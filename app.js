@@ -21,6 +21,7 @@ const runCaseQueryButton = document.querySelector("#runCaseQuery");
 const clearCasePointsButton = document.querySelector("#clearCasePoints");
 const baziCellsEl = document.querySelector("#baziCells");
 const baziCharPickerEl = document.querySelector("#baziCharPicker");
+const baziScanHintsEl = document.querySelector("#baziScanHints");
 const addBaziPointsButton = document.querySelector("#addBaziPoints");
 const scanBaziRelationsButton = document.querySelector("#scanBaziRelations");
 
@@ -216,8 +217,54 @@ function tenGod(dayGan, otherGan) {
   return "";
 }
 
-function relationItem(title, points, why) {
-  return { title, points: [...new Set(points)], why };
+function relationItem(title, points, why, cells = [], kind = "") {
+  return { title, points: [...new Set(points)], why, cells, kind };
+}
+
+function relationKind(title) {
+  if (title.includes("六冲")) return "冲";
+  if (title.includes("穿")) return "穿";
+  if (title.includes("六合")) return "合";
+  if (title.includes("五合")) return "合";
+  if (title.includes("暗合")) return "暗";
+  if (title.includes("破")) return "破";
+  if (title.includes("绝")) return "绝";
+  if (title.includes("三合") || title.includes("半合") || title.includes("拱合")) return "三合";
+  if (title.includes("三会")) return "三会";
+  if (title.includes("相克")) return "克";
+  if (title.includes("相生")) return "生";
+  if (title.includes("伏吟")) return "伏";
+  return "";
+}
+
+function relationCellsText(item) {
+  if (!item.cells?.length) return "";
+  return item.cells.map(cell => `${cell.label}${cell.value}`).join(" ↔ ");
+}
+
+function baziCellMarkers(index) {
+  const priority = { 冲: 100, 穿: 92, 合: 88, 暗: 84, 破: 78, 绝: 74, 三合: 70, 三会: 68, 伏: 28 };
+  const marked = scannedBaziRelations
+    .filter(item => item.kind && item.cells?.some(cell => cell.index === index))
+    .map(item => item.kind)
+    .filter(kind => priority[kind]);
+  return [...new Set(marked)]
+    .sort((a, b) => priority[b] - priority[a])
+    .slice(0, 3);
+}
+
+function renderBaziScanHints() {
+  const visibleRelations = scannedBaziRelations
+    .filter(item => item.kind && item.cells?.length >= 2 && relationCellsText(item))
+    .slice(0, 6);
+  baziScanHintsEl.innerHTML = visibleRelations.length
+    ? visibleRelations.map(item => `
+      <button type="button" data-add-case-term="${escapeHtml(item.points.slice(0, 3).join(" "))}">
+        <b>${escapeHtml(item.title)}</b>
+        <span>${escapeHtml(relationCellsText(item))}</span>
+      </button>
+    `).join("")
+    : `<p>点“扫描关系”后，会在这里标出哪两个字发生冲、合、穿、破。</p>`;
 }
 
 function relationPriority(item) {
@@ -248,18 +295,22 @@ function scanBaziRelationItems() {
       const a = ganCells[i];
       const b = ganCells[j];
       if (GAN_HE[a.value] === b.value) {
-        items.push(relationItem(`${a.value}${b.value}天干五合`, ["天干五合", "合", `${a.label}${a.value}`, `${b.label}${b.value}`], "天干五合主牵连、合绊、合作或控制，要看合来合去。"));
+        const title = `${a.value}${b.value}天干五合`;
+        items.push(relationItem(title, ["天干五合", "合", `${a.label}${a.value}`, `${b.label}${b.value}`], "天干五合主牵连、合绊、合作或控制，要看合来合去。", [a, b], relationKind(title)));
       }
       if (a.value === b.value) {
-        items.push(relationItem(`${a.value}伏吟`, ["伏吟", "重复", `${a.label}${a.value}`, `${b.label}${b.value}`], "同一字重复，主同象加强、旧事重来或反复。"));
+        const title = `${a.value}伏吟`;
+        items.push(relationItem(title, ["伏吟", "重复", `${a.label}${a.value}`, `${b.label}${b.value}`], "同一字重复，主同象加强、旧事重来或反复。", [a, b], relationKind(title)));
       }
       const aw = GAN_WUXING[a.value];
       const bw = GAN_WUXING[b.value];
       if (WUXING_SHENG[aw] === bw || WUXING_SHENG[bw] === aw) {
-        items.push(relationItem(`${a.value}${b.value}天干相生`, ["相生", "流通", `${a.value}${b.value}`], "相生代表能量流动和递送，需看生到喜神还是忌神。"));
+        const title = `${a.value}${b.value}天干相生`;
+        items.push(relationItem(title, ["相生", "流通", `${a.value}${b.value}`, `${a.label}${a.value}`, `${b.label}${b.value}`], "相生代表能量流动和递送，需看生到喜神还是忌神。", [a, b], relationKind(title)));
       }
       if (WUXING_KE[aw] === bw || WUXING_KE[bw] === aw) {
-        items.push(relationItem(`${a.value}${b.value}天干相克`, ["相克", "制约", `${a.value}${b.value}`], "相克代表管束、切割、压力，也可能成制化。"));
+        const title = `${a.value}${b.value}天干相克`;
+        items.push(relationItem(title, ["相克", "制约", `${a.value}${b.value}`, `${a.label}${a.value}`, `${b.label}${b.value}`], "相克代表管束、切割、压力，也可能成制化。", [a, b], relationKind(title)));
       }
     }
   }
@@ -270,39 +321,50 @@ function scanBaziRelationItems() {
       const b = zhiCells[j];
       const pair = a.value + b.value;
       if (ZHI_CHONG[a.value] === b.value) {
-        items.push(relationItem(`${a.value}${b.value}六冲`, ["六冲", "冲", "变动", `${a.label}${a.value}`, `${b.label}${b.value}`], "六冲主动荡、位移、分离或打开，重点看冲到哪个宫位。"));
+        const title = `${a.value}${b.value}六冲`;
+        items.push(relationItem(title, ["六冲", "冲", "变动", `${a.label}${a.value}`, `${b.label}${b.value}`], "六冲主动荡、位移、分离或打开，重点看冲到哪个宫位。", [a, b], relationKind(title)));
       }
       if (ZHI_HE[a.value] === b.value) {
-        items.push(relationItem(`${a.value}${b.value}六合`, ["六合", "合", "绑定", `${a.label}${a.value}`, `${b.label}${b.value}`], "六合主亲近、绑定、合作，也可能合绊拖住。"));
+        const title = `${a.value}${b.value}六合`;
+        items.push(relationItem(title, ["六合", "合", "绑定", `${a.label}${a.value}`, `${b.label}${b.value}`], "六合主亲近、绑定、合作，也可能合绊拖住。", [a, b], relationKind(title)));
       }
       if (ZHI_ANHE.has(pair)) {
-        items.push(relationItem(`${a.value}${b.value}暗合`, ["暗合", "隐秘", "私下牵连", `${a.label}${a.value}`, `${b.label}${b.value}`], "暗合主隐性牵连、私下关系或暗中配合。"));
+        const title = `${a.value}${b.value}暗合`;
+        items.push(relationItem(title, ["暗合", "隐秘", "私下牵连", `${a.label}${a.value}`, `${b.label}${b.value}`], "暗合主隐性牵连、私下关系或暗中配合。", [a, b], relationKind(title)));
       }
       if (ZHI_CHUAN.has(pair)) {
-        items.push(relationItem(`${a.value}${b.value}穿`, ["穿", "六穿", "暗伤", "漏洞", `${a.label}${a.value}`, `${b.label}${b.value}`], "穿主暗伤、漏洞、背后损耗，常比冲更隐蔽。"));
+        const title = `${a.value}${b.value}穿`;
+        items.push(relationItem(title, ["穿", "六穿", "暗伤", "漏洞", `${a.label}${a.value}`, `${b.label}${b.value}`], "穿主暗伤、漏洞、背后损耗，常比冲更隐蔽。", [a, b], relationKind(title)));
       }
       if (ZHI_PO.has(pair)) {
-        items.push(relationItem(`${a.value}${b.value}破`, ["破", "破局", "裂痕", `${a.label}${a.value}`, `${b.label}${b.value}`], "破主完整性受损、关系或生助路径有裂痕。"));
+        const title = `${a.value}${b.value}破`;
+        items.push(relationItem(title, ["破", "破局", "裂痕", `${a.label}${a.value}`, `${b.label}${b.value}`], "破主完整性受损、关系或生助路径有裂痕。", [a, b], relationKind(title)));
       }
       if (ZHI_JUE.has(pair)) {
-        items.push(relationItem(`${a.value}${b.value}绝`, ["绝", "断缘", "隔绝", `${a.label}${a.value}`, `${b.label}${b.value}`], "绝主气断、缘薄、隔绝，要看断的是喜神还是忌神。"));
+        const title = `${a.value}${b.value}绝`;
+        items.push(relationItem(title, ["绝", "断缘", "隔绝", `${a.label}${a.value}`, `${b.label}${b.value}`], "绝主气断、缘薄、隔绝，要看断的是喜神还是忌神。", [a, b], relationKind(title)));
       }
       if (a.value === b.value) {
-        items.push(relationItem(`${a.value}伏吟`, ["伏吟", "重复", `${a.label}${a.value}`, `${b.label}${b.value}`], "同支重复，主同象加强、事件反复。"));
+        const title = `${a.value}伏吟`;
+        items.push(relationItem(title, ["伏吟", "重复", `${a.label}${a.value}`, `${b.label}${b.value}`], "同支重复，主同象加强、事件反复。", [a, b], relationKind(title)));
       }
     }
   }
 
   ZHI_SANHE.forEach(group => {
-    const present = group.slice(0, 3).filter(zhi => zhiCells.some(cell => cell.value === zhi));
+    const presentCells = group.slice(0, 3).flatMap(zhi => zhiCells.filter(cell => cell.value === zhi));
+    const present = [...new Set(presentCells.map(cell => cell.value))];
     if (present.length >= 2) {
-      items.push(relationItem(`${present.join("")}${present.length === 3 ? "三合" : "半合/拱合"}${group[3]}局`, ["三合", "半合", "拱合", `${group[3]}局`, "局势"], "三合主力量汇聚，半合拱合代表已有方向，待岁运或中神引动。"));
+      const title = `${present.join("")}${present.length === 3 ? "三合" : "半合/拱合"}${group[3]}局`;
+      items.push(relationItem(title, ["三合", "半合", "拱合", `${group[3]}局`, "局势"], "三合主力量汇聚，半合拱合代表已有方向，待岁运或中神引动。", presentCells, relationKind(title)));
     }
   });
   ZHI_SANHUI.forEach(group => {
-    const present = group.slice(0, 3).filter(zhi => zhiCells.some(cell => cell.value === zhi));
+    const presentCells = group.slice(0, 3).flatMap(zhi => zhiCells.filter(cell => cell.value === zhi));
+    const present = [...new Set(presentCells.map(cell => cell.value))];
     if (present.length === 3) {
-      items.push(relationItem(`${present.join("")}三会${group[3]}方`, ["三会", `${group[3]}方`, "环境成势"], "三会主方气和季节环境成势，力量偏大。"));
+      const title = `${present.join("")}三会${group[3]}方`;
+      items.push(relationItem(title, ["三会", `${group[3]}方`, "环境成势"], "三会主方气和季节环境成势，力量偏大。", presentCells, relationKind(title)));
     }
   });
 
@@ -323,17 +385,22 @@ function scanBaziRelationItems() {
 function renderBaziPicker() {
   const cells = getBaziCells();
   baziCellsEl.innerHTML = `
-    ${cells.map(cell => `
-      <button type="button" class="bazi-cell ${selectedBaziCell === cell.index ? "active" : ""} ${cell.index === 2 ? "day-master" : ""}" data-bazi-cell="${cell.index}">
+    ${cells.map(cell => {
+      const markers = baziCellMarkers(cell.index);
+      return `
+      <button type="button" class="bazi-cell ${selectedBaziCell === cell.index ? "active" : ""} ${cell.index === 2 ? "day-master" : ""} ${markers.length ? "marked" : ""}" data-bazi-cell="${cell.index}">
         <strong>${escapeHtml(cell.value)}</strong>
         <span>${escapeHtml(cell.label)}</span>
+        ${markers.length ? `<em>${markers.map(escapeHtml).join(" / ")}</em>` : ""}
       </button>
-    `).join("")}
+    `;
+    }).join("")}
   `;
   const pool = selectedBaziCell < 4 ? GAN : ZHI;
   baziCharPickerEl.innerHTML = pool.map(char => `
     <button type="button" class="${caseBazi[selectedBaziCell] === char ? "active" : ""}" data-bazi-pick="${char}">${char}</button>
   `).join("");
+  renderBaziScanHints();
 }
 
 function addBaziObservationPoints() {
@@ -352,6 +419,7 @@ function scanAndApplyBaziRelations() {
   scannedBaziRelations = scanBaziRelationItems();
   const relationPoints = scannedBaziRelations.flatMap(item => item.points).slice(0, 32);
   setCasePoints([...casePoints, ...relationPoints]);
+  renderBaziPicker();
   renderCasePanel();
 }
 
@@ -1152,6 +1220,7 @@ function renderBaziSummary() {
         ${relationItems.slice(0, 12).map(item => `
           <button type="button" data-add-case-term="${escapeHtml(item.points.slice(0, 3).join(" "))}">
             <strong>${escapeHtml(item.title)}</strong>
+            ${relationCellsText(item) ? `<em>${escapeHtml(relationCellsText(item))}</em>` : ""}
             <span>${escapeHtml(item.why)}</span>
           </button>
         `).join("")}
