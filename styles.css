@@ -1752,3 +1752,235 @@ details[open] > summary .twist { transform: rotate(90deg); }
     gap: 4px;
   }
 }
+
+@media (orientation: landscape) and (min-width: 760px) and (max-width: 980px) {
+  body {
+    overflow: hidden;
+    background:
+      linear-gradient(90deg, rgba(155,47,47,.05), transparent 28%, rgba(31,107,104,.05)),
+      var(--bg);
+  }
+
+  .app {
+    display: grid;
+    grid-template-columns: 210px minmax(300px, 1fr) 270px;
+    height: 100vh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  aside, main, .detail {
+    height: 100vh;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  aside {
+    padding: 12px 10px;
+    border-right: 1px solid var(--line);
+    border-bottom: 0;
+  }
+
+  main {
+    padding: 12px 14px 18px;
+  }
+
+  .detail {
+    grid-column: auto;
+    margin: 0;
+    width: auto;
+    padding: 12px;
+    border: 0;
+    border-left: 1px solid var(--line);
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .brand {
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-size: 18px;
+  }
+
+  .seal {
+    width: 32px;
+    height: 32px;
+  }
+
+  .search {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    padding: 0 0 10px;
+    border-bottom: 0;
+    background: linear-gradient(var(--panel) 75%, rgba(255,253,248,0));
+    backdrop-filter: none;
+  }
+
+  .search input {
+    height: 38px;
+    font-size: 14px;
+  }
+
+  .mobile-jump {
+    display: none;
+  }
+
+  .case-box {
+    gap: 7px;
+    margin-bottom: 12px;
+    padding: 8px;
+  }
+
+  .case-title {
+    font-size: 12px;
+  }
+
+  .bazi-pillar-labels, .bazi-cells {
+    gap: 5px;
+  }
+
+  .bazi-cell {
+    min-height: 48px;
+    padding: 4px 1px;
+  }
+
+  .bazi-cell strong {
+    font-size: 19px;
+  }
+
+  .bazi-cell span {
+    font-size: 10px;
+  }
+
+  .bazi-char-picker {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .bazi-char-picker button {
+    min-height: 28px;
+    padding: 3px 2px;
+  }
+
+  .bazi-actions, .case-actions {
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+
+  .case-input-row {
+    grid-template-columns: 1fr 46px;
+    gap: 5px;
+  }
+
+  .case-input-row input {
+    height: 31px;
+    padding: 0 7px;
+  }
+
+  .case-box button {
+    min-height: 30px;
+    font-size: 13px;
+  }
+
+  .case-hint {
+    font-size: 11px;
+  }
+
+  .nav, .study-tools {
+    display: grid;
+    gap: 5px;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+  }
+
+  .nav button, .study-tools button {
+    max-width: none;
+    min-height: 31px;
+    padding: 6px 8px;
+    white-space: normal;
+  }
+
+  .nav-title {
+    margin: 12px 0 6px;
+  }
+
+  .hero {
+    display: flex;
+    align-items: end;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-bottom: 10px;
+  }
+
+  .hero h2 {
+    font-size: 22px;
+  }
+
+  .hero p {
+    max-width: 520px;
+    line-height: 1.55;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    min-width: 190px;
+  }
+
+  .toolbar button {
+    min-height: 32px;
+    padding: 6px 8px;
+    white-space: nowrap;
+  }
+
+  .insight-head, .case-panel-head, .network-head, .study-head {
+    display: flex;
+    align-items: flex-start;
+    padding: 10px 12px;
+  }
+
+  .case-panel-body {
+    grid-template-columns: 1fr;
+  }
+
+  .combo-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .network-map {
+    width: 100%;
+    max-height: 250px;
+  }
+
+  .network-legend {
+    grid-template-columns: 1fr;
+  }
+
+  summary {
+    grid-template-columns: 24px 1fr auto;
+    padding: 10px 12px;
+  }
+
+  .summary-actions {
+    grid-column: auto;
+  }
+
+  .children {
+    padding: 0 12px 12px 42px;
+  }
+
+  .detail h3 {
+    font-size: 20px;
+  }
+
+  .detail-block {
+    margin-top: 14px;
+    padding-top: 12px;
+  }
+}
