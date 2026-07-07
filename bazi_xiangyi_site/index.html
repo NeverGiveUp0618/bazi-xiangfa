@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>八字象义图谱</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <h1>八字象义图谱</h1>
+        <div class="seal">象</div>
+      </div>
+
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="搜索：文书、母亲、合同、竞争..." />
+      </div>
+
+      <div class="case-box">
+        <div class="case-title">命例工作台</div>
+        <div class="bazi-picker">
+          <div class="bazi-pillar-labels"><span>年</span><span>月</span><span>日</span><span>时</span></div>
+          <div class="bazi-cells" id="baziCells"></div>
+          <div class="bazi-char-picker" id="baziCharPicker"></div>
+          <div class="bazi-actions">
+            <button id="addBaziPoints" type="button">加入排盘观察点</button>
+            <button id="scanBaziRelations" type="button">扫描关系</button>
+          </div>
+        </div>
+        <div class="case-input-row">
+          <input id="casePointInput" type="text" placeholder="加入观察点：日支、穿、财库..." />
+          <button id="addCasePoint" type="button">加入</button>
+        </div>
+        <div class="case-points" id="casePoints"></div>
+        <div class="case-actions">
+          <button id="runCaseQuery" type="button">合并查询</button>
+          <button id="clearCasePoints" type="button">清空</button>
+        </div>
+      </div>
+
+      <div class="nav-title">我的学习</div>
+      <div class="study-tools" id="studyTools"></div>
+
+      <div class="nav-title">体系</div>
+      <div class="nav" id="nav"></div>
+
+      <div class="nav-title">主题索引</div>
+      <div class="nav">
+        <button data-quick="文书" data-target-system="ten-gods">文书 <span class="count">正印</span></button>
+        <button data-quick="财富" data-target-system="ten-gods">财富 <span class="count">财星</span></button>
+        <button data-quick="竞争" data-target-system="ten-gods">竞争 <span class="count">比劫</span></button>
+        <button data-quick="表达" data-target-system="ten-gods">表达 <span class="count">食伤</span></button>
+        <button data-quick="规则" data-target-system="ten-gods">规则 <span class="count">官杀</span></button>
+      </div>
+    </aside>
+
+    <main>
+      <section class="hero">
+        <div>
+          <h2 id="viewTitle">十神象义</h2>
+          <p id="viewDesc">以十神为核心节点，把人物、事物、心理、身体、职业、吉凶与组合条件向外展开。</p>
+        </div>
+        <div class="toolbar">
+          <button id="expandAll" type="button">全部展开</button>
+          <button id="collapseAll" type="button">全部收起</button>
+          <button id="resetSearch" type="button">清空搜索</button>
+        </div>
+      </section>
+
+      <section class="insight-panel" id="insightPanel"></section>
+      <section class="case-panel" id="casePanel"></section>
+      <section class="network-panel" id="networkPanel"></section>
+      <section class="study-panel" id="studyPanel"></section>
+      <section class="tree" id="tree"></section>
+      <div class="empty" id="empty">没有匹配的象义。可以换一个词，或后续把它补进词库。</div>
+      <footer class="site-footer">
+        <strong>八字象义图谱</strong>
+        <span>上架时间：2026年7月7日</span>
+      </footer>
+    </main>
+
+    <section class="detail" id="detail"></section>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
