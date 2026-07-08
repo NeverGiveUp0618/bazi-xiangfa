@@ -1173,6 +1173,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "📴 PWA 离线缓存——手机添加到主屏幕后可离线打开，联网时仍优先拉新版本"],
     ["26.7.9", "🌿 排盘补月令提纲与纳音逐柱——先看季节气候，再分年/月/日/时纳音各应什么位置"],
     ["26.7.9", "🔍 排盘结果补“为什么扫到”——关系、神煞、纳音、十神藏干都加检测理由，不只给结论"],
     ["26.7.9", "📦 命例本导出带盘中象快照——每个命例导出时附学习点、来源和入组理由"],
@@ -2585,6 +2586,12 @@ if (typeof document !== "undefined") {
   if (updateBar) updateBar.addEventListener("click", () => {
     location.replace(location.pathname + "?r=" + Date.now());
   });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", () => {
+      navigator.serviceWorker.register("./sw.js").catch(() => { /* 离线能力失败不影响主功能 */ });
+    });
+  }
 
   /* ---- 启动 ---- */
   history.replaceState({ tab: "search" }, "");

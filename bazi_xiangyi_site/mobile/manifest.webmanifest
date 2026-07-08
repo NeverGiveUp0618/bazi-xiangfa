@@ -1,0 +1,19 @@
+{
+  "name": "象义随身",
+  "short_name": "象义",
+  "description": "八字象法学习、查询、排盘标注与命例复盘工具",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f6f1e7",
+  "theme_color": "#b23a26",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "../preview.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
