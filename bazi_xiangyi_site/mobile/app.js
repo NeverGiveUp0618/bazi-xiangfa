@@ -362,6 +362,54 @@ function scanNayin(bazi) {
   });
 }
 
+/* ---------- 组合象识别（盘里出现的十神组合，连到组合卡） ---------- */
+const CAI_MU_OF_WX = { 木: "未", 火: "戌", 土: "戌", 金: "丑", 水: "辰" };
+
+// 统计盘里出现的十神组（含地支藏干），返回 { 组名: [{god, where}] }
+function chartGodGroups(bazi) {
+  const dg = bazi[2];
+  const groups = {};
+  const push = (grp, god, where) => { if (!grp) return; (groups[grp] = groups[grp] || []).push({ god, where }); };
+  [0, 1, 3].forEach(p => push(GOD_GROUP[tenGod(dg, bazi[p])], tenGod(dg, bazi[p]), `${PILLARS[p]}干${bazi[p]}`));
+  [4, 5, 6, 7].forEach(i => (CANG_GAN[bazi[i]] || []).forEach(hg => {
+    const g = tenGod(dg, hg);
+    push(GOD_GROUP[g], g, `${PILLARS[i % 4]}支${bazi[i]}藏${hg}`);
+  }));
+  return groups;
+}
+
+// 识别盘中成立的组合卡
+function detectCombos(bazi) {
+  const g = chartGodGroups(bazi);
+  const godsOf = grp => (g[grp] ? [...new Set(g[grp].map(x => x.god))].join("、") : "");
+  const has = grp => !!(g[grp] && g[grp].length);
+  const rels = scanRelations(bazi);
+  const hasChong = rels.some(r => r.kindLabel === "冲");
+  const hasHe = rels.some(r => ["合", "三合", "半合", "拱合", "暗合"].includes(r.kindLabel));
+  const dayZhi = bazi[6];
+  const spouseChuan = [4, 5, 7].some(i => {
+    const p = dayZhi + bazi[i], q = bazi[i] + dayZhi;
+    return CHUAN_SHENG.includes(p) || CHUAN_SHENG.includes(q) || CHUAN_KE.includes(p) || CHUAN_KE.includes(q);
+  });
+  const caiWx = WUXING_KE[GAN_WUXING[bazi[2]]];
+  const caiMu = CAI_MU_OF_WX[caiWx];
+  const caiMuHit = has("财星") && [4, 5, 6, 7].some(i => bazi[i] === caiMu);
+
+  const out = [];
+  const add = (title, why) => { const n = nodeByTitle.get(title); if (n) out.push({ nodeTitle: title, nodeId: n.id, why }); };
+
+  // 顺序：具体/少见的组合在前，最宽泛的（冲+宫位、印+文书）在后
+  if (has("食伤") && has("官杀")) add("食伤 + 官杀", `盘中${godsOf("食伤")}遇${godsOf("官杀")}：看是食神制杀（吉），还是伤官见官（要小心）。`);
+  if (has("印星") && has("财星")) add("印 + 财", `盘中${godsOf("印星")}遇${godsOf("财星")}：先分清是财破印，还是有印护身、财生官护印。`);
+  if (has("比劫") && has("财星")) add("比劫 + 财", `盘中${godsOf("比劫")}遇${godsOf("财星")}：留意比劫夺财、合伙分账。`);
+  if (caiMuHit) add("墓库 + 财", `财星属${caiWx}，其墓库「${caiMu}」在盘中：财易入库，是财库也可能被关住。`);
+  if (spouseChuan) add("穿 + 夫妻宫", `日支（夫妻宫）${dayZhi}被穿：婚姻感情宫位有暗损、难言的别扭。`);
+  if (has("财星") && hasHe) add("合 + 财", `盘中有${godsOf("财星")}又有合：财被合住，看是合来（得财）还是合去（失财）。`);
+  if (hasChong) add("冲 + 宫位", "盘中有六冲：重点看冲动了哪个宫位、可能应什么变动。");
+  if (has("印星")) add("印 + 文书", `盘中有${godsOf("印星")}：印主文书、证件、学历与庇护，办证签约类事看印。`);
+  return out;
+}
+
 /* ---------- 搜索与共象聚合 ---------- */
 function escapeHtml(v) {
   return String(v ?? "")
@@ -1138,6 +1186,7 @@ if (typeof document !== "undefined") {
     const rels = scanRelations(bazi);
     const shensha = scanShensha(bazi);
     const nayin = scanNayin(bazi);
+    const combos = detectCombos(bazi);
 
     const relBody = quizOn && !quizRevealed.rel
       ? `<button class="reveal-btn" type="button" data-reveal="rel">先自己找：盘里哪些字在冲、合、穿、破、刑？想好了点这里揭晓 ${rels.length} 条</button>`
@@ -1183,7 +1232,19 @@ if (typeof document !== "undefined") {
         </div>`;
     }).join("");
 
+    const comboBody = combos.map(c => `
+      <button class="combo-row" type="button" data-open-node="${escapeHtml(c.nodeId)}">
+        <div class="row-line"><strong>${escapeHtml(c.nodeTitle)}</strong><span class="combo-go">看组合卡 →</span></div>
+        <p class="brief">${escapeHtml(c.why)}</p>
+      </button>`).join("");
+    const comboSection = combos.length ? `
+      <section class="ana-section">
+        <div class="ana-head"><h3>组合提示</h3><span class="ana-count">${combos.length} 组</span></div>
+        ${comboBody}
+      </section>` : "";
+
     el.chartAnalysis.innerHTML = `
+      ${comboSection}
       <section class="ana-section">
         <div class="ana-head"><h3>干支关系</h3><span class="ana-count">${rels.length} 条</span></div>
         ${relBody}

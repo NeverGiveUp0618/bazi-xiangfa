@@ -607,6 +607,45 @@ mark {
   margin: 6px 0 0;
 }
 
+/* 组合提示行 */
+.combo-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow);
+}
+
+.combo-row .row-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.combo-row strong {
+  font-size: 16px;
+  color: var(--gold);
+}
+
+.combo-row .combo-go {
+  font-size: 12px;
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.combo-row .brief {
+  margin: 5px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink);
+  opacity: 0.85;
+}
+
 /* 神煞/纳音行 */
 .info-row {
   display: block;
