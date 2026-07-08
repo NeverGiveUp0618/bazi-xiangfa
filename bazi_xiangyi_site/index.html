@@ -3,109 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>八字象义图谱</title>
+  <meta http-equiv="refresh" content="0; url=./mobile/" />
+  <title>八字象义</title>
   <style>
-    :root {
-      --bg: #f6f4ef;
-      --panel: #fffdf8;
-      --ink: #202124;
-      --muted: #6b6760;
-      --line: #ded8cc;
-      --accent: #9b2f2f;
-      --accent-2: #1f6b68;
-      --shadow: 0 10px 28px rgba(42, 34, 23, .08);
-    }
-
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      min-height: 100vh;
-      color: var(--ink);
-      background: var(--bg);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
-    }
-
-    main {
-      display: grid;
-      align-content: center;
-      gap: 22px;
-      width: min(920px, calc(100% - 32px));
-      min-height: 100vh;
-      margin: 0 auto;
-      padding: 32px 0;
-    }
-
-    h1 {
-      margin: 0;
-      font-size: 34px;
-      line-height: 1.15;
-    }
-
-    p {
-      max-width: 620px;
-      margin: 8px 0 0;
-      color: var(--muted);
-      line-height: 1.7;
-    }
-
-    .version-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 14px;
-    }
-
-    a {
-      display: grid;
-      gap: 8px;
-      min-height: 150px;
-      padding: 18px;
-      color: var(--ink);
-      text-decoration: none;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-      background: var(--panel);
-      box-shadow: var(--shadow);
-    }
-
-    a strong {
-      color: var(--accent);
-      font-size: 22px;
-    }
-
-    a span {
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    a:hover {
-      border-color: var(--accent-2);
-    }
-
-    @media (max-width: 640px) {
-      h1 { font-size: 28px; }
-      .version-grid { grid-template-columns: 1fr; }
-      a { min-height: 126px; }
-    }
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f6f1e7; color: #8a7f70; font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif; }
+    a { color: #b23a26; }
   </style>
 </head>
 <body>
   <main>
-    <header>
-      <h1>八字象义图谱</h1>
-      <p>当前站点拆分为两个独立版本。Codex版保留电脑端工作台体验，Claude版为手机端全新重做。</p>
-    </header>
-
-    <section class="version-grid" aria-label="版本选择">
-      <a href="./desktop/">
-        <strong>Codex版</strong>
-        <span>电脑端：完整三栏工作台、关系网、命例观察台和象义查询功能。</span>
-      </a>
-      <a href="./mobile/">
-        <strong>Claude版</strong>
-        <span>手机端：共象聚合查询、排盘自动解读、刷卡学习、体系图鉴。</span>
-      </a>
-    </section>
+    <p>正在打开八字象义…</p>
+    <p><a href="./mobile/">未自动跳转请点这里</a></p>
   </main>
+  <script>location.replace("./mobile/");</script>
 </body>
 </html>

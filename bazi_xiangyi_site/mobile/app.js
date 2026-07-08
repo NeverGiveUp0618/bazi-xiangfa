@@ -987,6 +987,16 @@ if (typeof document !== "undefined") {
   };
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
+  const CHANGELOG = [
+    ["26.7.8", "🌳 象义树取象路径——点两个词看最短取象链，逐跳说清为什么这么串；关掉路径回到起点那个字的连线态"],
+    ["26.7.8", "🎯 学习加「答题」模式——由词选象 / 由象猜词 / 地支关系判断三种题，答对答错自动喂间隔复习"],
+    ["26.7.8", "🧩 排盘加「组合提示」——自动识别印+财、伤官见官、食神制杀、财入库、穿夫妻宫等组合，点进组合卡"],
+    ["26.7.8", "🔤 排盘天干候选改每行5个（甲乙丙丁戊 / 己庚辛壬癸），排版更齐"],
+    ["26.7.8", "🐛 修复戊土/午火 id 撞车——以前点戊土会误开午火、共享复习记录"],
+    ["26.7.8", "🔗 象义树352条连线全部标注理由——为什么杨柳木连着午火、未土，一看就懂"],
+    ["26.7.8", "🌌 象义树上线——131个词条织成发光关系网，点谁亮谁、双指缩放、按体系聚焦"],
+    ["26.7.7", "📱 手机版整体重做——共象聚合查询 / 点选八字自动解盘 / 翻卡间隔复习 / 体系图鉴"]
+  ];
   const HINTS = {
     search: "想到一个词，先查共象",
     chart: "点格子选字，全盘自动标注",
@@ -1102,6 +1112,12 @@ if (typeof document !== "undefined") {
           <button class="home-entry" type="button" data-entry="search"><span class="entry-badge">查</span><span><strong>查一个象</strong><p>想到词就搜：文书、财库、口舌、搬家……</p></span></button>
           <button class="home-entry" type="button" data-entry="chart"><span class="entry-badge">盘</span><span><strong>输入命例</strong><p>点选八字，冲合穿破、神煞纳音自动标出</p></span></button>
           <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天学一个</strong><p>翻卡回忆象义，认识/不熟自动安排复习</p></span></button>
+        </div>
+        <div class="dev-log">
+          <div class="dev-log-head">开发时间节点</div>
+          <div class="dev-log-list">
+            ${CHANGELOG.map(([d, t]) => `<div class="dev-log-row"><span class="dev-log-date">${escapeHtml(d)}</span><span class="dev-log-text">${escapeHtml(t)}</span></div>`).join("")}
+          </div>
         </div>`;
       return;
     }
@@ -2101,6 +2117,12 @@ if (typeof document !== "undefined") {
     renderAnalysis();
   });
   el.detailBack.addEventListener("click", goBack);
+
+  // 顶部刷新条：带时间戳强刷，绕过 GitHub Pages 缓存看到新版
+  const updateBar = document.querySelector("#updateBar");
+  if (updateBar) updateBar.addEventListener("click", () => {
+    location.replace(location.pathname + "?r=" + Date.now());
+  });
 
   /* ---- 启动 ---- */
   history.replaceState({ tab: "search" }, "");
