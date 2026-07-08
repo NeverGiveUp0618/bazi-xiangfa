@@ -458,6 +458,47 @@ function overlapSummary(results, terms) {
   return { overlaps, dist, topCount: top.length };
 }
 
+/* ---------- 象义树：图数据 ---------- */
+const SYS_COLORS = {
+  "five-elements": "#ffd54f",
+  "source-mapping": "#90a4ae",
+  "xiangfa-rules": "#ff8a65",
+  "combo-cards": "#f06292",
+  "ten-gods": "#ef5350",
+  "stems": "#4fc3f7",
+  "branches": "#66bb6a",
+  "relations": "#26c6da",
+  "shen-sha": "#c158dc",
+  "nayin": "#d4e157",
+  "palace-luck": "#9575cd"
+};
+
+// 少量类别词别名，帮孤立节点接回网络
+const GRAPH_ALIAS = { "五行": ["木", "火", "土", "金", "水"], "冲": ["六冲"], "破": ["六破"], "夫妻宫": ["日支"] };
+
+function buildGraphData() {
+  const gnodes = nodes.map((n, i) => ({ i, id: n.id, title: n.title, sysId: n.systemId, deg: 0 }));
+  const idxByTitle = new Map(gnodes.map(g => [g.title, g.i]));
+  const idxById = new Map(gnodes.map(g => [g.id, g.i]));
+  const edgeSet = new Set();
+  const edges = [];
+  nodes.forEach((n, i) => {
+    (n.relations || []).forEach(r => {
+      const targets = idxByTitle.has(r) ? [r] : (GRAPH_ALIAS[r] || []);
+      targets.forEach(t => {
+        const j = idxByTitle.get(t);
+        if (j === undefined || j === i) return;
+        const key = Math.min(i, j) + "-" + Math.max(i, j);
+        if (edgeSet.has(key)) return;
+        edgeSet.add(key);
+        edges.push([i, j]);
+      });
+    });
+  });
+  edges.forEach(([a, b]) => { gnodes[a].deg++; gnodes[b].deg++; });
+  return { gnodes, edges, idxById };
+}
+
 /* ---------- 本地存储 ---------- */
 function storageGet(key, fallback) {
   try {
@@ -552,6 +593,7 @@ if (typeof document !== "undefined") {
     search: "想到一个词，先查共象",
     chart: "点格子选字，全盘自动标注",
     study: "先自己回忆，再翻面对答案",
+    tree: "131个词条织成一张网，点谁看谁",
     library: "按体系慢慢翻",
     detail: "完整象义"
   };
@@ -576,6 +618,7 @@ if (typeof document !== "undefined") {
     document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === (view === "detail" ? activeTab : view)));
     el.topHint.textContent = HINTS[view] || "";
     window.scrollTo({ top: 0 });
+    if (view === "tree") treeStart(); else treeStop();
   }
 
   function switchTab(tab, pushHistory = true) {
@@ -923,6 +966,412 @@ if (typeof document !== "undefined") {
       ${relChips ? `<div class="branch-block"><h4>关联词条</h4><div class="relation-links">${relChips}</div></div>` : ""}`;
   }
 
+  /* ---- 象义树 ---- */
+  const tree = {
+    inited: false, running: false, raf: 0, physics: false, dirty: true,
+    n: [], e: [], idxById: null, anchors: [],
+    cam: { x: 0, y: 0, s: 0.8 },
+    alpha: 0, selected: -1, neighbors: new Set(), focusSys: "",
+    W: 320, H: 480, dpr: 1,
+    pointers: new Map(), pinch0: null, dragNode: -1, panStart: null, moved: 0, downAt: 0
+  };
+  const treeCanvas = document.querySelector("#treeCanvas");
+  const treeCtx = treeCanvas.getContext("2d");
+  const treeWrap = document.querySelector("#treeWrap");
+  const treeInfo = document.querySelector("#treeInfo");
+  const treeLegend = document.querySelector("#treeLegend");
+
+  function treeInit() {
+    const { gnodes, edges, idxById } = buildGraphData();
+    tree.idxById = idxById;
+    tree.e = edges;
+    const sysIds = graph.systems.map(s => s.id);
+    // 竖椭圆排布锚点，贴合手机竖屏
+    const RX = 420, RY = 660;
+    tree.anchors = sysIds.map((id, k) => {
+      const a = (k / sysIds.length) * Math.PI * 2 - Math.PI / 2;
+      return { id, x: Math.cos(a) * RX, y: Math.sin(a) * RY };
+    });
+    const anchorOf = Object.fromEntries(tree.anchors.map(a => [a.id, a]));
+    tree.n = gnodes.map(g => {
+      const a = anchorOf[g.sysId];
+      return {
+        ...g,
+        x: a.x + (Math.random() - 0.5) * 200,
+        y: a.y + (Math.random() - 0.5) * 200,
+        vx: 0, vy: 0,
+        ax: a.x, ay: a.y,
+        r: 4 + Math.min(g.deg, 12) * 0.65,
+        color: SYS_COLORS[g.sysId] || "#ffffff"
+      };
+    });
+    tree.alpha = 1;
+    for (let i = 0; i < 240; i++) treeTick();
+    tree.alpha = 0.12;
+    treeLegend.innerHTML = graph.systems.map(s =>
+      `<button type="button" data-tree-sys="${escapeHtml(s.id)}"><span class="dot" style="color:${SYS_COLORS[s.id]};background:${SYS_COLORS[s.id]}"></span>${escapeHtml(s.title)}</button>`
+    ).join("");
+    renderTreeInfo();
+    tree.inited = true;
+  }
+
+  function treeTick() {
+    const N = tree.n, E = tree.e, a = tree.alpha;
+    // 斥力（全对）
+    for (let i = 0; i < N.length; i++) {
+      const ni = N[i];
+      for (let j = i + 1; j < N.length; j++) {
+        const nj = N[j];
+        let dx = ni.x - nj.x, dy = ni.y - nj.y;
+        let d2 = dx * dx + dy * dy;
+        if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
+        if (d2 > 300000) continue;
+        const f = Math.min(1750 / d2, 4) * a;
+        const d = Math.sqrt(d2);
+        const fx = (dx / d) * f, fy = (dy / d) * f;
+        ni.vx += fx; ni.vy += fy;
+        nj.vx -= fx; nj.vy -= fy;
+      }
+    }
+    // 边弹簧（跨体系的连线放松，让集群分得开）
+    for (const [i, j] of E) {
+      const ni = N[i], nj = N[j];
+      const dx = nj.x - ni.x, dy = nj.y - ni.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 1;
+      const cross = ni.sysId !== nj.sysId;
+      const f = (d - (cross ? 130 : 80)) * (cross ? 0.008 : 0.02) * a;
+      const fx = (dx / d) * f, fy = (dy / d) * f;
+      ni.vx += fx; ni.vy += fy;
+      nj.vx -= fx; nj.vy -= fy;
+    }
+    // 体系锚点引力 + 全局向心
+    for (const ni of N) {
+      ni.vx += (ni.ax - ni.x) * 0.014 * a + (0 - ni.x) * 0.0012 * a;
+      ni.vy += (ni.ay - ni.y) * 0.014 * a + (0 - ni.y) * 0.0012 * a;
+      ni.vx *= 0.85; ni.vy *= 0.85;
+      if (tree.dragNode !== ni.i) { ni.x += ni.vx; ni.y += ni.vy; }
+    }
+    tree.alpha *= 0.995;
+    if (tree.alpha < 0.02) { tree.alpha = 0; tree.physics = false; }
+    tree.dirty = true;
+  }
+
+  function w2s(x, y) {
+    return [(x - tree.cam.x) * tree.cam.s + tree.W / 2, (y - tree.cam.y) * tree.cam.s + tree.H / 2];
+  }
+
+  function s2w(sx, sy) {
+    return [(sx - tree.W / 2) / tree.cam.s + tree.cam.x, (sy - tree.H / 2) / tree.cam.s + tree.cam.y];
+  }
+
+  function treeRender() {
+    if (!treeCtx) return;
+    const ctx = treeCtx, s = tree.cam.s;
+    ctx.setTransform(tree.dpr, 0, 0, tree.dpr, 0, 0);
+    ctx.fillStyle = "#0d0b14";
+    ctx.fillRect(0, 0, tree.W, tree.H);
+    const hasSel = tree.selected >= 0;
+    const focus = tree.focusSys;
+
+    // 边
+    for (const [i, j] of tree.e) {
+      const ni = tree.n[i], nj = tree.n[j];
+      const [x1, y1] = w2s(ni.x, ni.y);
+      const [x2, y2] = w2s(nj.x, nj.y);
+      let alpha = 0.16, width = 1, color = ni.color;
+      if (hasSel) {
+        const on = (i === tree.selected || j === tree.selected);
+        alpha = on ? 0.9 : 0.04;
+        width = on ? 1.8 : 1;
+        if (on) color = tree.n[tree.selected].color;
+      } else if (focus) {
+        const on = ni.sysId === focus || nj.sysId === focus;
+        alpha = on ? 0.32 : 0.04;
+      }
+      ctx.strokeStyle = color;
+      ctx.globalAlpha = alpha;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+    }
+
+    // 节点（光晕 + 实心核）
+    for (const ni of tree.n) {
+      const [sx, sy] = w2s(ni.x, ni.y);
+      if (sx < -40 || sy < -40 || sx > tree.W + 40 || sy > tree.H + 40) continue;
+      let dimmed = false;
+      if (hasSel) dimmed = !(ni.i === tree.selected || tree.neighbors.has(ni.i));
+      else if (focus) dimmed = ni.sysId !== focus;
+      const r = ni.r * s;
+      ctx.globalAlpha = dimmed ? 0.10 : 0.22;
+      ctx.fillStyle = ni.color;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 2.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = dimmed ? 0.25 : 1;
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.fill();
+      if (ni.i === tree.selected) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r + 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    // 文字（屏幕空间，恒定字号）
+    ctx.globalAlpha = 1;
+    ctx.font = "11px -apple-system, 'PingFang SC', sans-serif";
+    ctx.textAlign = "center";
+    for (const ni of tree.n) {
+      let show;
+      if (hasSel) show = ni.i === tree.selected || tree.neighbors.has(ni.i);
+      else if (focus) show = ni.sysId === focus ? (s > 0.4 || ni.deg >= 5) : false;
+      else show = s >= 0.62 || ni.deg >= 7;
+      if (!show) continue;
+      const [sx, sy] = w2s(ni.x, ni.y);
+      if (sx < -20 || sy < -20 || sx > tree.W + 20 || sy > tree.H + 20) continue;
+      const bold = ni.i === tree.selected;
+      ctx.font = (bold ? "600 13px" : "11px") + " -apple-system, 'PingFang SC', sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.65)";
+      ctx.fillText(ni.title, sx + 1, sy + ni.r * s + 13);
+      ctx.fillStyle = bold ? "#ffffff" : "rgba(255,255,255,0.85)";
+      ctx.fillText(ni.title, sx, sy + ni.r * s + 12);
+    }
+  }
+
+  function treeLoop() {
+    if (!tree.running) return;
+    if (tree.physics) { treeTick(); treeTick(); }
+    if (tree.dirty) { treeRender(); tree.dirty = false; }
+    tree.raf = requestAnimationFrame(treeLoop);
+  }
+
+  function treeResize() {
+    const navH = document.querySelector(".bottom-nav")?.offsetHeight || 64;
+    const top = treeWrap.getBoundingClientRect().top;
+    const h = Math.max(420, window.innerHeight - top - navH - 4);
+    const w = treeWrap.clientWidth || window.innerWidth;
+    tree.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    tree.W = w; tree.H = h;
+    treeCanvas.style.height = h + "px";
+    treeCanvas.width = Math.round(w * tree.dpr);
+    treeCanvas.height = Math.round(h * tree.dpr);
+    tree.dirty = true;
+  }
+
+  function treeFitTo(list) {
+    if (!list.length) return;
+    // 用分位数裁剪，外围孤点不把视野拉偏
+    const xs = list.map(n => n.x).sort((p, q) => p - q);
+    const ys = list.map(n => n.y).sort((p, q) => p - q);
+    const lo = Math.floor(xs.length * 0.06), hi = Math.ceil(xs.length * 0.94) - 1;
+    const x1 = xs[lo], x2 = xs[hi], y1 = ys[lo], y2 = ys[hi];
+    const bw = Math.max(x2 - x1, 60), bh = Math.max(y2 - y1, 60);
+    tree.cam.s = Math.min(Math.min(tree.W / bw, tree.H / bh) * 0.82, 2.2);
+    tree.cam.x = (x1 + x2) / 2;
+    tree.cam.y = (y1 + y2) / 2;
+    tree.dirty = true;
+  }
+
+  function renderTreeInfo() {
+    if (tree.selected < 0) {
+      treeInfo.innerHTML = `<span class="hint">点节点看关联 · 双指缩放 · 可拖动揉网</span>`;
+      return;
+    }
+    const gn = tree.n[tree.selected];
+    const node = nodeById.get(gn.id);
+    const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 10);
+    treeInfo.innerHTML = `
+      <div class="tree-card">
+        <div class="tc-title">
+          <strong>${escapeHtml(gn.title)}</strong>
+          <span class="tc-sys" style="color:${gn.color}">${escapeHtml(node.systemTitle)}</span>
+        </div>
+        <p class="tc-core">${escapeHtml((node.core || []).slice(0, 5).join(" · "))}</p>
+        ${nbs.length ? `<div class="tc-neighbors">${nbs.map(nb => `<button type="button" data-tree-select="${nb.i}">${escapeHtml(nb.title)}</button>`).join("")}</div>` : ""}
+        <button class="tc-open" type="button" data-open-node="${escapeHtml(gn.id)}">看完整象义 →</button>
+      </div>`;
+  }
+
+  function selectTreeNode(i, center = true) {
+    tree.selected = i;
+    tree.neighbors = new Set();
+    if (i >= 0) {
+      tree.e.forEach(([a, b]) => {
+        if (a === i) tree.neighbors.add(b);
+        if (b === i) tree.neighbors.add(a);
+      });
+      if (center) {
+        tree.cam.x = tree.n[i].x;
+        tree.cam.y = tree.n[i].y;
+        if (tree.cam.s < 0.75) tree.cam.s = 1.1;
+      }
+    }
+    renderTreeInfo();
+    tree.dirty = true;
+  }
+
+  function treeStart() {
+    if (!tree.inited) treeInit();
+    treeResize();
+    if (!tree.fitted) { treeFitTo(tree.n); tree.fitted = true; }
+    if (!tree.running) {
+      tree.running = true;
+      if (tree.alpha > 0.02) tree.physics = true;
+      tree.dirty = true;
+      tree.raf = requestAnimationFrame(treeLoop);
+    }
+  }
+
+  function treeStop() {
+    tree.running = false;
+    if (tree.raf) cancelAnimationFrame(tree.raf);
+    tree.raf = 0;
+  }
+
+  function treeHit(sx, sy) {
+    const [wx, wy] = s2w(sx, sy);
+    let best = -1, bestD = Infinity;
+    for (const ni of tree.n) {
+      const dx = ni.x - wx, dy = ni.y - wy;
+      const d = Math.sqrt(dx * dx + dy * dy);
+      const hitR = ni.r + 12 / tree.cam.s;
+      if (d < hitR && d < bestD) { best = ni.i; bestD = d; }
+    }
+    return best;
+  }
+
+  function canvasPos(ev) {
+    const rect = treeCanvas.getBoundingClientRect();
+    return [ev.clientX - rect.left, ev.clientY - rect.top];
+  }
+
+  treeCanvas.addEventListener("pointerdown", ev => {
+    treeCanvas.setPointerCapture(ev.pointerId);
+    const [sx, sy] = canvasPos(ev);
+    tree.pointers.set(ev.pointerId, { sx, sy });
+    tree.moved = 0;
+    tree.downAt = Date.now();
+    if (tree.pointers.size === 1) {
+      const hit = treeHit(sx, sy);
+      if (hit >= 0) {
+        tree.dragNode = hit;
+        tree.alpha = Math.max(tree.alpha, 0.25);
+        tree.physics = true;
+      } else {
+        tree.panStart = { camx: tree.cam.x, camy: tree.cam.y, sx, sy };
+      }
+    } else if (tree.pointers.size === 2) {
+      tree.dragNode = -1;
+      tree.panStart = null;
+      const pts = [...tree.pointers.values()];
+      tree.pinch0 = {
+        d: Math.hypot(pts[0].sx - pts[1].sx, pts[0].sy - pts[1].sy),
+        s: tree.cam.s,
+        mid: [(pts[0].sx + pts[1].sx) / 2, (pts[0].sy + pts[1].sy) / 2]
+      };
+      tree.pinch0.world = s2w(tree.pinch0.mid[0], tree.pinch0.mid[1]);
+    }
+  });
+
+  treeCanvas.addEventListener("pointermove", ev => {
+    if (!tree.pointers.has(ev.pointerId)) return;
+    const [sx, sy] = canvasPos(ev);
+    const prev = tree.pointers.get(ev.pointerId);
+    tree.moved += Math.abs(sx - prev.sx) + Math.abs(sy - prev.sy);
+    tree.pointers.set(ev.pointerId, { sx, sy });
+
+    if (tree.pointers.size === 2 && tree.pinch0) {
+      const pts = [...tree.pointers.values()];
+      const d = Math.hypot(pts[0].sx - pts[1].sx, pts[0].sy - pts[1].sy) || 1;
+      tree.cam.s = Math.min(4, Math.max(0.15, tree.pinch0.s * (d / tree.pinch0.d)));
+      const mid = [(pts[0].sx + pts[1].sx) / 2, (pts[0].sy + pts[1].sy) / 2];
+      tree.cam.x = tree.pinch0.world[0] - (mid[0] - tree.W / 2) / tree.cam.s;
+      tree.cam.y = tree.pinch0.world[1] - (mid[1] - tree.H / 2) / tree.cam.s;
+      tree.dirty = true;
+      return;
+    }
+    if (tree.dragNode >= 0) {
+      const [wx, wy] = s2w(sx, sy);
+      const ni = tree.n[tree.dragNode];
+      ni.x = wx; ni.y = wy; ni.vx = 0; ni.vy = 0;
+      tree.alpha = Math.max(tree.alpha, 0.2);
+      tree.physics = true;
+      tree.dirty = true;
+      return;
+    }
+    if (tree.panStart) {
+      tree.cam.x = tree.panStart.camx - (sx - tree.panStart.sx) / tree.cam.s;
+      tree.cam.y = tree.panStart.camy - (sy - tree.panStart.sy) / tree.cam.s;
+      tree.dirty = true;
+    }
+  });
+
+  function treePointerEnd(ev) {
+    if (!tree.pointers.has(ev.pointerId)) return;
+    const { sx, sy } = tree.pointers.get(ev.pointerId);
+    tree.pointers.delete(ev.pointerId);
+    if (tree.pointers.size < 2) tree.pinch0 = null;
+    const wasTap = tree.moved < 10 && Date.now() - tree.downAt < 400;
+    if (wasTap) {
+      const hit = treeHit(sx, sy);
+      selectTreeNode(hit, hit >= 0);
+    }
+    tree.dragNode = -1;
+    tree.panStart = null;
+  }
+  treeCanvas.addEventListener("pointerup", treePointerEnd);
+  treeCanvas.addEventListener("pointercancel", treePointerEnd);
+
+  treeCanvas.addEventListener("wheel", ev => {
+    ev.preventDefault();
+    const [sx, sy] = canvasPos(ev);
+    const [wx, wy] = s2w(sx, sy);
+    tree.cam.s = Math.min(4, Math.max(0.15, tree.cam.s * (ev.deltaY < 0 ? 1.12 : 0.89)));
+    tree.cam.x = wx - (sx - tree.W / 2) / tree.cam.s;
+    tree.cam.y = wy - (sy - tree.H / 2) / tree.cam.s;
+    tree.dirty = true;
+  }, { passive: false });
+
+  document.querySelector("#treeFit").addEventListener("click", () => {
+    tree.focusSys = "";
+    selectTreeNode(-1, false);
+    treeLegend.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    treeFitTo(tree.n);
+  });
+
+  document.querySelector("#treeShuffle").addEventListener("click", () => {
+    tree.n.forEach(ni => {
+      ni.x = ni.ax + (Math.random() - 0.5) * 240;
+      ni.y = ni.ay + (Math.random() - 0.5) * 240;
+      ni.vx = 0; ni.vy = 0;
+    });
+    tree.alpha = 1;
+    tree.physics = true;
+    tree.dirty = true;
+  });
+
+  treeLegend.addEventListener("click", ev => {
+    const btn = ev.target.closest("[data-tree-sys]");
+    if (!btn) return;
+    const sys = btn.dataset.treeSys;
+    tree.focusSys = tree.focusSys === sys ? "" : sys;
+    selectTreeNode(-1, false);
+    treeLegend.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.treeSys === tree.focusSys));
+    if (tree.focusSys) treeFitTo(tree.n.filter(ni => ni.sysId === tree.focusSys));
+    else treeFitTo(tree.n);
+  });
+
+  window.addEventListener("resize", () => {
+    if (tree.running) treeResize();
+  });
+
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
     const nav = event.target.closest("[data-view]");
@@ -936,6 +1385,9 @@ if (typeof document !== "undefined") {
       if (to === "study") renderStudy();
       return;
     }
+
+    const treeSel = event.target.closest("[data-tree-select]");
+    if (treeSel) { selectTreeNode(Number(treeSel.dataset.treeSelect)); return; }
 
     const open = event.target.closest("[data-open-node]");
     if (open) { openDetail(open.dataset.openNode); return; }

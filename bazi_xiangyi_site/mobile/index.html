@@ -52,6 +52,19 @@
         <div id="studyCard" class="study-zone"></div>
       </section>
 
+      <!-- 象义树 -->
+      <section class="view" id="view-tree">
+        <div class="tree-wrap" id="treeWrap">
+          <canvas id="treeCanvas"></canvas>
+          <div class="tree-legend" id="treeLegend"></div>
+          <div class="tree-tools">
+            <button type="button" id="treeFit">全图</button>
+            <button type="button" id="treeShuffle">重排</button>
+          </div>
+          <div class="tree-info" id="treeInfo"></div>
+        </div>
+      </section>
+
       <!-- 图鉴 -->
       <section class="view" id="view-library">
         <div id="systemTabs" class="scope-row"></div>
@@ -72,6 +85,7 @@
       <button type="button" data-view="search" class="active"><strong>查</strong><span>查询</span></button>
       <button type="button" data-view="chart"><strong>盘</strong><span>排盘</span></button>
       <button type="button" data-view="study"><strong>学</strong><span>学习</span></button>
+      <button type="button" data-view="tree"><strong>树</strong><span>象义树</span></button>
       <button type="button" data-view="library"><strong>库</strong><span>图鉴</span></button>
     </nav>
   </div>
