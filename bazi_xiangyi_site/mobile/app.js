@@ -809,6 +809,110 @@ function gradeStudy(nodeId, grade) {
   storageSet("srs", srs);
 }
 
+/* ---------- 学习出题（选择题，全部由 data.js 生成） ---------- */
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function sample(arr, n, exclude = new Set()) {
+  const pool = [...new Set(arr)].filter(x => !exclude.has(x));
+  return shuffle(pool).slice(0, n);
+}
+
+// 一个节点里出现过的所有词，用来排除“其实也对”的干扰项
+function nodeWordSet(node) {
+  const set = new Set([node.title, node.type]);
+  (node.core || []).forEach(w => set.add(w));
+  Object.values(node.branches || {}).forEach(vs => vs.forEach(v => set.add(String(v))));
+  (node.rules || []).forEach(r => set.add(r));
+  (node.relations || []).forEach(r => set.add(r));
+  return set;
+}
+
+// 地支关系题库：从关系表生成 (甲,乙,关系名,对应词条)
+function relQuizPool() {
+  const pool = [];
+  const chongSeen = new Set();
+  Object.entries(ZHI_CHONG).forEach(([a, b]) => {
+    const key = [a, b].sort().join("");
+    if (chongSeen.has(key)) return;
+    chongSeen.add(key);
+    pool.push({ a, b, label: "六冲", node: "六冲" });
+  });
+  Object.keys(ZHI_LIUHE).forEach(k => pool.push({ a: k[0], b: k[1], label: "六合", node: "地支六合" }));
+  CHUAN_SHENG.concat(CHUAN_KE).forEach(k => pool.push({ a: k[0], b: k[1], label: "相穿", node: "穿" }));
+  PO_PAIRS.forEach(k => pool.push({ a: k[0], b: k[1], label: "相破", node: "六破" }));
+  ANHE_PAIRS.forEach(k => pool.push({ a: k[0], b: k[1], label: "暗合", node: "暗合" }));
+  SANHE.forEach(([s, z, m]) => pool.push({ a: s, b: m, label: "三合", node: "地支三合" }));
+  return pool;
+}
+const REL_LABELS = ["六冲", "六合", "三合", "相穿", "相破", "暗合"];
+
+function makeQuizQuestion(scope) {
+  const pool = scopeNodes(scope);
+  if (!pool.length) return null;
+  const relOk = scope === "all" || scope === "relations" || scope === "branches";
+
+  // 约 1/3 概率出地支关系题
+  if (relOk && Math.random() < 0.34) {
+    const q = relQuizPool()[Math.floor(Math.random() * relQuizPool().length)];
+    const node = nodeByTitle.get(q.node);
+    const distract = sample(REL_LABELS, 3, new Set([q.label]));
+    const options = shuffle([{ text: q.label, correct: true }, ...distract.map(t => ({ text: t, correct: false }))]);
+    return {
+      kind: "rel",
+      nodeId: node?.id || null,
+      prompt: `地支「${q.a}」和「${q.b}」之间是什么关系？`,
+      options,
+      why: `${q.a}${q.b}${q.label}。${node ? nodePlain(node) : ""}`
+    };
+  }
+
+  const node = pickStudyNode(scope, null);
+  if (!node) return null;
+  const cores = (node.core || []).filter(Boolean);
+  const canReverse = cores.length >= 3;
+
+  // 象→词：给核心象，猜词条名
+  if (canReverse && Math.random() < 0.5) {
+    const sig = shuffle(cores).slice(0, 4);
+    const sameSys = pool.filter(n => n.id !== node.id).map(n => n.title);
+    const others = sample(sameSys.length >= 3 ? sameSys : nodes.map(n => n.title), 3, new Set([node.title]));
+    const options = shuffle([{ text: node.title, correct: true }, ...others.map(t => ({ text: t, correct: false }))]);
+    return {
+      kind: "toTitle",
+      nodeId: node.id,
+      prompt: `“${sig.join("、")}” 说的是哪个词条？`,
+      options,
+      why: `${node.title}（${node.systemTitle}）：${nodePlain(node)}`
+    };
+  }
+
+  // 词→象：给词条名，选正确的核心象义
+  const correct = cores.length ? cores[Math.floor(Math.random() * Math.min(cores.length, 4))] : node.title;
+  const own = nodeWordSet(node);
+  const distractPool = [];
+  (pool.length >= 8 ? pool : nodes).forEach(n => {
+    if (n.id === node.id) return;
+    (n.core || []).forEach(c => { if (c.length <= 5 && !own.has(c)) distractPool.push(c); });
+  });
+  const distract = sample(distractPool, 3, new Set([correct]));
+  if (distract.length < 3) return makeQuizQuestion(scope); // 干扰项不足，换一题
+  const options = shuffle([{ text: correct, correct: true }, ...distract.map(t => ({ text: t, correct: false }))]);
+  return {
+    kind: "toCore",
+    nodeId: node.id,
+    prompt: `「${node.title}」最核心的象义，下面哪个对？`,
+    options,
+    why: `${node.title}：${nodePlain(node)}`
+  };
+}
+
 /* ================= DOM 层 ================= */
 if (typeof document !== "undefined") {
 
@@ -823,6 +927,7 @@ if (typeof document !== "undefined") {
     quizMode: document.querySelector("#quizMode"),
     resetBazi: document.querySelector("#resetBazi"),
     chartAnalysis: document.querySelector("#chartAnalysis"),
+    studyMode: document.querySelector("#studyMode"),
     studyScope: document.querySelector("#studyScope"),
     studyStats: document.querySelector("#studyStats"),
     studyCard: document.querySelector("#studyCard"),
@@ -854,6 +959,9 @@ if (typeof document !== "undefined") {
   let studyScope = storageGet("studyScope", "all");
   let studyNodeId = null;
   let studyFlipped = false;
+  let studyMode = storageGet("studyMode", "flip"); // flip | quiz
+  let currentQuiz = null;
+  let quizChosen = -1;
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
 
@@ -1095,6 +1203,12 @@ if (typeof document !== "undefined") {
   }
 
   /* ---- 学习页 ---- */
+  function renderStudyMode() {
+    el.studyMode.innerHTML = `
+      <button type="button" class="${studyMode === "flip" ? "active" : ""}" data-study-mode="flip">翻卡</button>
+      <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">答题</button>`;
+  }
+
   function renderStudyScope() {
     const scopes = [{ id: "all", title: "全部" }, ...graph.systems.map(s => ({ id: s.id, title: s.title }))];
     el.studyScope.innerHTML = scopes.map(s =>
@@ -1110,9 +1224,50 @@ if (typeof document !== "undefined") {
       <div class="stat-box s-new"><b>${fresh}</b><span>未学</span></div>`;
   }
 
+  function renderQuiz(pickNew = false) {
+    if (pickNew || !currentQuiz) {
+      currentQuiz = makeQuizQuestion(studyScope);
+      quizChosen = -1;
+    }
+    if (!currentQuiz) {
+      el.studyCard.innerHTML = `<div class="empty-card">这个范围里的词条不够出题，换个范围或用翻卡。</div>`;
+      return;
+    }
+    const q = currentQuiz;
+    const answered = quizChosen >= 0;
+    const chosenCorrect = answered && q.options[quizChosen].correct;
+    const kindLabel = { rel: "地支关系", toTitle: "由象猜词", toCore: "由词选象" }[q.kind] || "";
+    const opts = q.options.map((o, i) => {
+      let cls = "quiz-opt";
+      if (answered) {
+        if (o.correct) cls += " correct";
+        else if (i === quizChosen) cls += " wrong";
+        else cls += " faded";
+      }
+      return `<button type="button" class="${cls}" data-quiz-opt="${i}" ${answered ? "disabled" : ""}>${escapeHtml(o.text)}</button>`;
+    }).join("");
+    el.studyCard.innerHTML = `
+      <div class="quiz-card">
+        <p class="quiz-kind">${escapeHtml(kindLabel)}</p>
+        <h3 class="quiz-prompt">${escapeHtml(q.prompt)}</h3>
+        <div class="quiz-opts">${opts}</div>
+        ${answered ? `
+          <div class="quiz-feedback ${chosenCorrect ? "ok" : "no"}">
+            <strong>${chosenCorrect ? "答对了 ✓" : "再记一下 ✗"}</strong>
+            <p>${escapeHtml(q.why)}</p>
+          </div>
+          <div class="quiz-after">
+            ${q.nodeId ? `<button class="flash-detail-link" type="button" data-open-node="${escapeHtml(q.nodeId)}">看完整象义</button>` : "<span></span>"}
+            <button class="quiz-next" type="button" data-quiz-next>下一题 →</button>
+          </div>` : ""}
+      </div>`;
+  }
+
   function renderStudy(pickNew = false) {
+    renderStudyMode();
     renderStudyScope();
     renderStudyStats();
+    if (studyMode === "quiz") { renderQuiz(pickNew); return; }
     if (pickNew || !studyNodeId || !scopeNodes(studyScope).some(n => n.id === studyNodeId)) {
       const next = pickStudyNode(studyScope, studyNodeId);
       studyNodeId = next?.id || null;
@@ -1814,6 +1969,14 @@ if (typeof document !== "undefined") {
     const reveal = event.target.closest("[data-reveal]");
     if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); return; }
 
+    const studyModeBtn = event.target.closest("[data-study-mode]");
+    if (studyModeBtn) {
+      studyMode = studyModeBtn.dataset.studyMode;
+      storageSet("studyMode", studyMode);
+      renderStudy();
+      return;
+    }
+
     const scope = event.target.closest("[data-scope]");
     if (scope) {
       studyScope = scope.dataset.scope;
@@ -1830,6 +1993,18 @@ if (typeof document !== "undefined") {
       renderStudy(true);
       return;
     }
+
+    const quizOpt = event.target.closest("[data-quiz-opt]");
+    if (quizOpt) {
+      if (quizChosen >= 0 || !currentQuiz) return;
+      quizChosen = Number(quizOpt.dataset.quizOpt);
+      if (currentQuiz.nodeId) gradeStudy(currentQuiz.nodeId, currentQuiz.options[quizChosen].correct ? "good" : "bad");
+      renderStudyStats();
+      renderQuiz();
+      return;
+    }
+
+    if (event.target.closest("[data-quiz-next]")) { renderQuiz(true); renderStudyStats(); return; }
 
     const system = event.target.closest("[data-system]");
     if (system) { activeSystemId = system.dataset.system; renderLibrary(); return; }

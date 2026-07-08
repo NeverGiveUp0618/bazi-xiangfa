@@ -3510,7 +3510,7 @@ window.BAZI_GRAPH = {
           ]
         },
         {
-          "id": "wu",
+          "id": "wu-gan",
           "title": "戊土",
           "type": "天干",
           "core": [
