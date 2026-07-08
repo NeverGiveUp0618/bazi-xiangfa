@@ -586,6 +586,112 @@ mark {
 
 .quiz-toggle input { width: 17px; height: 17px; accent-color: var(--accent); }
 
+/* 命例本 */
+.chart-book {
+  background: var(--card-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px;
+  margin: 0 0 12px;
+}
+
+.chart-book-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chart-book-head strong {
+  font-size: 14px;
+  color: var(--accent-ink);
+}
+
+.chart-book-head span {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.chart-book-actions {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chart-book-actions button,
+.chart-study-actions button {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.chart-book-actions button:first-child,
+.chart-study-actions button:first-child {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chart-book-actions button:disabled,
+.chart-study-actions button:disabled {
+  opacity: 0.45;
+}
+
+.chart-book-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 9px;
+}
+
+.chart-book-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.chart-book-row > button:first-child {
+  text-align: left;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+
+.chart-book-row.active > button:first-child {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.chart-book-row strong,
+.chart-book-row span {
+  display: block;
+}
+
+.chart-book-row strong {
+  font-size: 13px;
+}
+
+.chart-book-row span {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chart-book-del {
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 10px;
+  padding: 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* 解读区 */
 .ana-section { margin-top: 16px; }
 
@@ -626,6 +732,36 @@ mark {
   border-radius: var(--radius);
   padding: 14px;
   font-size: 14px;
+}
+
+.chart-study-box {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-top: 14px;
+}
+
+.chart-study-box strong {
+  color: var(--gold);
+  font-size: 15px;
+}
+
+.chart-study-box p {
+  margin: 3px 0 0;
+  font-size: 12px;
+  color: var(--ink);
+  opacity: 0.82;
+}
+
+.chart-study-actions {
+  display: flex;
+  gap: 6px;
+  white-space: nowrap;
 }
 
 .rel-card {
@@ -1025,6 +1161,17 @@ mark {
 .flash-ask {
   font-size: 14px;
   color: var(--muted);
+}
+
+.flash-chart-why {
+  margin: 0;
+  background: var(--gold-soft);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 13px;
+  text-align: left;
+  color: var(--gold);
 }
 
 .flash-core {

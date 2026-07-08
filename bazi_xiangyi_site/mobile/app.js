@@ -804,12 +804,102 @@ function storageSet(key, value) {
   try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* 忽略 */ }
 }
 
+function baziTitle(arr) {
+  if (!Array.isArray(arr) || arr.length !== 8) return "未命名命例";
+  return PILLARS.map((p, i) => `${p}:${arr[i]}${arr[i + 4]}`).join(" ");
+}
+
+function baziKey(arr) {
+  return Array.isArray(arr) ? arr.join("") : "";
+}
+
+function uid(prefix = "id") {
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function normalizeChartBook(value) {
+  if (!Array.isArray(value)) return [];
+  return value
+    .filter(item => Array.isArray(item?.bazi) && item.bazi.length === 8)
+    .map(item => ({
+      id: item.id || uid("chart"),
+      title: String(item.title || baziTitle(item.bazi)),
+      bazi: item.bazi.slice(0, 8),
+      note: String(item.note || ""),
+      createdAt: Number(item.createdAt || Date.now()),
+      updatedAt: Number(item.updatedAt || item.createdAt || Date.now())
+    }));
+}
+
+function chartBookAll() {
+  return normalizeChartBook(storageGet("chartBook", []));
+}
+
+function chartStudyDeck() {
+  const deck = storageGet("chartStudyDeck", null);
+  if (!deck || !Array.isArray(deck.ids)) return { ids: [], items: [], title: "", bazi: [], savedAt: 0 };
+  const ids = [...new Set(deck.ids)].filter(id => nodeById.has(id));
+  const items = Array.isArray(deck.items)
+    ? deck.items.filter(x => x && ids.includes(x.id)).map(x => ({ id: x.id, why: String(x.why || ""), source: String(x.source || "") }))
+    : ids.map(id => ({ id, why: "", source: "" }));
+  return {
+    ids,
+    items,
+    title: String(deck.title || ""),
+    bazi: Array.isArray(deck.bazi) ? deck.bazi.slice(0, 8) : [],
+    savedAt: Number(deck.savedAt || 0)
+  };
+}
+
+function chartStudyNodes() {
+  const deck = chartStudyDeck();
+  return deck.ids.map(id => nodeById.get(id)).filter(Boolean);
+}
+
+function collectChartStudyItems(bazi) {
+  const map = new Map();
+  const add = (nodeId, source, why) => {
+    if (!nodeId || !nodeById.has(nodeId)) return;
+    if (map.has(nodeId)) {
+      const old = map.get(nodeId);
+      if (source && !old.source.includes(source)) old.source += `、${source}`;
+      return;
+    }
+    map.set(nodeId, { id: nodeId, source, why });
+  };
+
+  bazi.forEach((ch, i) => {
+    const n = nodeForChar(ch);
+    add(n?.id, slotLabel(i), `${slotLabel(i)}见${ch}，先把这个字本身的五行、性情、像法记住。`);
+  });
+
+  detectCombos(bazi).forEach(c => add(c.nodeId, "组合提示", c.why));
+  scanRelations(bazi).forEach(r => add(r.nodeId, "干支关系", `${r.name}落在${r.pos}：${r.note || r.brief}`));
+  scanShensha(bazi).forEach(s => add(s.nodeId, "神煞", `${s.name}落${slotLabel(s.cell.i)}${s.cell.ch}，${s.baseDescs.join("；")}。`));
+  scanNayin(bazi).forEach(n => add(n.nodeId, "纳音", `${n.pillar}${n.ganzhi}为${n.name}，先记它的大象。`));
+
+  const dayGan = bazi[2];
+  [0, 1, 3].forEach(p => {
+    const god = tenGod(dayGan, bazi[p]);
+    const n = nodeByTitle.get(god);
+    add(n?.id, "十神", `${PILLARS[p]}干${bazi[p]}对日主${dayGan}为${god}。`);
+  });
+  [4, 5, 6, 7].forEach(i => (CANG_GAN[bazi[i]] || []).forEach(hg => {
+    const god = tenGod(dayGan, hg);
+    const n = nodeByTitle.get(god);
+    add(n?.id, "藏干十神", `${slotLabel(i)}${bazi[i]}藏${hg}，对日主${dayGan}为${god}。`);
+  }));
+
+  return [...map.values()];
+}
+
 /* ---------- 学习（间隔复习） ---------- */
 const SRS_IVL_DAYS = [0.5, 1, 3, 7, 15, 30];
 
 function srsAll() { return storageGet("srs", {}); }
 
 function scopeNodes(scope) {
+  if (scope === "chart-current") return chartStudyNodes();
   return scope === "all" ? nodes : nodes.filter(n => n.systemId === scope);
 }
 
@@ -974,6 +1064,7 @@ if (typeof document !== "undefined") {
     charPicker: document.querySelector("#charPicker"),
     quizMode: document.querySelector("#quizMode"),
     resetBazi: document.querySelector("#resetBazi"),
+    chartBook: document.querySelector("#chartBook"),
     chartAnalysis: document.querySelector("#chartAnalysis"),
     studyMode: document.querySelector("#studyMode"),
     studyScope: document.querySelector("#studyScope"),
@@ -988,6 +1079,8 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "📚 排盘和学习打通——盘里扫到的天干地支、十神、关系、神煞、纳音可一键加入「盘中象」卡组"],
+    ["26.7.9", "🗂️ 命例本上线——可保存多个八字盘，随时载入复盘，并支持 JSON 导入导出"],
     ["26.7.8", "🌳 象义树取象路径——点两个词看最短取象链，逐跳说清为什么这么串；关掉路径回到起点那个字的连线态"],
     ["26.7.8", "🎯 学习加「答题」模式——由词选象 / 由象猜词 / 地支关系判断三种题，答对答错自动喂间隔复习"],
     ["26.7.8", "🧩 排盘加「组合提示」——自动识别印+财、伤官见官、食神制杀、财入库、穿夫妻宫等组合，点进组合卡"],
@@ -1015,6 +1108,7 @@ if (typeof document !== "undefined") {
   let quizOn = storageGet("quiz", false);
   let quizRevealed = { rel: false, ss: false };
   let studyScope = storageGet("studyScope", "all");
+  if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
   let studyNodeId = null;
   let studyFlipped = false;
   let studyMode = storageGet("studyMode", "flip"); // flip | quiz
@@ -1145,6 +1239,7 @@ if (typeof document !== "undefined") {
 
   /* ---- 排盘页 ---- */
   function renderChart() {
+    renderChartBook();
     // 上排天干、下排地支
     const cellsHtml = [];
     for (const row of [0, 4]) {
@@ -1188,6 +1283,30 @@ if (typeof document !== "undefined") {
     renderAnalysis();
   }
 
+  function renderChartBook() {
+    const book = chartBookAll();
+    const currentKey = baziKey(bazi);
+    const rows = book.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8).map(item => `
+      <div class="chart-book-row ${baziKey(item.bazi) === currentKey ? "active" : ""}">
+        <button type="button" data-load-chart="${escapeHtml(item.id)}">
+          <strong>${escapeHtml(item.title)}</strong>
+          <span>${escapeHtml(baziTitle(item.bazi))}</span>
+        </button>
+        <button type="button" class="chart-book-del" data-delete-chart="${escapeHtml(item.id)}" aria-label="删除命例">删</button>
+      </div>`).join("");
+    el.chartBook.innerHTML = `
+      <div class="chart-book-head">
+        <strong>命例本</strong>
+        <span>${book.length ? `${book.length} 个命例` : "先保存当前盘，之后可反复载入"}</span>
+      </div>
+      <div class="chart-book-actions">
+        <button type="button" data-save-chart>保存当前盘</button>
+        <button type="button" data-export-charts ${book.length ? "" : "disabled"}>导出</button>
+        <button type="button" data-import-charts>导入</button>
+      </div>
+      ${rows ? `<div class="chart-book-list">${rows}</div>` : ""}`;
+  }
+
   function relCardHtml(item) {
     return `
       <button class="rel-card ${item.kindClass}" type="button" ${item.nodeId ? `data-open-node="${escapeHtml(item.nodeId)}"` : ""}>
@@ -1205,6 +1324,12 @@ if (typeof document !== "undefined") {
     const shensha = scanShensha(bazi);
     const nayin = scanNayin(bazi);
     const combos = detectCombos(bazi);
+    const chartStudyItems = collectChartStudyItems(bazi);
+    const savedDeck = chartStudyDeck();
+    const currentDeckKey = chartStudyItems.map(x => x.id).sort().join("|");
+    const savedDeckKey = savedDeck.ids.slice().sort().join("|");
+    const isSavedDeck = baziKey(savedDeck.bazi) === baziKey(bazi) && savedDeckKey === currentDeckKey;
+    const sourceSummary = [...new Set(chartStudyItems.map(x => x.source).filter(Boolean))].slice(0, 6).join("、");
 
     const relBody = quizOn && !quizRevealed.rel
       ? `<button class="reveal-btn" type="button" data-reveal="rel">先自己找：盘里哪些字在冲、合、穿、破、刑？想好了点这里揭晓 ${rels.length} 条</button>`
@@ -1260,8 +1385,20 @@ if (typeof document !== "undefined") {
         <div class="ana-head"><h3>组合提示</h3><span class="ana-count">${combos.length} 组</span></div>
         ${comboBody}
       </section>` : "";
+    const studyDeckSection = `
+      <div class="chart-study-box">
+        <div>
+          <strong>盘中象学习卡组</strong>
+          <p>本盘扫到 ${chartStudyItems.length} 个可复习词条：${escapeHtml(sourceSummary || "天干地支、十神、关系、神煞、纳音")}</p>
+        </div>
+        <div class="chart-study-actions">
+          <button type="button" data-add-chart-study>${isSavedDeck ? "更新卡组" : "加入学"}</button>
+          <button type="button" data-go-chart-study ${isSavedDeck ? "" : "disabled"}>去复习</button>
+        </div>
+      </div>`;
 
     el.chartAnalysis.innerHTML = `
+      ${studyDeckSection}
       ${comboSection}
       <section class="ana-section">
         <div class="ana-head"><h3>干支关系</h3><span class="ana-count">${rels.length} 条</span></div>
@@ -1289,9 +1426,14 @@ if (typeof document !== "undefined") {
   }
 
   function renderStudyScope() {
-    const scopes = [{ id: "all", title: "全部" }, ...graph.systems.map(s => ({ id: s.id, title: s.title }))];
+    const deck = chartStudyDeck();
+    const scopes = [
+      { id: "all", title: "全部" },
+      { id: "chart-current", title: deck.ids.length ? `盘中象 ${deck.ids.length}` : "盘中象" },
+      ...graph.systems.map(s => ({ id: s.id, title: s.title }))
+    ];
     el.studyScope.innerHTML = scopes.map(s =>
-      `<button type="button" class="${studyScope === s.id ? "active" : ""}" data-scope="${escapeHtml(s.id)}">${escapeHtml(s.title)}</button>`
+      `<button type="button" class="${studyScope === s.id ? "active" : ""}" data-scope="${escapeHtml(s.id)}" ${s.id === "chart-current" && !deck.ids.length ? "disabled" : ""}>${escapeHtml(s.title)}</button>`
     ).join("");
   }
 
@@ -1301,6 +1443,12 @@ if (typeof document !== "undefined") {
       <div class="stat-box s-ok"><b>${ok}</b><span>已掌握</span></div>
       <div class="stat-box s-doing"><b>${doing}</b><span>学习中</span></div>
       <div class="stat-box s-new"><b>${fresh}</b><span>未学</span></div>`;
+  }
+
+  function chartStudyReason(nodeId) {
+    if (studyScope !== "chart-current") return "";
+    const hit = chartStudyDeck().items.find(x => x.id === nodeId);
+    return hit?.why || "";
   }
 
   function renderQuiz(pickNew = false) {
@@ -1359,11 +1507,13 @@ if (typeof document !== "undefined") {
     }
     const srs = srsAll()[node.id];
     const status = !srs?.seen ? "新词条" : (srs.lv >= 3 ? "已掌握 · 复习" : `熟练度 ${srs.lv}/5`);
+    const chartWhy = chartStudyReason(node.id);
     if (!studyFlipped) {
       el.studyCard.innerHTML = `
         <div class="flash-card">
           <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)} · ${escapeHtml(status)}</p>
           <h2 class="flash-title">${escapeHtml(node.title)}</h2>
+          ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
           <p class="flash-ask">它的核心象义是什么？大白话怎么讲？先自己想。</p>
         </div>
         <button class="flash-flip" type="button" data-flip>翻面看答案</button>`;
@@ -1374,6 +1524,7 @@ if (typeof document !== "undefined") {
           <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)}</p>
           <h2 class="flash-title" style="font-size:28px">${escapeHtml(node.title)}</h2>
           <div class="flash-core">${(node.core || []).slice(0, 6).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>
+          ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
           <p class="flash-plain">${escapeHtml(nodePlain(node))}</p>
           ${like?.length ? `<p class="flash-like">像什么：${escapeHtml(like.slice(0, 4).join("、"))}</p>` : ""}
         </div>
@@ -2009,6 +2160,111 @@ if (typeof document !== "undefined") {
     if (tree.running) treeResize();
   });
 
+  function saveCurrentChart() {
+    const book = chartBookAll();
+    const key = baziKey(bazi);
+    const old = book.find(item => baziKey(item.bazi) === key);
+    const name = prompt("给这个命例起个名字：", old?.title || baziTitle(bazi));
+    if (name === null) return;
+    const now = Date.now();
+    if (old) {
+      old.title = name.trim() || baziTitle(bazi);
+      old.bazi = bazi.slice();
+      old.updatedAt = now;
+    } else {
+      book.push({ id: uid("chart"), title: name.trim() || baziTitle(bazi), bazi: bazi.slice(), note: "", createdAt: now, updatedAt: now });
+    }
+    storageSet("chartBook", book);
+    renderChartBook();
+  }
+
+  function loadChart(id) {
+    const item = chartBookAll().find(x => x.id === id);
+    if (!item) return;
+    bazi = item.bazi.slice();
+    selectedSlot = 0;
+    quizRevealed = { rel: false, ss: false };
+    storageSet("bazi", bazi);
+    renderChart();
+  }
+
+  function deleteChart(id) {
+    const book = chartBookAll();
+    const item = book.find(x => x.id === id);
+    if (!item) return;
+    if (!confirm(`删除命例「${item.title}」？`)) return;
+    storageSet("chartBook", book.filter(x => x.id !== id));
+    renderChartBook();
+  }
+
+  function exportCharts() {
+    const payload = { app: "bazi-xiangyi", type: "chart-book", version: 1, exportedAt: new Date().toISOString(), charts: chartBookAll() };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `八字象义_命例本_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function importCharts() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json,.json";
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(String(reader.result || ""));
+          const incoming = normalizeChartBook(Array.isArray(parsed) ? parsed : parsed.charts);
+          if (!incoming.length) { alert("没有读到可导入的命例。"); return; }
+          const book = chartBookAll();
+          const byKey = new Map(book.map(x => [baziKey(x.bazi), x]));
+          incoming.forEach(item => {
+            const key = baziKey(item.bazi);
+            const old = byKey.get(key);
+            if (old) {
+              old.title = item.title || old.title;
+              old.updatedAt = Date.now();
+            } else {
+              item.id = uid("chart");
+              book.push(item);
+            }
+          });
+          storageSet("chartBook", book);
+          renderChartBook();
+          alert(`已导入 ${incoming.length} 个命例。`);
+        } catch {
+          alert("导入失败：JSON 格式不对。");
+        }
+      };
+      reader.readAsText(file);
+    });
+    input.click();
+  }
+
+  function saveChartStudyDeck() {
+    const items = collectChartStudyItems(bazi);
+    storageSet("chartStudyDeck", {
+      title: baziTitle(bazi),
+      bazi: bazi.slice(),
+      ids: items.map(x => x.id),
+      items,
+      savedAt: Date.now()
+    });
+    studyScope = "chart-current";
+    storageSet("studyScope", studyScope);
+    studyNodeId = null;
+    currentQuiz = null;
+    renderAnalysis();
+    renderStudy(true);
+  }
+
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
     const nav = event.target.closest("[data-view]");
@@ -2059,6 +2315,26 @@ if (typeof document !== "undefined") {
 
     const reveal = event.target.closest("[data-reveal]");
     if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); return; }
+
+    if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); return; }
+    if (event.target.closest("[data-export-charts]")) { exportCharts(); return; }
+    if (event.target.closest("[data-import-charts]")) { importCharts(); return; }
+
+    const loadChartBtn = event.target.closest("[data-load-chart]");
+    if (loadChartBtn) { loadChart(loadChartBtn.dataset.loadChart); return; }
+
+    const deleteChartBtn = event.target.closest("[data-delete-chart]");
+    if (deleteChartBtn) { deleteChart(deleteChartBtn.dataset.deleteChart); return; }
+
+    if (event.target.closest("[data-add-chart-study]")) { saveChartStudyDeck(); return; }
+    if (event.target.closest("[data-go-chart-study]")) {
+      if (!chartStudyDeck().ids.length) return;
+      studyScope = "chart-current";
+      storageSet("studyScope", studyScope);
+      switchTab("study");
+      renderStudy(true);
+      return;
+    }
 
     const studyModeBtn = event.target.closest("[data-study-mode]");
     if (studyModeBtn) {
