@@ -1040,6 +1040,52 @@ mark {
   font-weight: 600;
 }
 
+.chart-study-filter {
+  margin: 0 0 8px;
+}
+
+.chart-study-filter:empty { display: none; }
+
+.chart-study-filter-head {
+  font-size: 12px;
+  color: var(--gold);
+  font-weight: 600;
+  margin: 2px 0 5px;
+}
+
+.chart-study-filter-row {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chart-study-filter-row::-webkit-scrollbar { display: none; }
+
+.chart-study-filter-row button {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  background: var(--card);
+  border-radius: 999px;
+  padding: 6px 11px;
+  font-size: 13px;
+}
+
+.chart-study-filter-row button.active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #fff;
+}
+
+.chart-study-filter-row button:disabled {
+  opacity: 0.42;
+}
+
+.chart-study-filter-row small {
+  margin-left: 4px;
+  opacity: 0.7;
+}
+
 .study-stats {
   display: flex;
   gap: 8px;

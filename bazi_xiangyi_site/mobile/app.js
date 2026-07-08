@@ -804,6 +804,8 @@ function storageSet(key, value) {
   try { localStorage.setItem(STORAGE_PREFIX + key, JSON.stringify(value)); } catch { /* 忽略 */ }
 }
 
+let chartStudyPart = "all";
+
 function baziTitle(arr) {
   if (!Array.isArray(arr) || arr.length !== 8) return "未命名命例";
   return PILLARS.map((p, i) => `${p}:${arr[i]}${arr[i + 4]}`).join(" ");
@@ -861,6 +863,36 @@ function chartStudyNodes() {
   return deck.ids.map(id => nodeById.get(id)).filter(Boolean);
 }
 
+const CHART_STUDY_PARTS = [
+  { id: "all", title: "全部", sources: [] },
+  { id: "chars", title: "字本身", sources: ["年干", "月干", "日干", "时干", "年支", "月支", "日支", "时支"] },
+  { id: "gods", title: "十神藏干", sources: ["十神", "藏干十神"] },
+  { id: "rels", title: "关系组合", sources: ["干支关系", "组合提示"] },
+  { id: "marks", title: "神煞纳音", sources: ["神煞", "纳音"] }
+];
+
+function chartStudyPartCounts() {
+  const deck = chartStudyDeck();
+  const counts = Object.fromEntries(CHART_STUDY_PARTS.map(p => [p.id, 0]));
+  counts.all = deck.ids.length;
+  deck.items.forEach(item => {
+    CHART_STUDY_PARTS.slice(1).forEach(part => {
+      if (part.sources.some(src => item.source.includes(src))) counts[part.id]++;
+    });
+  });
+  return counts;
+}
+
+function chartStudyNodesByPart(partId) {
+  const deck = chartStudyDeck();
+  if (partId === "all") return chartStudyNodes();
+  const part = CHART_STUDY_PARTS.find(p => p.id === partId) || CHART_STUDY_PARTS[0];
+  const ids = deck.items
+    .filter(item => part.sources.some(src => item.source.includes(src)))
+    .map(item => item.id);
+  return [...new Set(ids)].map(id => nodeById.get(id)).filter(Boolean);
+}
+
 function collectChartStudyItems(bazi) {
   const map = new Map();
   const add = (nodeId, source, why) => {
@@ -904,7 +936,7 @@ const SRS_IVL_DAYS = [0.5, 1, 3, 7, 15, 30];
 function srsAll() { return storageGet("srs", {}); }
 
 function scopeNodes(scope) {
-  if (scope === "chart-current") return chartStudyNodes();
+  if (scope === "chart-current") return chartStudyNodesByPart(chartStudyPart);
   return scope === "all" ? nodes : nodes.filter(n => n.systemId === scope);
 }
 
@@ -1073,6 +1105,7 @@ if (typeof document !== "undefined") {
     chartAnalysis: document.querySelector("#chartAnalysis"),
     studyMode: document.querySelector("#studyMode"),
     studyScope: document.querySelector("#studyScope"),
+    chartStudyFilter: document.querySelector("#chartStudyFilter"),
     studyStats: document.querySelector("#studyStats"),
     studyCard: document.querySelector("#studyCard"),
     systemTabs: document.querySelector("#systemTabs"),
@@ -1084,6 +1117,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🧭 盘中象可分组复习——按字本身、十神藏干、关系组合、神煞纳音拆开刷，先抓一类象再扩展"],
     ["26.7.9", "📝 命例本升级研究笔记——每个已保存八字盘可记录自断、重点共象和复盘结论，导入导出会一起保留"],
     ["26.7.9", "⚠️ 补「不能这样断」反例——伤官见官、财库、桃花、夫妻宫等高频误断点加新手防误用提醒"],
     ["26.7.9", "📚 排盘和学习打通——盘里扫到的天干地支、十神、关系、神煞、纳音可一键加入「盘中象」卡组"],
@@ -1116,6 +1150,8 @@ if (typeof document !== "undefined") {
   let quizRevealed = { rel: false, ss: false };
   let studyScope = storageGet("studyScope", "all");
   if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
+  chartStudyPart = storageGet("chartStudyPart", "all");
+  if (!CHART_STUDY_PARTS.some(p => p.id === chartStudyPart)) chartStudyPart = "all";
   let studyNodeId = null;
   let studyFlipped = false;
   let studyMode = storageGet("studyMode", "flip"); // flip | quiz
@@ -1451,6 +1487,27 @@ if (typeof document !== "undefined") {
     ).join("");
   }
 
+  function renderChartStudyFilter() {
+    if (studyScope !== "chart-current") {
+      el.chartStudyFilter.innerHTML = "";
+      return;
+    }
+    const counts = chartStudyPartCounts();
+    if (!counts.all) {
+      el.chartStudyFilter.innerHTML = `<div class="empty-card">还没有盘中象卡组。回到「盘」页点“加入学”。</div>`;
+      return;
+    }
+    if (!counts[chartStudyPart]) chartStudyPart = "all";
+    el.chartStudyFilter.innerHTML = `
+      <div class="chart-study-filter-head">按取象来源复习</div>
+      <div class="chart-study-filter-row">
+        ${CHART_STUDY_PARTS.map(part => `
+          <button type="button" class="${chartStudyPart === part.id ? "active" : ""}" data-chart-study-part="${escapeHtml(part.id)}" ${counts[part.id] ? "" : "disabled"}>
+            ${escapeHtml(part.title)}<small>${counts[part.id] || 0}</small>
+          </button>`).join("")}
+      </div>`;
+  }
+
   function renderStudyStats() {
     const { ok, doing, fresh } = srsStats(studyScope);
     el.studyStats.innerHTML = `
@@ -1507,6 +1564,7 @@ if (typeof document !== "undefined") {
   function renderStudy(pickNew = false) {
     renderStudyMode();
     renderStudyScope();
+    renderChartStudyFilter();
     renderStudyStats();
     if (studyMode === "quiz") { renderQuiz(pickNew); return; }
     if (pickNew || !studyNodeId || !scopeNodes(studyScope).some(n => n.id === studyNodeId)) {
@@ -2284,7 +2342,9 @@ if (typeof document !== "undefined") {
       savedAt: Date.now()
     });
     studyScope = "chart-current";
+    chartStudyPart = "all";
     storageSet("studyScope", studyScope);
+    storageSet("chartStudyPart", chartStudyPart);
     studyNodeId = null;
     currentQuiz = null;
     renderAnalysis();
@@ -2365,6 +2425,16 @@ if (typeof document !== "undefined") {
       return;
     }
 
+    const chartPartBtn = event.target.closest("[data-chart-study-part]");
+    if (chartPartBtn) {
+      chartStudyPart = chartPartBtn.dataset.chartStudyPart;
+      storageSet("chartStudyPart", chartStudyPart);
+      studyNodeId = null;
+      currentQuiz = null;
+      renderStudy(true);
+      return;
+    }
+
     const studyModeBtn = event.target.closest("[data-study-mode]");
     if (studyModeBtn) {
       studyMode = studyModeBtn.dataset.studyMode;
@@ -2377,6 +2447,10 @@ if (typeof document !== "undefined") {
     if (scope) {
       studyScope = scope.dataset.scope;
       storageSet("studyScope", studyScope);
+      if (studyScope !== "chart-current") {
+        chartStudyPart = "all";
+        storageSet("chartStudyPart", chartStudyPart);
+      }
       renderStudy(true);
       return;
     }
