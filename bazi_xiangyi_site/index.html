@@ -4,97 +4,108 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>八字象义图谱</title>
-  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --bg: #f6f4ef;
+      --panel: #fffdf8;
+      --ink: #202124;
+      --muted: #6b6760;
+      --line: #ded8cc;
+      --accent: #9b2f2f;
+      --accent-2: #1f6b68;
+      --shadow: 0 10px 28px rgba(42, 34, 23, .08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    main {
+      display: grid;
+      align-content: center;
+      gap: 22px;
+      width: min(920px, calc(100% - 32px));
+      min-height: 100vh;
+      margin: 0 auto;
+      padding: 32px 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 34px;
+      line-height: 1.15;
+    }
+
+    p {
+      max-width: 620px;
+      margin: 8px 0 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .version-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    a {
+      display: grid;
+      gap: 8px;
+      min-height: 150px;
+      padding: 18px;
+      color: var(--ink);
+      text-decoration: none;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    a strong {
+      color: var(--accent);
+      font-size: 22px;
+    }
+
+    a span {
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    a:hover {
+      border-color: var(--accent-2);
+    }
+
+    @media (max-width: 640px) {
+      h1 { font-size: 28px; }
+      .version-grid { grid-template-columns: 1fr; }
+      a { min-height: 126px; }
+    }
+  </style>
 </head>
 <body>
-  <div class="app">
-    <aside>
-      <div class="brand">
-        <h1>八字象义图谱</h1>
-        <div class="seal">象</div>
-      </div>
+  <main>
+    <header>
+      <h1>八字象义图谱</h1>
+      <p>当前站点拆分为两个独立版本。电脑版保留现有工作台体验，手机版后续单独重做交互。</p>
+    </header>
 
-      <div class="search">
-        <input id="searchInput" type="search" placeholder="搜索：文书、母亲、合同、竞争..." />
-      </div>
-
-      <nav class="mobile-jump" aria-label="手机快捷导航">
-        <a href="#searchInput">搜索</a>
-        <a href="#caseWorkbench">排盘</a>
-        <a href="#insightPanel">查询</a>
-        <a href="#networkPanel">关系</a>
-        <a href="#studyPanel">学习</a>
-        <a href="#detail">详情</a>
-      </nav>
-
-      <div class="case-box" id="caseWorkbench">
-        <div class="case-title">命例工作台</div>
-        <div class="bazi-picker">
-          <div class="bazi-pillar-labels"><span>年</span><span>月</span><span>日</span><span>时</span></div>
-          <div class="bazi-cells" id="baziCells"></div>
-          <div class="bazi-char-picker" id="baziCharPicker"></div>
-          <div class="bazi-actions">
-            <button id="addBaziPoints" type="button">加入排盘观察点</button>
-            <button id="scanBaziRelations" type="button">扫描关系</button>
-          </div>
-          <div class="bazi-scan-hints" id="baziScanHints"></div>
-        </div>
-        <div class="case-input-row">
-          <input id="casePointInput" type="text" placeholder="加入观察点：日支、穿、财库..." />
-          <button id="addCasePoint" type="button">加入</button>
-        </div>
-        <div class="case-points" id="casePoints"></div>
-        <div class="case-actions">
-          <button id="runCaseQuery" type="button">合并查询</button>
-          <button id="clearCasePoints" type="button">清空</button>
-        </div>
-      </div>
-
-      <div class="nav-title">我的学习</div>
-      <div class="study-tools" id="studyTools"></div>
-
-      <div class="nav-title">体系</div>
-      <div class="nav" id="nav"></div>
-
-      <div class="nav-title">主题索引</div>
-      <div class="nav">
-        <button data-quick="文书" data-target-system="ten-gods">文书 <span class="count">正印</span></button>
-        <button data-quick="财富" data-target-system="ten-gods">财富 <span class="count">财星</span></button>
-        <button data-quick="竞争" data-target-system="ten-gods">竞争 <span class="count">比劫</span></button>
-        <button data-quick="表达" data-target-system="ten-gods">表达 <span class="count">食伤</span></button>
-        <button data-quick="规则" data-target-system="ten-gods">规则 <span class="count">官杀</span></button>
-      </div>
-    </aside>
-
-    <main>
-      <section class="hero">
-        <div>
-          <h2 id="viewTitle">十神象义</h2>
-          <p id="viewDesc">以十神为核心节点，把人物、事物、心理、身体、职业、吉凶与组合条件向外展开。</p>
-        </div>
-        <div class="toolbar">
-          <button id="expandAll" type="button">全部展开</button>
-          <button id="collapseAll" type="button">全部收起</button>
-          <button id="resetSearch" type="button">清空搜索</button>
-        </div>
-      </section>
-
-      <section class="insight-panel" id="insightPanel"></section>
-      <section class="case-panel" id="casePanel"></section>
-      <section class="network-panel" id="networkPanel"></section>
-      <section class="study-panel" id="studyPanel"></section>
-      <section class="tree" id="tree"></section>
-      <div class="empty" id="empty">没有匹配的象义。可以换一个词，或后续把它补进词库。</div>
-      <footer class="site-footer">
-        <strong>八字象义图谱</strong>
-        <span>上架时间：2026年7月7日</span>
-      </footer>
-    </main>
-
-    <section class="detail" id="detail"></section>
-  </div>
-
-  <script src="data.js"></script>
-  <script src="app.js"></script>
+    <section class="version-grid" aria-label="版本选择">
+      <a href="./desktop/">
+        <strong>电脑版</strong>
+        <span>保留当前完整三栏工作台、关系网、命例观察台和象义查询功能。</span>
+      </a>
+      <a href="./mobile/">
+        <strong>手机版</strong>
+        <span>作为后续大幅改造的独立版本，优先服务手机点选、查询和学习。</span>
+      </a>
+    </section>
+  </main>
 </body>
 </html>
