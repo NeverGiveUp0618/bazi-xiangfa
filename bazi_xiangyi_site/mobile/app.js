@@ -499,6 +499,251 @@ function buildGraphData() {
   return { gnodes, edges, idxById };
 }
 
+/* ---------- 象义树：连线理由（为什么这两个词连着） ---------- */
+// 纳音名 -> 两组干支，如 杨柳木 -> [壬午, 癸未]
+const NAYIN_GANZHI = {};
+NAYIN_NAMES.forEach((name, k) => {
+  NAYIN_GANZHI[name] = [2 * k, 2 * k + 1].map(i => GAN[i % 10] + ZHI[i % 12]);
+});
+
+const GOD_GROUP = { 正印: "印星", 偏印: "印星", 比肩: "比劫", 劫财: "比劫", 食神: "食伤", 伤官: "食伤", 正财: "财星", 偏财: "财星", 正官: "官杀", 七杀: "官杀" };
+const GROUP_SHENG = { 印星: "比劫", 比劫: "食伤", 食伤: "财星", 财星: "官杀", 官杀: "印星" };
+const GROUP_KE = { 印星: "食伤", 比劫: "财星", 食伤: "官杀", 财星: "印星", 官杀: "比劫" };
+const GROUP_COMBO_NAME = {
+  "官杀印星": "官印相生", "印星比劫": "印生身", "比劫食伤": "身生食伤", "食伤财星": "食伤生财", "财星官杀": "财生官",
+  "财星印星": "财破印", "比劫财星": "比劫夺财", "食伤官杀": "食神制杀、伤官见官", "印星食伤": "印制食伤", "官杀比劫": "官杀克身"
+};
+const SHENSHA_SPOTS = {
+  桃花: { spots: "子午卯酉", why: "桃花按三合局起，永远落在子午卯酉四正（沐浴）之位" },
+  将星: { spots: "子午卯酉", why: "将星是三合局的中神，只会是子午卯酉" },
+  驿马: { spots: "寅申巳亥", why: "驿马按三合局起，永远落在寅申巳亥四驿（长生冲位）" },
+  华盖: { spots: "辰戌丑未", why: "华盖是三合局的墓神，只会是辰戌丑未四库" }
+};
+
+// 取节点代表的单字（甲木->甲、未土->未、五行节点->本字）
+function charOfNode(n) {
+  if (n.systemId === "stems" || n.systemId === "branches") return n.title[0];
+  if (n.systemId === "five-elements" && n.title.length === 1) return n.title;
+  return "";
+}
+
+const HARM_RELS = new Set(["六冲", "三刑", "六害", "六破", "穿", "反吟", "绝", "患"]);
+const HE_RELS = new Set(["天干五合", "地支六合", "暗合", "干支自合", "地支三合", "地支三会"]);
+
+// 需要命理常识才能讲清的连线，逐对手写大白话
+const PAIR_NOTES = {
+  "华盖|偏印": "华盖与偏印气质同类：孤高、玄学、冷门学问，常互相印证。",
+  "羊刃|劫财": "羊刃就是阳干的劫财旺地，刃是劫财的极端形态。",
+  "羊刃|七杀": "羊刃驾杀是经典格局：刃的狠劲要靠七杀来统领使用。",
+  "禄神|比肩": "禄是日主同气之根，禄位藏干正是比肩。",
+  "天乙贵人|正印": "贵人主庇护提携，与正印的庇护、资格之象相合。",
+  "天乙贵人|正官": "贵人常应在名分、体制内的提携上，与正官同路。",
+  "文昌|正印": "文昌主文书考试，正印主文凭证书，文事相通。",
+  "文昌|食神": "文昌主聪明才思，食神主才华输出，都是吐秀之象。",
+  "文昌|伤官": "文昌的聪明外露一面，与伤官的表达才华同路。",
+  "将星|七杀": "将星主掌权统兵，配七杀（权力威严）最典型。",
+  "将星|正官": "将星主掌权，正官主职位名分，合看权位。",
+  "将星|正印": "将星配印，权力有靠山有印信，主掌实权。",
+  "贵人类|天乙贵人": "天乙贵人是贵人类神煞里的头牌。",
+  "贵人类|正印": "贵人类神煞多应庇护提携，与正印同气。",
+  "贵人类|正官": "贵人类常应体制内的提携，与正官名分同路。",
+  "煞类|七杀": "七杀本身就是十神里的『煞』，凶煞类的核心字。",
+  "煞类|三刑": "三刑是煞类总纲下常用的凶象之一。",
+  "煞类|羊刃": "羊刃属凶煞类，气烈而狠。",
+  "华盖|墓库": "华盖本身就落在辰戌丑未四墓库支上，天生带收藏孤静之气。",
+  "孤辰寡宿|华盖": "都偏孤：华盖孤高自处，孤寡孤冷少伴，常合看六亲缘分。",
+  "孤辰寡宿|日支": "孤寡落在日支（夫妻宫）才最应婚姻孤象。",
+  "干支互通禄位|禄神": "同一个『禄』：禄位讲天干在地支的根，禄神把它当神煞看饭碗根基。",
+  "空亡|伏吟": "空亡主虚、伏吟主原地反复，都常表现为使不上劲、没结果。",
+  "驿马|六冲": "驿马逢冲则动——马要冲才跑，冲是驿马应事的扳机。",
+  "六冲|墓库": "四库逢冲论开库破库，冲是墓库最重要的动象。",
+  "地支六合|六冲": "合与冲互为反象：合主绑定、冲主打开；冲可解合，合可绊冲。",
+  "海中金|水": "海中金生于甲子乙丑（水旺之地），金沉海底，与水气相依。",
+  "三元类象|共象": "都是取象方法论：三元类象提供来源维度，共象取重叠交集。",
+  "大运|月柱": "大运从月柱顺逆排出，是月令气数的延伸。",
+  "年柱|月柱": "年管祖上早年、月管父母青年，是前后相续的两个宫位。",
+  "年柱|大运": "大运一步步走过的气数与年柱根基相应，早年运先看家底。",
+  "日主|日支": "日主坐日支：自己与配偶、身与家同在一柱。",
+  "日支|流年": "流年冲合日支时，婚姻、家庭、身体的事最容易应验。",
+  "日支|六冲": "日支被冲是夫妻宫动的第一信号，主家宅婚姻变动。",
+  "官鬼爻 -> 官杀|六冲": "官鬼爻主克身之事，冲同属克动之象，可互相印证。",
+  "官鬼爻 -> 官杀|三刑": "官鬼爻主克身之事，刑同属克伤纠缠之象，可互相印证。",
+  "地支三合|土": "三合局的收尾（墓神）都是土支——辰戌丑未随局收藏。",
+  "地支三会|土": "三会每一方都以土支收尾（春辰夏未秋戌冬丑），土是聚气的收藏端。"
+};
+
+function pairNote(a, b) {
+  return PAIR_NOTES[a.title + "|" + b.title] || PAIR_NOTES[b.title + "|" + a.title] || null;
+}
+
+function explainPair(a, b) {
+  // 手写精注 > 结构规则 > 原文摘句 > 兜底
+  return pairNote(a, b)
+    || explainDirected(a, b) || explainDirected(b, a)
+    || explainByQuote(a, b) || explainByQuote(b, a)
+    || "两个条目在资料里互相标注为关联词，取象时常放在一起看。";
+}
+
+function explainDirected(a, b) {
+  const ca = charOfNode(a), cb = charOfNode(b);
+
+  // 纳音 -> 干支 / 五行
+  if (a.systemId === "nayin") {
+    const pair = NAYIN_GANZHI[a.title] || [];
+    if (cb) {
+      const hitGz = pair.find(gz => gz.includes(cb));
+      if (hitGz && b.systemId === "stems") return `「${a.title}」由${pair.join("、")}两柱组成，${cb}是其中${hitGz}柱的天干。`;
+      if (hitGz && b.systemId === "branches") return `「${a.title}」由${pair.join("、")}两柱组成，${cb}是其中${hitGz}柱的地支。`;
+      if (b.systemId === "five-elements" && a.title.endsWith(cb)) return `「${a.title}」的纳音五行就是${cb}。`;
+    }
+    return null;
+  }
+
+  // 五行 <- 天干/地支
+  if (b.systemId === "five-elements" && cb) {
+    if (a.systemId === "stems" && GAN_WUXING[ca] === cb) return `天干${ca}五行属${cb}，是${cb}的${ganYinYang(ca)}性形态。`;
+    if (a.systemId === "branches" && ZHI_WUXING[ca] === cb) return `地支${ca}五行属${cb}。`;
+    if (a.systemId === "branches" && KU_MAP[ca] === cb + "库") return `${ca}是${cb}库，${cb}的气收藏在${ca}里。`;
+  }
+
+  // 五行 <-> 五行
+  if (a.systemId === "five-elements" && b.systemId === "five-elements" && ca && cb) {
+    if (WUXING_SHENG[ca] === cb) return `五行相生：${ca}生${cb}。`;
+    if (WUXING_SHENG[cb] === ca) return `五行相生：${cb}生${ca}。`;
+    if (WUXING_KE[ca] === cb) return `五行相克：${ca}克${cb}。`;
+    if (WUXING_KE[cb] === ca) return `五行相克：${cb}克${ca}。`;
+  }
+
+  if (ca && cb) {
+    // 地支 <-> 地支
+    if (ZHI_IDX[ca] !== undefined && ZHI_IDX[cb] !== undefined) {
+      if (ZHI_CHONG[ca] === cb) return `${ca}${cb}相冲（六冲），一动一开，是最直接的作用关系。`;
+      if (ZHI_LIUHE[ca + cb] || ZHI_LIUHE[cb + ca]) return `${ca}${cb}六合，气相亲、能绑在一起。`;
+      if (CHUAN_SHENG.includes(ca + cb) || CHUAN_SHENG.includes(cb + ca)) return `${ca}${cb}相穿（生穿），暗中损耗。`;
+      if (CHUAN_KE.includes(ca + cb) || CHUAN_KE.includes(cb + ca)) return `${ca}${cb}相穿（克穿），直接卡住生路。`;
+      if (PO_PAIRS.includes(ca + cb) || PO_PAIRS.includes(cb + ca)) return `${ca}${cb}相破，完整性受损。`;
+      if (ANHE_PAIRS.includes(ca + cb) || ANHE_PAIRS.includes(cb + ca)) return `${ca}${cb}暗合，藏干私下勾连。`;
+      const sh = SANHE.find(g => g.slice(0, 3).includes(ca) && g.slice(0, 3).includes(cb));
+      if (sh) return `${ca}${cb}同属${sh.slice(0, 3).join("")}三合${sh[3]}局，气脉一家。`;
+      const hui = SANHUI.find(g => g.slice(0, 3).includes(ca) && g.slice(0, 3).includes(cb));
+      if (hui) return `${ca}${cb}同属${hui.slice(0, 3).join("")}三会${hui[3]}方，季节同气。`;
+      const xing = XING_GROUPS.find(g => g.chars.includes(ca) && g.chars.includes(cb));
+      if (xing) return `${ca}${cb}同在${xing.chars.join("")}${xing.name}组里，相刑纠缠。`;
+    }
+    // 天干 <-> 地支
+    if (GAN_IDX[ca] !== undefined && ZHI_IDX[cb] !== undefined) {
+      const parts = [];
+      if (LU_MAP[ca] === cb) parts.push(`${ca}的禄在${cb}，${ca}在${cb}最有根气`);
+      if ((CANG_GAN[cb] || []).includes(ca)) parts.push(`${cb}的藏干里有${ca}（${(CANG_GAN[cb] || []).join("")}），${ca}在${cb}中通根`);
+      if (GAN_MU[ca] === cb) parts.push(`${ca}的墓库在${cb}，气归藏于此`);
+      if (YANGREN[ca] === cb) parts.push(`${cb}是${ca}的羊刃（帝旺之地），气最旺最烈`);
+      if (parts.length) return parts.join("；") + "。";
+      if (GAN_WUXING[ca] === ZHI_WUXING[cb]) return `${ca}与${cb}同属${GAN_WUXING[ca]}，干支同气。`;
+    }
+    // 天干 <-> 天干
+    if (GAN_IDX[ca] !== undefined && GAN_IDX[cb] !== undefined) {
+      if (GAN_HE[ca + cb] || GAN_HE[cb + ca]) return `${ca}${cb}天干五合，欲化${GAN_HE[ca + cb] || GAN_HE[cb + ca]}。`;
+      if (GAN_WUXING[ca] === GAN_WUXING[cb]) return `${ca}${cb}同属${GAN_WUXING[ca]}，一阳一阴，是同一种气的两副面孔。`;
+      if (WUXING_SHENG[GAN_WUXING[ca]] === GAN_WUXING[cb]) return `${GAN_WUXING[ca]}生${GAN_WUXING[cb]}，${ca}能生${cb}。`;
+      if (WUXING_KE[GAN_WUXING[ca]] === GAN_WUXING[cb]) return `${GAN_WUXING[ca]}克${GAN_WUXING[cb]}，${ca}能克${cb}。`;
+    }
+  }
+
+  // 十神 <-> 十神
+  if (GOD_GROUP[a.title] && GOD_GROUP[b.title]) {
+    const ga = GOD_GROUP[a.title], gb = GOD_GROUP[b.title];
+    if (ga === gb) return `${a.title}和${b.title}同属${ga}，一正一偏，象义同源、用法有别。`;
+    if (GROUP_SHENG[ga] === gb) return `${ga}生${gb}${GROUP_COMBO_NAME[ga + gb] ? `（${GROUP_COMBO_NAME[ga + gb]}）` : ""}，两者常连着看。`;
+    if (GROUP_SHENG[gb] === ga) return `${gb}生${ga}${GROUP_COMBO_NAME[gb + ga] ? `（${GROUP_COMBO_NAME[gb + ga]}）` : ""}，两者常连着看。`;
+    if (GROUP_KE[ga] === gb) return `${ga}克${gb}${GROUP_COMBO_NAME[ga + gb] ? `（${GROUP_COMBO_NAME[ga + gb]}）` : ""}，是一对典型的作用关系。`;
+    if (GROUP_KE[gb] === ga) return `${gb}克${ga}${GROUP_COMBO_NAME[gb + ga] ? `（${GROUP_COMBO_NAME[gb + ga]}）` : ""}，是一对典型的作用关系。`;
+  }
+
+  // 组合卡 -> 组成元素
+  if (a.systemId === "combo-cards") {
+    const short = b.title[0];
+    if (a.title.includes(b.title) || (GOD_GROUP[b.title] && a.title.includes(GOD_GROUP[b.title][0]))) {
+      return `「${a.title}」这张组合卡就是由${b.title}这类字参与构成的。`;
+    }
+    if (a.title.includes(short)) return `「${a.title}」组合里包含「${short}」，${b.title}是它的组成元素之一。`;
+  }
+
+  // 神煞 -> 地支落点
+  if (a.systemId === "shen-sha" && SHENSHA_SPOTS[a.title] && cb && SHENSHA_SPOTS[a.title].spots.includes(cb)) {
+    return `${SHENSHA_SPOTS[a.title].why}，${cb}是其中之一。`;
+  }
+
+  // 羊刃 -> 天干
+  if (a.title === "羊刃" && b.systemId === "stems" && YANGREN[cb]) {
+    return `${cb}的羊刃在${YANGREN[cb]}——阳干才有刃，${b.title}是典型的带刃之干。`;
+  }
+
+  // 阴阳 -> 五行
+  if (a.title === "阴阳" && b.systemId === "five-elements" && cb) {
+    return `每一行都分阴阳两面（如甲为阳${cb}、乙为阴${cb}这样成对），阴阳是五行的底层属性。`;
+  }
+
+  // 墓库条目 -> 四库支
+  if (a.title === "墓库" && cb && KU_MAP[cb]) {
+    return `${cb}就是四墓库之一（${KU_MAP[cb]}），墓库讲的正是这四个字。`;
+  }
+
+  // 损伤类关系互连
+  if (HARM_RELS.has(a.title) && HARM_RELS.has(b.title)) {
+    return "同属损伤动荡类关系，只是方式不同：冲明撞、刑纠缠、穿暗损、破裂缝、害阻隔。";
+  }
+
+  // 合类关系互连
+  if (HE_RELS.has(a.title) && HE_RELS.has(b.title)) {
+    return "同属合类关系：都是把字绑在一起，只是明暗、深浅、成局与否不同。";
+  }
+
+  // 象法方法 -> 关系素材
+  if (a.systemId === "xiangfa-rules" && b.systemId === "relations") {
+    if (a.title === "合象" && (HE_RELS.has(b.title) || b.title.includes("合"))) return `「合象」是统一解读各种合的取象方法，${b.title}是它的素材之一。`;
+    if ((a.title === "字象" || a.title === "倒象") && HARM_RELS.has(b.title)) return `「${a.title}」断字时常借冲破来拆解变形，${b.title}是常用的作用方式。`;
+    return `「${a.title}」是取象方法，${b.title}是它常用的作用素材。`;
+  }
+
+  // 组合卡 -> 关系类型
+  if (a.systemId === "combo-cards" && b.systemId === "relations") {
+    if ((HE_RELS.has(b.title) || b.title.includes("合")) && a.title.includes("合")) return `「${a.title}」组合里的『合』可以是${b.title}这一类。`;
+    if (b.title === "六冲" && a.title.includes("冲")) return `「${a.title}」组合里的『冲』就是六冲。`;
+    if (b.title === "墓库" && (a.title.includes("库") || a.title.includes("墓"))) return `「${a.title}」组合里的『库』就是墓库。`;
+  }
+
+  // 资料映射条目（六爻/卦象 -> 八字）
+  if (a.systemId === "source-mapping" && a.title.includes(" -> ")) {
+    const [src, dst] = a.title.split(" -> ");
+    if (GOD_GROUP[b.title] && dst.includes(GOD_GROUP[b.title])) {
+      return `六爻资料里的${src}对应八字的${GOD_GROUP[b.title]}，${b.title}属${GOD_GROUP[b.title]}，象义可直接迁移借用。`;
+    }
+    const el = dst[0];
+    if (cb && "木火土金水".includes(el) && (GAN_WUXING[cb] === el || ZHI_WUXING[cb] === el)) {
+      return `卦象${src}五行属${el}，与${b.title}同气，可借卦象补充${el}类取象。`;
+    }
+    return `这是${src}到八字体系的映射条目，与「${b.title}」同走一路象义。`;
+  }
+
+  return null;
+}
+
+// 从条目原文里摘一句提到对方的话作为证据
+function explainByQuote(a, b) {
+  const needle = b.title;
+  for (const [key, values] of Object.entries(a.branches || {})) {
+    if (key.includes(needle)) return `「${a.title}」条目专门有一栏「${key}」讲它。`;
+    for (const v of values) {
+      const s = String(v);
+      if (s.includes(needle) && s !== needle) return `「${a.title}」条目里提到：${s.length > 42 ? s.slice(0, 42) + "…" : s}`;
+    }
+  }
+  for (const r of a.rules || []) {
+    if (r.includes(needle)) return `「${a.title}」的判断提醒里提到：${r.length > 42 ? r.slice(0, 42) + "…" : r}`;
+  }
+  return null;
+}
+
 /* ---------- 本地存储 ---------- */
 function storageGet(key, fallback) {
   try {
@@ -948,9 +1193,18 @@ if (typeof document !== "undefined") {
 
     const relChips = (node.relations || []).map(r => {
       const target = nodeByTitle.get(r);
-      return target
-        ? `<button type="button" data-open-node="${escapeHtml(target.id)}">${escapeHtml(r)}</button>`
-        : `<button type="button" data-quick="${escapeHtml(r)}">${escapeHtml(r)}</button>`;
+      if (target) {
+        return `
+          <div class="rel-link-row">
+            <button type="button" data-open-node="${escapeHtml(target.id)}">${escapeHtml(r)}</button>
+            <span>${escapeHtml(explainPair(node, target))}</span>
+          </div>`;
+      }
+      return `
+        <div class="rel-link-row">
+          <button type="button" data-quick="${escapeHtml(r)}">${escapeHtml(r)}</button>
+          <span>库里暂无同名词条，点击按词搜索相关象义。</span>
+        </div>`;
     }).join("");
 
     el.detailCard.innerHTML = `
@@ -1186,7 +1440,15 @@ if (typeof document !== "undefined") {
     }
     const gn = tree.n[tree.selected];
     const node = nodeById.get(gn.id);
-    const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 10);
+    const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 12);
+    const nbRows = nbs.map(nb => {
+      const reason = explainPair(node, nodeById.get(nb.id));
+      return `
+        <div class="tc-nb-row">
+          <button type="button" data-tree-select="${nb.i}" style="color:${nb.color};border-color:${nb.color}">${escapeHtml(nb.title)}</button>
+          <span>${escapeHtml(reason)}</span>
+        </div>`;
+    }).join("");
     treeInfo.innerHTML = `
       <div class="tree-card">
         <div class="tc-title">
@@ -1194,7 +1456,7 @@ if (typeof document !== "undefined") {
           <span class="tc-sys" style="color:${gn.color}">${escapeHtml(node.systemTitle)}</span>
         </div>
         <p class="tc-core">${escapeHtml((node.core || []).slice(0, 5).join(" · "))}</p>
-        ${nbs.length ? `<div class="tc-neighbors">${nbs.map(nb => `<button type="button" data-tree-select="${nb.i}">${escapeHtml(nb.title)}</button>`).join("")}</div>` : ""}
+        ${nbRows ? `<div class="tc-nb-list">${nbRows}</div>` : ""}
         <button class="tc-open" type="button" data-open-node="${escapeHtml(gn.id)}">看完整象义 →</button>
       </div>`;
   }

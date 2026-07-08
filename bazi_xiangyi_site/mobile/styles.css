@@ -973,20 +973,38 @@ mark {
   color: rgba(255, 255, 255, 0.75);
 }
 
-.tree-card .tc-neighbors {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 8px;
+.tree-card {
+  max-height: 46vh;
+  overflow-y: auto;
 }
 
-.tree-card .tc-neighbors button {
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
+.tree-card .tc-nb-list {
+  margin-top: 8px;
+  display: grid;
+  gap: 7px;
+}
+
+.tree-card .tc-nb-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.tree-card .tc-nb-row button {
+  flex-shrink: 0;
+  min-width: 52px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.06);
   border-radius: 999px;
   padding: 3px 10px;
   font-size: 12px;
+}
+
+.tree-card .tc-nb-row span {
+  font-size: 12px;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.62);
+  padding-top: 2px;
 }
 
 .tree-card .tc-open {
@@ -1111,18 +1129,32 @@ mark {
 }
 
 .relation-links {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 9px;
 }
 
-.relation-links button {
+.rel-link-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.rel-link-row button {
+  flex-shrink: 0;
+  min-width: 56px;
   border: 1px solid var(--line);
-  background: var(--card);
+  background: var(--card-soft);
   border-radius: 999px;
-  padding: 5px 14px;
+  padding: 4px 13px;
   font-size: 14px;
   color: var(--accent-ink);
+}
+
+.rel-link-row span {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+  padding-top: 3px;
 }
 
 /* ---- 底部导航 ---- */
