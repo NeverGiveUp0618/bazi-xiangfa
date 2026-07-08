@@ -468,6 +468,9 @@ mark {
   margin-top: 10px;
 }
 
+.char-picker.cols-5 { grid-template-columns: repeat(5, 1fr); }
+.char-picker.cols-6 { grid-template-columns: repeat(6, 1fr); }
+
 .char-picker button {
   border: 1px solid var(--line);
   background: var(--card);

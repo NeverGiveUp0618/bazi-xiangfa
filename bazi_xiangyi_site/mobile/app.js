@@ -1161,6 +1161,8 @@ if (typeof document !== "undefined") {
     } else {
       hint = `<p class="picker-hint">正选 ${slotLabel(selectedSlot)}。</p>`;
     }
+    // 天干10字每行5个（甲乙丙丁戊 / 己庚辛壬癸），地支12字每行6个
+    el.charPicker.className = "char-picker " + (isGan ? "cols-5" : "cols-6");
     el.charPicker.innerHTML = hint + pool.map(ch => {
       const dim = !isGan && (GAN_IDX[pillarGan] % 2) !== (ZHI_IDX[ch] % 2);
       return `<button type="button" class="${bazi[selectedSlot] === ch ? "active" : ""} ${dim ? "dim" : ""}" data-char="${ch}">${ch}</button>`;
