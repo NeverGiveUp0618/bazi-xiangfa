@@ -835,6 +835,11 @@ function chartBookAll() {
   return normalizeChartBook(storageGet("chartBook", []));
 }
 
+function currentChartEntry(book, arr) {
+  const key = baziKey(arr);
+  return book.find(item => baziKey(item.bazi) === key) || null;
+}
+
 function chartStudyDeck() {
   const deck = storageGet("chartStudyDeck", null);
   if (!deck || !Array.isArray(deck.ids)) return { ids: [], items: [], title: "", bazi: [], savedAt: 0 };
@@ -1079,6 +1084,8 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "📝 命例本升级研究笔记——每个已保存八字盘可记录自断、重点共象和复盘结论，导入导出会一起保留"],
+    ["26.7.9", "⚠️ 补「不能这样断」反例——伤官见官、财库、桃花、夫妻宫等高频误断点加新手防误用提醒"],
     ["26.7.9", "📚 排盘和学习打通——盘里扫到的天干地支、十神、关系、神煞、纳音可一键加入「盘中象」卡组"],
     ["26.7.9", "🗂️ 命例本上线——可保存多个八字盘，随时载入复盘，并支持 JSON 导入导出"],
     ["26.7.8", "🌳 象义树取象路径——点两个词看最短取象链，逐跳说清为什么这么串；关掉路径回到起点那个字的连线态"],
@@ -1286,6 +1293,7 @@ if (typeof document !== "undefined") {
   function renderChartBook() {
     const book = chartBookAll();
     const currentKey = baziKey(bazi);
+    const current = currentChartEntry(book, bazi);
     const rows = book.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8).map(item => `
       <div class="chart-book-row ${baziKey(item.bazi) === currentKey ? "active" : ""}">
         <button type="button" data-load-chart="${escapeHtml(item.id)}">
@@ -1304,6 +1312,12 @@ if (typeof document !== "undefined") {
         <button type="button" data-export-charts ${book.length ? "" : "disabled"}>导出</button>
         <button type="button" data-import-charts>导入</button>
       </div>
+      ${current ? `
+        <div class="chart-note-box">
+          <label for="chartNote">观察笔记</label>
+          <textarea id="chartNote" rows="4" placeholder="先自断：盘中最明显的共象是什么？哪些地方不能直接下断？复盘后再补结论。">${escapeHtml(current.note || "")}</textarea>
+          <button type="button" data-save-chart-note="${escapeHtml(current.id)}">保存笔记</button>
+        </div>` : ""}
       ${rows ? `<div class="chart-book-list">${rows}</div>` : ""}`;
   }
 
@@ -2178,6 +2192,17 @@ if (typeof document !== "undefined") {
     renderChartBook();
   }
 
+  function saveChartNote(id) {
+    const noteEl = document.querySelector("#chartNote");
+    const book = chartBookAll();
+    const item = book.find(x => x.id === id);
+    if (!item || !noteEl) return;
+    item.note = noteEl.value.trim();
+    item.updatedAt = Date.now();
+    storageSet("chartBook", book);
+    renderChartBook();
+  }
+
   function loadChart(id) {
     const item = chartBookAll().find(x => x.id === id);
     if (!item) return;
@@ -2230,6 +2255,7 @@ if (typeof document !== "undefined") {
             const old = byKey.get(key);
             if (old) {
               old.title = item.title || old.title;
+              old.note = item.note || old.note || "";
               old.updatedAt = Date.now();
             } else {
               item.id = uid("chart");
@@ -2319,6 +2345,9 @@ if (typeof document !== "undefined") {
     if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); return; }
     if (event.target.closest("[data-export-charts]")) { exportCharts(); return; }
     if (event.target.closest("[data-import-charts]")) { importCharts(); return; }
+
+    const saveNoteBtn = event.target.closest("[data-save-chart-note]");
+    if (saveNoteBtn) { saveChartNote(saveNoteBtn.dataset.saveChartNote); return; }
 
     const loadChartBtn = event.target.closest("[data-load-chart]");
     if (loadChartBtn) { loadChart(loadChartBtn.dataset.loadChart); return; }
