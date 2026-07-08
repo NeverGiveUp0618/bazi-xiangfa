@@ -152,6 +152,43 @@ function palaceLine(cells) {
   return "落宫：" + parts.join(" × ");
 }
 
+const SEASON_BY_MONTH = {
+  寅: { name: "孟春", season: "春木初生", wang: "木旺、火相、水休、金囚、土死", hint: "像启动、萌发、计划成形；木气刚起，宜看生发和方向，不宜直接断结果已稳。" },
+  卯: { name: "仲春", season: "春木最旺", wang: "木旺、火相、水休、金囚、土死", hint: "像生长、人际、门户、审美最明显；木太旺也有枝蔓、纠缠、规矩松散。" },
+  辰: { name: "季春", season: "春末湿土", wang: "土渐起、木有余气、水入库", hint: "像收束、库、湿土、旧事沉淀；辰带水库，常把流动之事收进手续或库存。" },
+  巳: { name: "孟夏", season: "夏火初旺", wang: "火旺、土相、木休、水囚、金死", hint: "像热度、曝光、行动、技术启动；火起但未极，先看传播、动力和外显。" },
+  午: { name: "仲夏", season: "夏火最旺", wang: "火旺、土相、木休、水囚、金死", hint: "像名气、速度、热闹、情绪最强；火太旺也取急躁、炎症、口舌、过度曝光。" },
+  未: { name: "季夏", season: "夏末燥土", wang: "土旺、火有余气、木入库", hint: "像承载、田宅、库、成果收纳；未为木库，常把生发之物收成资源或负担。" },
+  申: { name: "孟秋", season: "秋金初旺", wang: "金旺、水相、土休、火囚、木死", hint: "像规则、切割、工具、执行开始；金气起，先看制度、技术、边界。" },
+  酉: { name: "仲秋", season: "秋金最旺", wang: "金旺、水相、土休、火囚、木死", hint: "像精细、口舌、审美、金属、兑象最明显；金太旺也取挑剔、分离、伤口。" },
+  戌: { name: "季秋", season: "秋末燥土", wang: "土旺、金有余气、火入库", hint: "像收尾、库、规章沉淀、旧火收藏；戌为火库，常把名气、热度、心气收住。" },
+  亥: { name: "孟冬", season: "冬水初旺", wang: "水旺、木相、金休、土囚、火死", hint: "像流动、信息、远方、暗处启动；水起，宜看迁移、想法、资源流。" },
+  子: { name: "仲冬", season: "冬水最旺", wang: "水旺、木相、金休、土囚、火死", hint: "像智慧、隐秘、流动、寒冷最强；水太旺也取拖延、寒湿、情绪暗涌。" },
+  丑: { name: "季冬", season: "冬末湿土", wang: "土渐起、水有余气、金入库", hint: "像低温收藏、账本、库存、旧资产；丑为金库，常把规则、钱物、器具收住。" }
+};
+
+function monthSeasonInfo(bazi) {
+  const month = bazi[5];
+  const info = SEASON_BY_MONTH[month];
+  if (!info) return null;
+  const monthNode = nodeForChar(month);
+  return {
+    month,
+    ...info,
+    nodeId: monthNode?.id || "",
+    plain: nodePlain(monthNode)
+  };
+}
+
+function nayinPillarUse(pillar) {
+  return {
+    年柱: "年柱纳音偏看根源、祖上、早年环境和外界给你的底色。",
+    月柱: "月柱纳音偏看父母、单位平台、职业环境和当令气候。",
+    日柱: "日柱纳音偏看自己、配偶宫附近的气质、居住与亲密关系底色。",
+    时柱: "时柱纳音偏看子女、作品、晚年结果和事情落点。"
+  }[pillar] || "";
+}
+
 function relItem(name, kindLabel, kindClass, cells, nodeTitle, note) {
   const node = nodeByTitle.get(nodeTitle);
   return {
@@ -1136,6 +1173,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🌿 排盘补月令提纲与纳音逐柱——先看季节气候，再分年/月/日/时纳音各应什么位置"],
     ["26.7.9", "🔍 排盘结果补“为什么扫到”——关系、神煞、纳音、十神藏干都加检测理由，不只给结论"],
     ["26.7.9", "📦 命例本导出带盘中象快照——每个命例导出时附学习点、来源和入组理由"],
     ["26.7.9", "🧩 十神组合细化成立/不成立条件——官印相生、伤官见官、食神制杀、财破印、比劫夺财更好分辨"],
@@ -1397,6 +1435,7 @@ if (typeof document !== "undefined") {
     const shensha = scanShensha(bazi);
     const nayin = scanNayin(bazi);
     const combos = detectCombos(bazi);
+    const season = monthSeasonInfo(bazi);
     const chartStudyItems = collectChartStudyItems(bazi);
     const savedDeck = chartStudyDeck();
     const currentDeckKey = chartStudyItems.map(x => x.id).sort().join("|");
@@ -1423,6 +1462,7 @@ if (typeof document !== "undefined") {
         <div class="row-line"><strong>${escapeHtml(n.pillar)} ${escapeHtml(n.ganzhi)}</strong><span class="where">${n.name ? escapeHtml(n.name) : "干支阴阳不匹配，无纳音"}</span></div>
         ${n.name ? `<p class="brief">${escapeHtml(n.brief)}</p>` : ""}
         <p class="scan-why">为什么扫到：${escapeHtml(n.scanWhy)}</p>
+        <p class="scan-why">逐柱取象：${escapeHtml(nayinPillarUse(n.pillar))}</p>
       </button>`).join("");
 
     const godRows = [0, 1, 3].map(p => {
@@ -1474,9 +1514,20 @@ if (typeof document !== "undefined") {
           <button type="button" data-go-chart-study ${isSavedDeck ? "" : "disabled"}>去复习</button>
         </div>
       </div>`;
+    const seasonSection = season ? `
+      <section class="ana-section">
+        <div class="ana-head"><h3>月令提纲</h3><span class="ana-count">${escapeHtml(season.month)}月 · ${escapeHtml(season.name)}</span></div>
+        <button class="info-row season-row" type="button" ${season.nodeId ? `data-open-node="${escapeHtml(season.nodeId)}"` : ""}>
+          <div class="row-line"><strong>${escapeHtml(season.season)}</strong><span class="where">${escapeHtml(season.wang)}</span></div>
+          <p class="brief">${escapeHtml(season.hint)}</p>
+          <p class="scan-why">为什么先看月令：月支是全局气候，决定五行得令与否；同一个字在不同季节，力量和应象会变。</p>
+          ${season.plain ? `<p class="scan-why">本月支字象：${escapeHtml(season.plain)}</p>` : ""}
+        </button>
+      </section>` : "";
 
     el.chartAnalysis.innerHTML = `
       ${studyDeckSection}
+      ${seasonSection}
       ${comboSection}
       <section class="ana-section">
         <div class="ana-head"><h3>干支关系</h3><span class="ana-count">${rels.length} 条</span></div>

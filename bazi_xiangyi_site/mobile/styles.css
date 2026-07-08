@@ -946,6 +946,16 @@ mark {
   color: var(--muted);
 }
 
+.season-row {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.season-row strong,
+.season-row .scan-why:first-of-type {
+  color: var(--gold);
+}
+
 /* 十神表 */
 .god-table {
   background: var(--card);
