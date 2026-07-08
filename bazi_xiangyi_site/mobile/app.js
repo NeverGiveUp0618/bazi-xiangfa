@@ -1444,7 +1444,7 @@ if (typeof document !== "undefined") {
     n: [], e: [], adj: [], idxById: null, anchors: [],
     cam: { x: 0, y: 0, s: 0.8 },
     alpha: 0, selected: -1, neighbors: new Set(), focusSys: "",
-    pathStart: -1, pathNodes: [], pathNodeSet: new Set(), pathEdgeSet: new Set(),
+    pathStart: -1, pathOrigin: -1, pathNodes: [], pathNodeSet: new Set(), pathEdgeSet: new Set(),
     W: 320, H: 480, dpr: 1,
     pointers: new Map(), pinch0: null, dragNode: -1, panStart: null, moved: 0, downAt: 0
   };
@@ -1692,9 +1692,17 @@ if (typeof document !== "undefined") {
 
   function clearPath() {
     tree.pathStart = -1;
+    tree.pathOrigin = -1;
     tree.pathNodes = [];
     tree.pathNodeSet = new Set();
     tree.pathEdgeSet = new Set();
+  }
+
+  // 退出路径，回到起点那个字的单选（相关字连线）状态
+  function exitPathToOrigin() {
+    const origin = tree.pathOrigin;
+    clearPath();
+    selectTreeNode(origin, false);
   }
 
   function setPath(nodesIdx) {
@@ -1715,6 +1723,7 @@ if (typeof document !== "undefined") {
 
   function armPathStart(i) {
     tree.pathStart = i;
+    tree.pathOrigin = i;
     renderTreeInfo();
     tree.dirty = true;
   }
@@ -1812,9 +1821,12 @@ if (typeof document !== "undefined") {
     if (tree.pathStart >= 0 && hit !== tree.pathStart) {
       const path = bfsPath(tree.pathStart, hit);
       if (path && path.length >= 2) { setPath(path); return; }
-      // 不连通
+      // 不连通：保留起点，叉号/好 仍能回到起点单选态
       const a = tree.n[tree.pathStart], b = tree.n[hit];
-      clearPath();
+      tree.pathStart = -1;
+      tree.pathNodes = [];
+      tree.pathNodeSet = new Set();
+      tree.pathEdgeSet = new Set();
       treeInfo.innerHTML = `
         <div class="tree-card tc-arm">
           <span class="tc-arm-line">「${escapeHtml(a.title)}」和「${escapeHtml(b.title)}」在图里暂时没有连通路径（这个词关联还少）。</span>
@@ -2002,7 +2014,7 @@ if (typeof document !== "undefined") {
     if (pathStartBtn) { armPathStart(Number(pathStartBtn.dataset.pathStart)); return; }
 
     const pathClear = event.target.closest("[data-path-clear]");
-    if (pathClear) { clearPath(); selectTreeNode(-1, false); return; }
+    if (pathClear) { exitPathToOrigin(); return; }
 
     const open = event.target.closest("[data-open-node]");
     if (open) { openDetail(open.dataset.openNode); return; }
