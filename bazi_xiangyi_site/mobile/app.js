@@ -1223,9 +1223,10 @@ if (typeof document !== "undefined") {
   /* ---- 象义树 ---- */
   const tree = {
     inited: false, running: false, raf: 0, physics: false, dirty: true,
-    n: [], e: [], idxById: null, anchors: [],
+    n: [], e: [], adj: [], idxById: null, anchors: [],
     cam: { x: 0, y: 0, s: 0.8 },
     alpha: 0, selected: -1, neighbors: new Set(), focusSys: "",
+    pathStart: -1, pathNodes: [], pathNodeSet: new Set(), pathEdgeSet: new Set(),
     W: 320, H: 480, dpr: 1,
     pointers: new Map(), pinch0: null, dragNode: -1, panStart: null, moved: 0, downAt: 0
   };
@@ -1239,6 +1240,9 @@ if (typeof document !== "undefined") {
     const { gnodes, edges, idxById } = buildGraphData();
     tree.idxById = idxById;
     tree.e = edges;
+    // 邻接表，供取象路径 BFS 用
+    tree.adj = gnodes.map(() => []);
+    edges.forEach(([a, b]) => { tree.adj[a].push(b); tree.adj[b].push(a); });
     const sysIds = graph.systems.map(s => s.id);
     // 竖椭圆排布锚点，贴合手机竖屏
     const RX = 420, RY = 660;
@@ -1326,6 +1330,7 @@ if (typeof document !== "undefined") {
     ctx.fillRect(0, 0, tree.W, tree.H);
     const hasSel = tree.selected >= 0;
     const focus = tree.focusSys;
+    const hasPath = tree.pathNodes.length >= 2;
 
     // 边
     for (const [i, j] of tree.e) {
@@ -1333,7 +1338,12 @@ if (typeof document !== "undefined") {
       const [x1, y1] = w2s(ni.x, ni.y);
       const [x2, y2] = w2s(nj.x, nj.y);
       let alpha = 0.16, width = 1, color = ni.color;
-      if (hasSel) {
+      if (hasPath) {
+        const on = tree.pathEdgeSet.has(Math.min(i, j) + "-" + Math.max(i, j));
+        alpha = on ? 1 : 0.03;
+        width = on ? 2.6 : 1;
+        if (on) color = "#ffe08a";
+      } else if (hasSel) {
         const on = (i === tree.selected || j === tree.selected);
         alpha = on ? 0.9 : 0.04;
         width = on ? 1.8 : 1;
@@ -1356,7 +1366,9 @@ if (typeof document !== "undefined") {
       const [sx, sy] = w2s(ni.x, ni.y);
       if (sx < -40 || sy < -40 || sx > tree.W + 40 || sy > tree.H + 40) continue;
       let dimmed = false;
-      if (hasSel) dimmed = !(ni.i === tree.selected || tree.neighbors.has(ni.i));
+      const onPath = hasPath && tree.pathNodeSet.has(ni.i);
+      if (hasPath) dimmed = !onPath;
+      else if (hasSel) dimmed = !(ni.i === tree.selected || tree.neighbors.has(ni.i));
       else if (focus) dimmed = ni.sysId !== focus;
       const r = ni.r * s;
       ctx.globalAlpha = dimmed ? 0.10 : 0.22;
@@ -1368,10 +1380,11 @@ if (typeof document !== "undefined") {
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
-      if (ni.i === tree.selected) {
+      const isEnd = hasPath && (ni.i === tree.pathNodes[0] || ni.i === tree.pathNodes[tree.pathNodes.length - 1]);
+      if (ni.i === tree.selected || onPath) {
         ctx.globalAlpha = 1;
-        ctx.strokeStyle = "#ffffff";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = isEnd ? "#ffe08a" : "#ffffff";
+        ctx.lineWidth = isEnd ? 3 : 2;
         ctx.beginPath();
         ctx.arc(sx, sy, r + 3, 0, Math.PI * 2);
         ctx.stroke();
@@ -1384,13 +1397,14 @@ if (typeof document !== "undefined") {
     ctx.textAlign = "center";
     for (const ni of tree.n) {
       let show;
-      if (hasSel) show = ni.i === tree.selected || tree.neighbors.has(ni.i);
+      if (hasPath) show = tree.pathNodeSet.has(ni.i);
+      else if (hasSel) show = ni.i === tree.selected || tree.neighbors.has(ni.i);
       else if (focus) show = ni.sysId === focus ? (s > 0.4 || ni.deg >= 5) : false;
       else show = s >= 0.62 || ni.deg >= 7;
       if (!show) continue;
       const [sx, sy] = w2s(ni.x, ni.y);
       if (sx < -20 || sy < -20 || sx > tree.W + 20 || sy > tree.H + 20) continue;
-      const bold = ni.i === tree.selected;
+      const bold = ni.i === tree.selected || (hasPath && tree.pathNodeSet.has(ni.i));
       ctx.font = (bold ? "600 13px" : "11px") + " -apple-system, 'PingFang SC', sans-serif";
       ctx.fillStyle = "rgba(0,0,0,0.65)";
       ctx.fillText(ni.title, sx + 1, sy + ni.r * s + 13);
@@ -1433,11 +1447,101 @@ if (typeof document !== "undefined") {
     tree.dirty = true;
   }
 
+  // BFS 找两节点间最短取象路径（返回节点下标数组，含首尾）
+  function bfsPath(a, b) {
+    if (a === b) return [a];
+    const prev = new Int32Array(tree.n.length).fill(-1);
+    const seen = new Uint8Array(tree.n.length);
+    const queue = [a];
+    seen[a] = 1;
+    for (let head = 0; head < queue.length; head++) {
+      const cur = queue[head];
+      for (const nx of tree.adj[cur]) {
+        if (seen[nx]) continue;
+        seen[nx] = 1;
+        prev[nx] = cur;
+        if (nx === b) {
+          const path = [b];
+          let p = cur;
+          while (p !== -1) { path.push(p); p = prev[p]; }
+          return path.reverse();
+        }
+        queue.push(nx);
+      }
+    }
+    return null;
+  }
+
+  function clearPath() {
+    tree.pathStart = -1;
+    tree.pathNodes = [];
+    tree.pathNodeSet = new Set();
+    tree.pathEdgeSet = new Set();
+  }
+
+  function setPath(nodesIdx) {
+    tree.pathNodes = nodesIdx;
+    tree.pathNodeSet = new Set(nodesIdx);
+    tree.pathEdgeSet = new Set();
+    for (let k = 0; k + 1 < nodesIdx.length; k++) {
+      const a = nodesIdx[k], b = nodesIdx[k + 1];
+      tree.pathEdgeSet.add(Math.min(a, b) + "-" + Math.max(a, b));
+    }
+    tree.selected = -1;
+    tree.neighbors = new Set();
+    tree.pathStart = -1;
+    treeFitTo(nodesIdx.map(i => tree.n[i]));
+    renderTreeInfo();
+    tree.dirty = true;
+  }
+
+  function armPathStart(i) {
+    tree.pathStart = i;
+    renderTreeInfo();
+    tree.dirty = true;
+  }
+
   function renderTreeInfo() {
-    if (tree.selected < 0) {
-      treeInfo.innerHTML = `<span class="hint">点节点看关联 · 双指缩放 · 可拖动揉网</span>`;
+    // 状态一：路径已生成，渲染为竖向链：词 →理由→ 词
+    if (tree.pathNodes.length >= 2) {
+      const parts = [];
+      tree.pathNodes.forEach((idx, k) => {
+        const gnk = tree.n[idx];
+        parts.push(`<button type="button" class="tc-chain-node" data-open-node="${escapeHtml(gnk.id)}" style="color:${gnk.color}">${escapeHtml(gnk.title)}</button>`);
+        if (k + 1 < tree.pathNodes.length) {
+          const to = tree.n[tree.pathNodes[k + 1]];
+          const reason = explainPair(nodeById.get(gnk.id), nodeById.get(to.id));
+          parts.push(`<div class="tc-chain-why"><span class="tc-arrow">↓</span><span>${escapeHtml(reason)}</span></div>`);
+        }
+      });
+      const a = tree.n[tree.pathNodes[0]], z = tree.n[tree.pathNodes[tree.pathNodes.length - 1]];
+      treeInfo.innerHTML = `
+        <div class="tree-card">
+          <div class="tc-path-head">
+            <strong>取象路径</strong>
+            <span>${escapeHtml(a.title)} → ${escapeHtml(z.title)} · ${tree.pathNodes.length - 1} 步</span>
+            <button type="button" data-path-clear>✕</button>
+          </div>
+          <div class="tc-chain">${parts.join("")}</div>
+        </div>`;
       return;
     }
+    // 状态二：已选起点，等终点
+    if (tree.pathStart >= 0) {
+      const gn = tree.n[tree.pathStart];
+      treeInfo.innerHTML = `
+        <div class="tree-card tc-arm">
+          <span class="tc-arm-line">起点 <b style="color:${gn.color}">${escapeHtml(gn.title)}</b> · 再点一个词，看它俩怎么串起来</span>
+          <button type="button" data-path-clear>取消</button>
+        </div>`;
+      return;
+    }
+    // 状态三：无选中
+    if (tree.selected < 0) {
+      treeInfo.innerHTML = `<span class="hint">点词看关联 · 点开后可"连一条取象路径" · 双指缩放</span>`;
+      return;
+    }
+    // 状态四：单点选中
     const gn = tree.n[tree.selected];
     const node = nodeById.get(gn.id);
     const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 12);
@@ -1457,18 +1561,19 @@ if (typeof document !== "undefined") {
         </div>
         <p class="tc-core">${escapeHtml((node.core || []).slice(0, 5).join(" · "))}</p>
         ${nbRows ? `<div class="tc-nb-list">${nbRows}</div>` : ""}
-        <button class="tc-open" type="button" data-open-node="${escapeHtml(gn.id)}">看完整象义 →</button>
+        <div class="tc-actions">
+          <button class="tc-path-btn" type="button" data-path-start="${gn.i}">从这里连一条取象路径 →</button>
+          <button class="tc-open" type="button" data-open-node="${escapeHtml(gn.id)}">看完整象义 →</button>
+        </div>
       </div>`;
   }
 
   function selectTreeNode(i, center = true) {
+    clearPath();
     tree.selected = i;
     tree.neighbors = new Set();
     if (i >= 0) {
-      tree.e.forEach(([a, b]) => {
-        if (a === i) tree.neighbors.add(b);
-        if (b === i) tree.neighbors.add(a);
-      });
+      for (const nx of tree.adj[i]) tree.neighbors.add(nx);
       if (center) {
         tree.cam.x = tree.n[i].x;
         tree.cam.y = tree.n[i].y;
@@ -1477,6 +1582,30 @@ if (typeof document !== "undefined") {
     }
     renderTreeInfo();
     tree.dirty = true;
+  }
+
+  // 点击某节点，根据当前是否在"选路径"状态决定行为
+  function treeTapNode(hit) {
+    if (hit < 0) {
+      if (tree.pathStart >= 0 || tree.pathNodes.length) { clearPath(); selectTreeNode(-1, false); }
+      else selectTreeNode(-1, false);
+      return;
+    }
+    if (tree.pathStart >= 0 && hit !== tree.pathStart) {
+      const path = bfsPath(tree.pathStart, hit);
+      if (path && path.length >= 2) { setPath(path); return; }
+      // 不连通
+      const a = tree.n[tree.pathStart], b = tree.n[hit];
+      clearPath();
+      treeInfo.innerHTML = `
+        <div class="tree-card tc-arm">
+          <span class="tc-arm-line">「${escapeHtml(a.title)}」和「${escapeHtml(b.title)}」在图里暂时没有连通路径（这个词关联还少）。</span>
+          <button type="button" data-path-clear>好</button>
+        </div>`;
+      tree.dirty = true;
+      return;
+    }
+    selectTreeNode(hit);
   }
 
   function treeStart() {
@@ -1583,7 +1712,7 @@ if (typeof document !== "undefined") {
     const wasTap = tree.moved < 10 && Date.now() - tree.downAt < 400;
     if (wasTap) {
       const hit = treeHit(sx, sy);
-      selectTreeNode(hit, hit >= 0);
+      treeTapNode(hit);
     }
     tree.dragNode = -1;
     tree.panStart = null;
@@ -1650,6 +1779,12 @@ if (typeof document !== "undefined") {
 
     const treeSel = event.target.closest("[data-tree-select]");
     if (treeSel) { selectTreeNode(Number(treeSel.dataset.treeSelect)); return; }
+
+    const pathStartBtn = event.target.closest("[data-path-start]");
+    if (pathStartBtn) { armPathStart(Number(pathStartBtn.dataset.pathStart)); return; }
+
+    const pathClear = event.target.closest("[data-path-clear]");
+    if (pathClear) { clearPath(); selectTreeNode(-1, false); return; }
 
     const open = event.target.closest("[data-open-node]");
     if (open) { openDetail(open.dataset.openNode); return; }

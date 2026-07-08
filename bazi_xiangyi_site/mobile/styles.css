@@ -1007,16 +1007,117 @@ mark {
   padding-top: 2px;
 }
 
+.tree-card .tc-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tree-card .tc-path-btn {
+  border: 1px solid rgba(255, 224, 138, 0.5);
+  border-radius: 10px;
+  background: rgba(255, 224, 138, 0.1);
+  color: #ffe08a;
+  padding: 9px;
+  font-size: 14px;
+}
+
 .tree-card .tc-open {
   display: block;
   width: 100%;
-  margin-top: 10px;
   border: none;
   border-radius: 10px;
   background: var(--accent);
   color: #fff;
   padding: 9px;
   font-size: 14px;
+}
+
+/* 起点已选、等终点 */
+.tree-card.tc-arm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.tc-arm-line {
+  flex: 1;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.tc-arm button {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+/* 取象路径卡 */
+.tc-path-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.tc-path-head strong {
+  font-size: 15px;
+  color: #ffe08a;
+}
+
+.tc-path-head span {
+  flex: 1;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tc-path-head button {
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.85);
+  border-radius: 999px;
+  width: 26px;
+  height: 26px;
+  font-size: 13px;
+  padding: 0;
+}
+
+.tc-chain { display: block; }
+
+.tc-chain-node {
+  display: block;
+  border: none;
+  background: none;
+  padding: 2px 0;
+  font-size: 18px;
+  font-family: "Kaiti SC", "STKaiti", "KaiTi", serif;
+  text-align: left;
+}
+
+.tc-chain-why {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 1px 0 1px 3px;
+  padding: 2px 0 4px 10px;
+  border-left: 2px solid rgba(255, 224, 138, 0.35);
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.tc-arrow {
+  color: #ffe08a;
+  font-size: 13px;
+  line-height: 1.3;
 }
 
 .tree-hint {
