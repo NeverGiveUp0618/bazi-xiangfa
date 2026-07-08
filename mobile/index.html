@@ -3,88 +3,76 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>八字象义图谱｜手机版</title>
+  <meta name="theme-color" content="#f6f1e7" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#181512" media="(prefers-color-scheme: dark)" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>象义随身 · 八字象义手机版</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="mobile-app">
     <header class="topbar">
       <div class="brand-row">
-        <div>
-          <h1>八字象义</h1>
-          <p id="topHint">手机学习版</p>
-        </div>
+        <h1>象义随身</h1>
+        <p id="topHint" class="top-hint">想到一个词，先查共象</p>
         <a class="desktop-link" href="../desktop/">电脑版</a>
       </div>
-
-      <label class="search-box">
-        <span>查</span>
-        <input id="globalSearch" type="search" placeholder="文书、财库、子午冲、母亲..." />
-      </label>
-
-      <div class="quick-row" id="quickRow"></div>
     </header>
 
-    <main>
-      <section class="view active" id="view-search" aria-label="查象义">
-        <div class="section-head">
-          <h2>查象义</h2>
-          <button id="clearSearch" type="button">清空</button>
+    <main class="app-main">
+      <!-- 查询 -->
+      <section class="view active" id="view-search">
+        <div class="search-box">
+          <input id="globalSearch" type="search" placeholder="输入象义词：文书 / 财库 / 子午冲 / 母亲" autocomplete="off" />
+          <button id="clearSearch" type="button" aria-label="清空">✕</button>
         </div>
-        <div class="result-stack" id="searchResults"></div>
+        <div id="quickRow" class="quick-row"></div>
+        <div id="searchBody"></div>
       </section>
 
-      <section class="view" id="view-bazi" aria-label="排盘观察">
+      <!-- 排盘 -->
+      <section class="view" id="view-chart">
         <div class="section-head">
-          <h2>排盘观察</h2>
-          <button id="resetBazi" type="button">重置</button>
+          <h2>点选八字 · 自动解盘</h2>
+          <button id="resetBazi" type="button" class="ghost-btn">重置</button>
         </div>
-
-        <div class="bazi-board">
-          <div class="pillar-labels"><span>年</span><span>月</span><span>日</span><span>时</span></div>
-          <div class="bazi-cells" id="baziCells"></div>
-          <div class="char-picker" id="charPicker"></div>
-          <div class="action-row">
-            <button id="scanRelations" type="button">扫描关系</button>
-            <button id="useBaziAsSearch" type="button">按此盘查询</button>
-          </div>
-        </div>
-
-        <div class="evidence-list" id="relationEvidence"></div>
-        <div class="result-stack" id="baziResults"></div>
+        <div id="baziGrid" class="bazi-grid"></div>
+        <div id="charPicker" class="char-picker"></div>
+        <label class="quiz-toggle">
+          <input type="checkbox" id="quizMode" />
+          <span>验证模式：先自己断盘，再逐项揭晓对答案</span>
+        </label>
+        <div id="chartAnalysis" class="chart-analysis"></div>
       </section>
 
-      <section class="view" id="view-study" aria-label="学习卡片">
-        <div class="section-head">
-          <h2>学习卡片</h2>
-          <button id="nextCard" type="button">下一张</button>
-        </div>
-        <article class="study-card" id="studyCard"></article>
+      <!-- 学习 -->
+      <section class="view" id="view-study">
+        <div id="studyScope" class="scope-row"></div>
+        <div id="studyStats" class="study-stats"></div>
+        <div id="studyCard" class="study-zone"></div>
       </section>
 
-      <section class="view" id="view-library" aria-label="体系">
-        <div class="section-head">
-          <h2>体系浏览</h2>
-          <span id="libraryCount"></span>
-        </div>
-        <div class="system-tabs" id="systemTabs"></div>
-        <div class="result-stack" id="libraryNodes"></div>
+      <!-- 图鉴 -->
+      <section class="view" id="view-library">
+        <div id="systemTabs" class="scope-row"></div>
+        <p id="systemDesc" class="system-desc"></p>
+        <div id="libraryNodes" class="library-list"></div>
       </section>
 
-      <section class="view" id="view-detail" aria-label="详情">
-        <div class="section-head">
-          <h2 id="detailTitle">详情</h2>
-          <button id="backToPrevious" type="button">返回</button>
+      <!-- 详情 -->
+      <section class="view" id="view-detail">
+        <div class="detail-head">
+          <button id="detailBack" type="button" class="ghost-btn">← 返回</button>
         </div>
-        <article class="detail-card" id="detailCard"></article>
+        <article id="detailCard" class="detail-card"></article>
       </section>
     </main>
 
     <nav class="bottom-nav" aria-label="主导航">
-      <button class="active" type="button" data-view="search">查询</button>
-      <button type="button" data-view="bazi">排盘</button>
-      <button type="button" data-view="study">学习</button>
-      <button type="button" data-view="library">体系</button>
+      <button type="button" data-view="search" class="active"><strong>查</strong><span>查询</span></button>
+      <button type="button" data-view="chart"><strong>盘</strong><span>排盘</span></button>
+      <button type="button" data-view="study"><strong>学</strong><span>学习</span></button>
+      <button type="button" data-view="library"><strong>库</strong><span>图鉴</span></button>
     </nav>
   </div>
 
