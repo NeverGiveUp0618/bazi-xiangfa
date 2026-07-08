@@ -160,6 +160,7 @@ function relItem(name, kindLabel, kindClass, cells, nodeTitle, note) {
     pos: posText(cells),
     palace: palaceLine(cells),
     brief: nodePlain(node),
+    scanWhy: `盘中同时见 ${posText(cells)}，按检测口径归入「${kindLabel}」象。`,
     note: note || ""
   };
 }
@@ -292,6 +293,7 @@ function scanShensha(bazi) {
       return;
     }
     const item = { name, nodeTitle, nodeId: nodeByTitle.get(nodeTitle)?.id || "", cell, baseDescs: [baseDesc] };
+    item.scanWhy = `${baseDesc}，目标字落在${slotLabel(cell.i)}${cell.ch}，所以扫到${name}。`;
     merged.set(key, item);
     items.push(item);
   }
@@ -358,7 +360,7 @@ function scanNayin(bazi) {
     const gz = bazi[idx] + bazi[idx + 4];
     const name = nayinOf(bazi[idx], bazi[idx + 4]);
     const node = name ? nodeByTitle.get(name) : null;
-    return { pillar: p + "柱", ganzhi: gz, name, nodeId: node?.id || "", brief: nodePlain(node) };
+    return { pillar: p + "柱", ganzhi: gz, name, nodeId: node?.id || "", brief: nodePlain(node), scanWhy: name ? `${p}柱为${gz}，六十甲子纳音表对应「${name}」。` : `${p}柱${gz}干支阴阳不匹配，所以不取纳音。` };
   });
 }
 
@@ -930,6 +932,23 @@ function collectChartStudyItems(bazi) {
   return [...map.values()];
 }
 
+function chartExportSnapshot(arr) {
+  const items = collectChartStudyItems(arr);
+  return {
+    title: baziTitle(arr),
+    studyItems: items.map(item => {
+      const n = nodeById.get(item.id);
+      return {
+        id: item.id,
+        title: n?.title || item.id,
+        system: n?.systemTitle || "",
+        source: item.source,
+        why: item.why
+      };
+    })
+  };
+}
+
 /* ---------- 学习（间隔复习） ---------- */
 const SRS_IVL_DAYS = [0.5, 1, 3, 7, 15, 30];
 
@@ -1117,6 +1136,9 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🔍 排盘结果补“为什么扫到”——关系、神煞、纳音、十神藏干都加检测理由，不只给结论"],
+    ["26.7.9", "📦 命例本导出带盘中象快照——每个命例导出时附学习点、来源和入组理由"],
+    ["26.7.9", "🧩 十神组合细化成立/不成立条件——官印相生、伤官见官、食神制杀、财破印、比劫夺财更好分辨"],
     ["26.7.9", "🧭 盘中象可分组复习——按字本身、十神藏干、关系组合、神煞纳音拆开刷，先抓一类象再扩展"],
     ["26.7.9", "📝 命例本升级研究笔记——每个已保存八字盘可记录自断、重点共象和复盘结论，导入导出会一起保留"],
     ["26.7.9", "⚠️ 补「不能这样断」反例——伤官见官、财库、桃花、夫妻宫等高频误断点加新手防误用提醒"],
@@ -1363,6 +1385,7 @@ if (typeof document !== "undefined") {
         <div class="rel-title"><strong>${escapeHtml(item.name)}</strong><span class="rel-kind">${escapeHtml(item.kindLabel)}</span></div>
         <p class="rel-pos">${escapeHtml(item.pos)}</p>
         <p class="rel-brief">${escapeHtml(item.brief)}</p>
+        ${item.scanWhy ? `<p class="scan-why">为什么扫到：${escapeHtml(item.scanWhy)}</p>` : ""}
         ${item.note ? `<p class="rel-brief">${escapeHtml(item.note)}</p>` : ""}
         <p class="rel-palace">${escapeHtml(item.palace)}</p>
         ${item.nodeId ? `<p class="rel-more">点开看「${escapeHtml(item.nodeTitle)}」完整象义 →</p>` : ""}
@@ -1389,6 +1412,7 @@ if (typeof document !== "undefined") {
       <button class="info-row" type="button" ${s.nodeId ? `data-open-node="${escapeHtml(s.nodeId)}"` : ""}>
         <div class="row-line"><strong>${escapeHtml(s.name)}</strong><span class="where">${escapeHtml(slotLabel(s.cell.i))}${escapeHtml(s.cell.ch)} · ${escapeHtml(s.baseDescs.join("；"))}</span></div>
         <p class="brief">${escapeHtml(nodePlain(nodeByTitle.get(s.nodeTitle)))}</p>
+        <p class="scan-why">为什么扫到：${escapeHtml(s.scanWhy || s.baseDescs.join("；"))}</p>
       </button>`).join("");
     const ssBody = quizOn && !quizRevealed.ss
       ? `<button class="reveal-btn" type="button" data-reveal="ss">先自己找：桃花、驿马、贵人、空亡都落在哪？点这里揭晓 ${shensha.length} 个</button>`
@@ -1398,6 +1422,7 @@ if (typeof document !== "undefined") {
       <button class="info-row" type="button" ${n.nodeId ? `data-open-node="${escapeHtml(n.nodeId)}"` : ""}>
         <div class="row-line"><strong>${escapeHtml(n.pillar)} ${escapeHtml(n.ganzhi)}</strong><span class="where">${n.name ? escapeHtml(n.name) : "干支阴阳不匹配，无纳音"}</span></div>
         ${n.name ? `<p class="brief">${escapeHtml(n.brief)}</p>` : ""}
+        <p class="scan-why">为什么扫到：${escapeHtml(n.scanWhy)}</p>
       </button>`).join("");
 
     const godRows = [0, 1, 3].map(p => {
@@ -1408,6 +1433,7 @@ if (typeof document !== "undefined") {
           <span class="pos-label">${PILLARS[p]}干</span>
           <span class="big-char wx-${GAN_WUXING[bazi[p]]}">${escapeHtml(bazi[p])}</span>
           <button type="button" class="god-link" ${gNode ? `data-open-node="${escapeHtml(gNode.id)}"` : ""}>${escapeHtml(god)}</button>
+          <span class="god-why">日主${escapeHtml(bazi[2])}看${escapeHtml(bazi[p])}为${escapeHtml(god)}</span>
         </div>`;
     }).join("");
     const hiddenRows = [4, 5, 6, 7].map(i => {
@@ -1417,11 +1443,13 @@ if (typeof document !== "undefined") {
         const gNode = nodeByTitle.get(god);
         return `<span>${escapeHtml(hg)}</span><button type="button" class="god-link" ${gNode ? `data-open-node="${escapeHtml(gNode.id)}"` : ""}>${escapeHtml(god)}</button>`;
       }).join("");
+      const whyParts = (CANG_GAN[ch] || []).map(hg => `${hg}为${tenGod(bazi[2], hg)}`).join("、");
       return `
         <div class="god-row">
           <span class="pos-label">${slotLabel(i)}</span>
           <span class="big-char wx-${ZHI_WUXING[ch]}">${escapeHtml(ch)}</span>
           <span class="hidden-gods">藏 ${parts}</span>
+          <span class="god-why">${escapeHtml(ch)}藏干：${escapeHtml(whyParts)}</span>
         </div>`;
     }).join("");
 
@@ -2281,7 +2309,11 @@ if (typeof document !== "undefined") {
   }
 
   function exportCharts() {
-    const payload = { app: "bazi-xiangyi", type: "chart-book", version: 1, exportedAt: new Date().toISOString(), charts: chartBookAll() };
+    const charts = chartBookAll().map(item => ({
+      ...item,
+      chartStudySnapshot: chartExportSnapshot(item.bazi)
+    }));
+    const payload = { app: "bazi-xiangyi", type: "chart-book", version: 2, exportedAt: new Date().toISOString(), charts };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
