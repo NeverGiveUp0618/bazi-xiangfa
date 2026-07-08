@@ -357,6 +357,18 @@ mark {
   color: var(--muted);
 }
 
+.tree-search-btn {
+  width: 100%;
+  border: 1px solid var(--gold);
+  background: var(--gold-soft);
+  color: var(--gold);
+  border-radius: 10px;
+  padding: 9px 12px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .chip-row {
   display: flex;
   flex-wrap: wrap;
@@ -1522,6 +1534,21 @@ mark {
   flex-direction: column;
   gap: 8px;
   margin-top: 10px;
+}
+
+.tree-hit-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.tree-hit-list button {
+  border: 1px solid;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
 }
 
 .tree-card .tc-path-btn {

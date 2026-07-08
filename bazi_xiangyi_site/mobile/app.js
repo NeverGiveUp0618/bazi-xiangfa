@@ -1173,6 +1173,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🕸️ 共象搜索联动象义树——搜到一批词条后可直接在树上高亮命中，看它们分布和连线"],
     ["26.7.9", "📴 PWA 离线缓存——手机添加到主屏幕后可离线打开，联网时仍优先拉新版本"],
     ["26.7.9", "🌿 排盘补月令提纲与纳音逐柱——先看季节气候，再分年/月/日/时纳音各应什么位置"],
     ["26.7.9", "🔍 排盘结果补“为什么扫到”——关系、神煞、纳音、十神藏干都加检测理由，不只给结论"],
@@ -1336,6 +1337,7 @@ if (typeof document !== "undefined") {
             ${summary.overlaps.map(o => `<button type="button" class="chip ${o.count >= 3 ? "hot" : ""}" data-quick="${escapeHtml(o.word)}">${escapeHtml(o.word)}<small>×${o.count}</small></button>`).join("")}
           </div>
           <p class="sys-dist">常落体系：${summary.dist.slice(0, 4).map(([s, c]) => `${escapeHtml(s)} ${c}条`).join(" · ")}</p>
+          <button type="button" class="tree-search-btn" data-tree-search="${escapeHtml(query)}">在象义树看这批命中 →</button>
         </div>`;
     }
     el.searchBody.innerHTML = overlapHtml + results.map(r => nodeCardHtml(r, terms)).join("");
@@ -1763,6 +1765,7 @@ if (typeof document !== "undefined") {
     n: [], e: [], adj: [], idxById: null, anchors: [],
     cam: { x: 0, y: 0, s: 0.8 },
     alpha: 0, selected: -1, neighbors: new Set(), focusSys: "",
+    searchSet: new Set(), searchQuery: "",
     pathStart: -1, pathOrigin: -1, pathNodes: [], pathNodeSet: new Set(), pathEdgeSet: new Set(),
     W: 320, H: 480, dpr: 1,
     pointers: new Map(), pinch0: null, dragNode: -1, panStart: null, moved: 0, downAt: 0
@@ -1868,6 +1871,7 @@ if (typeof document !== "undefined") {
     const hasSel = tree.selected >= 0;
     const focus = tree.focusSys;
     const hasPath = tree.pathNodes.length >= 2;
+    const hasSearch = tree.searchSet.size > 0;
 
     // 边
     for (const [i, j] of tree.e) {
@@ -1879,6 +1883,11 @@ if (typeof document !== "undefined") {
         const on = tree.pathEdgeSet.has(Math.min(i, j) + "-" + Math.max(i, j));
         alpha = on ? 1 : 0.03;
         width = on ? 2.6 : 1;
+        if (on) color = "#ffe08a";
+      } else if (hasSearch) {
+        const on = tree.searchSet.has(i) || tree.searchSet.has(j);
+        alpha = on ? 0.5 : 0.035;
+        width = on ? 1.5 : 1;
         if (on) color = "#ffe08a";
       } else if (hasSel) {
         const on = (i === tree.selected || j === tree.selected);
@@ -1905,6 +1914,7 @@ if (typeof document !== "undefined") {
       let dimmed = false;
       const onPath = hasPath && tree.pathNodeSet.has(ni.i);
       if (hasPath) dimmed = !onPath;
+      else if (hasSearch) dimmed = !tree.searchSet.has(ni.i);
       else if (hasSel) dimmed = !(ni.i === tree.selected || tree.neighbors.has(ni.i));
       else if (focus) dimmed = ni.sysId !== focus;
       const r = ni.r * s;
@@ -1935,6 +1945,7 @@ if (typeof document !== "undefined") {
     for (const ni of tree.n) {
       let show;
       if (hasPath) show = tree.pathNodeSet.has(ni.i);
+      else if (hasSearch) show = tree.searchSet.has(ni.i);
       else if (hasSel) show = ni.i === tree.selected || tree.neighbors.has(ni.i);
       else if (focus) show = ni.sysId === focus ? (s > 0.4 || ni.deg >= 5) : false;
       else show = s >= 0.62 || ni.deg >= 7;
@@ -2017,6 +2028,11 @@ if (typeof document !== "undefined") {
     tree.pathEdgeSet = new Set();
   }
 
+  function clearTreeSearch() {
+    tree.searchSet = new Set();
+    tree.searchQuery = "";
+  }
+
   // 退出路径，回到起点那个字的单选（相关字连线）状态
   function exitPathToOrigin() {
     const origin = tree.pathOrigin;
@@ -2048,6 +2064,22 @@ if (typeof document !== "undefined") {
   }
 
   function renderTreeInfo() {
+    // 状态零：搜索高亮
+    if (tree.searchSet.size) {
+      const hits = [...tree.searchSet].map(i => tree.n[i]).slice(0, 18);
+      treeInfo.innerHTML = `
+        <div class="tree-card">
+          <div class="tc-path-head">
+            <strong>搜索命中</strong>
+            <span>「${escapeHtml(tree.searchQuery)}」· ${tree.searchSet.size} 个词条</span>
+            <button type="button" data-tree-search-clear>✕</button>
+          </div>
+          <div class="tree-hit-list">
+            ${hits.map(gn => `<button type="button" data-tree-select="${gn.i}" style="border-color:${gn.color};color:${gn.color}">${escapeHtml(gn.title)}</button>`).join("")}
+          </div>
+        </div>`;
+      return;
+    }
     // 状态一：路径已生成，渲染为竖向链：词 →理由→ 词
     if (tree.pathNodes.length >= 2) {
       const parts = [];
@@ -2116,6 +2148,7 @@ if (typeof document !== "undefined") {
 
   function selectTreeNode(i, center = true) {
     clearPath();
+    clearTreeSearch();
     tree.selected = i;
     tree.neighbors = new Set();
     if (i >= 0) {
@@ -2155,6 +2188,22 @@ if (typeof document !== "undefined") {
       return;
     }
     selectTreeNode(hit);
+  }
+
+  function showSearchInTree(query) {
+    const results = searchNodes(query);
+    if (!results.length) return;
+    switchTab("tree");
+    treeStart();
+    clearPath();
+    tree.selected = -1;
+    tree.neighbors = new Set();
+    tree.focusSys = "";
+    tree.searchQuery = query;
+    tree.searchSet = new Set(results.map(r => tree.idxById.get(r.node.id)).filter(i => i !== undefined));
+    if (tree.searchSet.size) treeFitTo([...tree.searchSet].map(i => tree.n[i]));
+    renderTreeInfo();
+    tree.dirty = true;
   }
 
   function treeStart() {
@@ -2281,6 +2330,7 @@ if (typeof document !== "undefined") {
 
   document.querySelector("#treeFit").addEventListener("click", () => {
     tree.focusSys = "";
+    clearTreeSearch();
     selectTreeNode(-1, false);
     treeLegend.querySelectorAll("button").forEach(b => b.classList.remove("active"));
     treeFitTo(tree.n);
@@ -2302,6 +2352,7 @@ if (typeof document !== "undefined") {
     if (!btn) return;
     const sys = btn.dataset.treeSys;
     tree.focusSys = tree.focusSys === sys ? "" : sys;
+    clearTreeSearch();
     selectTreeNode(-1, false);
     treeLegend.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.treeSys === tree.focusSys));
     if (tree.focusSys) treeFitTo(tree.n.filter(ni => ni.sysId === tree.focusSys));
@@ -2451,6 +2502,16 @@ if (typeof document !== "undefined") {
 
     const treeSel = event.target.closest("[data-tree-select]");
     if (treeSel) { selectTreeNode(Number(treeSel.dataset.treeSelect)); return; }
+
+    const treeSearch = event.target.closest("[data-tree-search]");
+    if (treeSearch) { showSearchInTree(treeSearch.dataset.treeSearch); return; }
+
+    if (event.target.closest("[data-tree-search-clear]")) {
+      clearTreeSearch();
+      renderTreeInfo();
+      tree.dirty = true;
+      return;
+    }
 
     const pathStartBtn = event.target.closest("[data-path-start]");
     if (pathStartBtn) { armPathStart(Number(pathStartBtn.dataset.pathStart)); return; }
