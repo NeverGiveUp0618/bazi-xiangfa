@@ -84,6 +84,22 @@ h1 {
   font-weight: 800;
 }
 
+.switch-version {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  margin: -6px 0 14px;
+  color: #fff;
+  text-decoration: none;
+  border-radius: var(--radius);
+  background: var(--accent-2);
+  font-weight: 760;
+}
+
+.switch-version:hover {
+  background: #185653;
+}
+
 .search {
   position: sticky;
   top: 0;
