@@ -545,6 +545,27 @@ function overlapSummary(results, terms) {
   return { overlaps, dist, topCount: top.length };
 }
 
+function sourceCompare(results, query) {
+  const specs = [
+    { id: "ten-gods", title: "十神来的象", why: "从人事关系和资源角色取象，比如印为文书庇护、财为钱物客户、官为规则名分。" },
+    { id: "combo-cards", title: "组合来的象", why: "多个十神、宫位或关系叠在一起，先看条件是否成立，再看反例。" },
+    { id: "relations", title: "干支关系来的象", why: "冲合刑穿破让字与字发生作用，重点看哪个宫位被引动。" },
+    { id: "shen-sha", title: "神煞来的象", why: "神煞补画面和场景，不单独定吉凶，要回到宫位与十神。" },
+    { id: "nayin", title: "纳音来的象", why: "纳音补充一柱的质地和背景，年/月/日/时应的位置不同。" },
+    { id: "palace-luck", title: "宫位岁运来的象", why: "同一个象落年/月/日/时，应到长辈、平台、自己婚恋、结果子女会不同。" }
+  ];
+  const groups = specs.map(spec => ({
+    ...spec,
+    hits: results.filter(r => r.node.systemId === spec.id).slice(0, 4).map(r => r.node.title)
+  })).filter(g => g.hits.length);
+  const known = new Set(specs.map(s => s.id));
+  const other = results.filter(r => !known.has(r.node.systemId)).slice(0, 4).map(r => r.node.title);
+  if (other.length) {
+    groups.push({ id: "other", title: "本象来的象", why: `直接从字、五行或资料映射里命中「${query}」，先看本义，再看是否与其他来源重叠。`, hits: other });
+  }
+  return groups.slice(0, 5);
+}
+
 /* ---------- 象义树：图数据 ---------- */
 const SYS_COLORS = {
   "five-elements": "#ffd54f",
@@ -844,6 +865,7 @@ function storageSet(key, value) {
 }
 
 let chartStudyPart = "all";
+let chartBookTagFilter = "";
 
 function baziTitle(arr) {
   if (!Array.isArray(arr) || arr.length !== 8) return "未命名命例";
@@ -868,6 +890,7 @@ function normalizeChartBook(value) {
       bazi: item.bazi.slice(0, 8),
       note: String(item.note || ""),
       noteSections: normalizeChartNoteSections(item.noteSections, item.note),
+      tags: normalizeTags(item.tags),
       createdAt: Number(item.createdAt || Date.now()),
       updatedAt: Number(item.updatedAt || item.createdAt || Date.now())
     }));
@@ -901,6 +924,43 @@ function chartNotePlain(sections) {
     .map(f => s[f.id] ? `${f.title}：${s[f.id]}` : "")
     .filter(Boolean)
     .join("\n");
+}
+
+function normalizeTags(tags) {
+  if (!Array.isArray(tags)) return [];
+  return [...new Set(tags.map(t => String(t).trim()).filter(Boolean))].slice(0, 12);
+}
+
+function parseTags(text) {
+  return normalizeTags(String(text || "").split(/[、,，\s]+/));
+}
+
+function suggestedChartTags(arr) {
+  const tags = new Set();
+  const rels = scanRelations(arr);
+  const combos = detectCombos(arr);
+  const shensha = scanShensha(arr);
+  const add = t => { if (t) tags.add(t); };
+  combos.forEach(c => {
+    if (c.nodeTitle.includes("夫妻宫")) add("感情");
+    if (c.nodeTitle.includes("财")) add("财运");
+    if (c.nodeTitle.includes("食伤") || c.nodeTitle.includes("印")) add("学业/技能");
+    add(c.nodeTitle);
+  });
+  rels.forEach(r => {
+    if (r.palace.includes("日支")) add("夫妻宫");
+    if (r.kindLabel === "冲") add("冲");
+    if (r.kindLabel === "穿") add("穿");
+    if (r.kindLabel === "库") add("库");
+  });
+  shensha.forEach(s => {
+    if (s.name.includes("桃花")) add("桃花");
+    if (s.name.includes("驿马")) add("迁移");
+    if (s.name.includes("文昌")) add("学业/文书");
+    if (s.name.includes("孤") || s.name.includes("寡")) add("感情");
+  });
+  if (tags.size === 0) add("待复盘");
+  return [...tags].slice(0, 8);
 }
 
 function currentChartEntry(book, arr) {
@@ -1221,6 +1281,9 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🏷️ 命例本加标签筛选——自动建议感情、财运、冲、穿、桃花等标签，导入导出保留"],
+    ["26.7.9", "📌 高频词条补小案例——财库、伤官见官、桃花、夫妻宫等加正例、反例、变体"],
+    ["26.7.9", "🔎 搜索加同象不同源——把十神、组合、关系、神煞、纳音、宫位来源分开解释"],
     ["26.7.9", "🧾 命例笔记模板化——按初看共象、盘中证据、不能这样断、岁运触发、复盘结论记录"],
     ["26.7.9", "🧭 排盘加取象路径和学习路线——先定月令，再看日主十神、结构、神煞纳音，最后写反例"],
     ["26.7.9", "🕸️ 共象搜索联动象义树——搜到一批词条后可直接在树上高亮命中，看它们分布和连线"],
@@ -1390,7 +1453,18 @@ if (typeof document !== "undefined") {
           <button type="button" class="tree-search-btn" data-tree-search="${escapeHtml(query)}">在象义树看这批命中 →</button>
         </div>`;
     }
-    el.searchBody.innerHTML = overlapHtml + results.map(r => nodeCardHtml(r, terms)).join("");
+    const compare = sourceCompare(results, query);
+    const compareHtml = compare.length >= 2 ? `
+      <div class="source-compare-card">
+        <h3>同象不同源</h3>
+        ${compare.map(group => `
+          <div class="source-compare-row">
+            <strong>${escapeHtml(group.title)}</strong>
+            <p>${escapeHtml(group.why)}</p>
+            <div>${group.hits.map(t => `<button type="button" data-quick="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join("")}</div>
+          </div>`).join("")}
+      </div>` : "";
+    el.searchBody.innerHTML = overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
   }
 
   /* ---- 排盘页 ---- */
@@ -1443,11 +1517,15 @@ if (typeof document !== "undefined") {
     const book = chartBookAll();
     const currentKey = baziKey(bazi);
     const current = currentChartEntry(book, bazi);
-    const rows = book.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 8).map(item => `
+    const allTags = [...new Set(book.flatMap(item => item.tags || []))].slice(0, 18);
+    if (chartBookTagFilter && !allTags.includes(chartBookTagFilter)) chartBookTagFilter = "";
+    const visibleBook = chartBookTagFilter ? book.filter(item => (item.tags || []).includes(chartBookTagFilter)) : book;
+    const rows = visibleBook.slice().sort((a, b) => b.updatedAt - a.updatedAt).slice(0, 10).map(item => `
       <div class="chart-book-row ${baziKey(item.bazi) === currentKey ? "active" : ""}">
         <button type="button" data-load-chart="${escapeHtml(item.id)}">
           <strong>${escapeHtml(item.title)}</strong>
           <span>${escapeHtml(baziTitle(item.bazi))}</span>
+          ${(item.tags || []).length ? `<em>${item.tags.map(t => `#${escapeHtml(t)}`).join(" ")}</em>` : ""}
         </button>
         <button type="button" class="chart-book-del" data-delete-chart="${escapeHtml(item.id)}" aria-label="删除命例">删</button>
       </div>`).join("");
@@ -1461,9 +1539,20 @@ if (typeof document !== "undefined") {
         <button type="button" data-export-charts ${book.length ? "" : "disabled"}>导出</button>
         <button type="button" data-import-charts>导入</button>
       </div>
+      ${allTags.length ? `
+        <div class="chart-tag-filter">
+          <button type="button" class="${chartBookTagFilter ? "" : "active"}" data-chart-tag-filter="">全部</button>
+          ${allTags.map(tag => `<button type="button" class="${chartBookTagFilter === tag ? "active" : ""}" data-chart-tag-filter="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}
+        </div>` : ""}
       ${current ? `
         <div class="chart-note-box">
           <div class="chart-note-title">命例复盘模板</div>
+          <label for="chartTags">标签</label>
+          <input id="chartTags" class="chart-tags-input" data-chart-tags-input value="${escapeHtml((current.tags || []).join("、"))}" placeholder="感情、财运、冲、桃花；用顿号或逗号分隔" />
+          <div class="chart-tag-suggest">
+            <span>建议</span>
+            ${suggestedChartTags(bazi).map(tag => `<button type="button" data-add-chart-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}
+          </div>
           ${CHART_NOTE_FIELDS.map(field => `
             <label for="chartNote_${escapeHtml(field.id)}">${escapeHtml(field.title)}</label>
             <textarea id="chartNote_${escapeHtml(field.id)}" data-chart-note-field="${escapeHtml(field.id)}" rows="2" placeholder="${escapeHtml(field.hint)}">${escapeHtml(current.noteSections?.[field.id] || "")}</textarea>
@@ -2446,9 +2535,10 @@ if (typeof document !== "undefined") {
     if (old) {
       old.title = name.trim() || baziTitle(bazi);
       old.bazi = bazi.slice();
+      if (!old.tags.length) old.tags = suggestedChartTags(bazi);
       old.updatedAt = now;
     } else {
-      book.push({ id: uid("chart"), title: name.trim() || baziTitle(bazi), bazi: bazi.slice(), note: "", createdAt: now, updatedAt: now });
+      book.push({ id: uid("chart"), title: name.trim() || baziTitle(bazi), bazi: bazi.slice(), note: "", noteSections: normalizeChartNoteSections(null), tags: suggestedChartTags(bazi), createdAt: now, updatedAt: now });
     }
     storageSet("chartBook", book);
     renderChartBook();
@@ -2464,6 +2554,7 @@ if (typeof document !== "undefined") {
     });
     item.noteSections = normalizeChartNoteSections(sections);
     item.note = chartNotePlain(item.noteSections);
+    item.tags = parseTags(document.querySelector("[data-chart-tags-input]")?.value || "");
     item.updatedAt = Date.now();
     storageSet("chartBook", book);
     renderChartBook();
@@ -2527,6 +2618,7 @@ if (typeof document !== "undefined") {
               old.title = item.title || old.title;
               old.noteSections = normalizeChartNoteSections(item.noteSections, item.note || old.note);
               old.note = item.note || old.note || "";
+              old.tags = normalizeTags(item.tags?.length ? item.tags : old.tags);
               old.updatedAt = Date.now();
             } else {
               item.id = uid("chart");
@@ -2631,6 +2723,23 @@ if (typeof document !== "undefined") {
 
     const saveNoteBtn = event.target.closest("[data-save-chart-note]");
     if (saveNoteBtn) { saveChartNote(saveNoteBtn.dataset.saveChartNote); return; }
+
+    const tagFilterBtn = event.target.closest("[data-chart-tag-filter]");
+    if (tagFilterBtn) {
+      chartBookTagFilter = tagFilterBtn.dataset.chartTagFilter || "";
+      renderChartBook();
+      return;
+    }
+
+    const addTagBtn = event.target.closest("[data-add-chart-tag]");
+    if (addTagBtn) {
+      const input = document.querySelector("[data-chart-tags-input]");
+      if (!input) return;
+      const tags = new Set(parseTags(input.value));
+      tags.add(addTagBtn.dataset.addChartTag);
+      input.value = [...tags].join("、");
+      return;
+    }
 
     const loadChartBtn = event.target.closest("[data-load-chart]");
     if (loadChartBtn) { loadChart(loadChartBtn.dataset.loadChart); return; }
