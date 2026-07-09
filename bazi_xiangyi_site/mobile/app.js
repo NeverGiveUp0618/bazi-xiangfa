@@ -236,8 +236,13 @@ function scanRelations(bazi) {
       if (CHUAN_SHENG.includes(p12) || CHUAN_SHENG.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属生穿：一边给一边伤，多看心性、模式、关系方式转换。"));
       if (CHUAN_KE.includes(p12) || CHUAN_KE.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属克穿：直接卡住生路，实质损伤、穿跑穿走的力道更硬。"));
       const liuheEl = ZHI_LIUHE[p12] || ZHI_LIUHE[p21];
-      if (liuheEl) found.push(relItem(`${z1.ch}${z2.ch}六合`, "合", "k-合", [z1, z2], "地支六合", `合化倾向${liuheEl}，也可能只是合绊拖住。`));
+      if (liuheEl) found.push(relItem(`${z1.ch}${z2.ch}六合`, "合", "k-合", [z1, z2], "地支六合", `对应合化五行为${liuheEl}，但先按合留、合绊、牵连取象。`));
       if (ANHE_PAIRS.includes(p12) || ANHE_PAIRS.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}暗合`, "暗合", "k-合", [z1, z2], "暗合"));
+      if (JUE_PAIRS.includes(p12) || JUE_PAIRS.includes(p21)) {
+        const hasAnhe = ANHE_PAIRS.includes(p12) || ANHE_PAIRS.includes(p21);
+        const note = hasAnhe ? "此组也入暗合：绝看明气不通，暗合看暗线牵连。" : "绝主气机不接、缘分变薄，喜忌决定是摆脱还是损失。";
+        found.push(relItem(`${z1.ch}${z2.ch}相绝`, "绝", "k-破", [z1, z2], "绝", note));
+      }
       if (PO_PAIRS.includes(p12) || PO_PAIRS.includes(p21)) {
         const note = (p12 === "子卯" || p21 === "子卯") ? "四正破口径；部分体系把子卯归无礼刑。" : "四正破口径，传统六破另有组合，见详情。";
         found.push(relItem(`${z1.ch}${z2.ch}相破`, "破", "k-破", [z1, z2], "六破", note));
@@ -326,7 +331,7 @@ function scanRelations(bazi) {
     found.push(relItem(`${slotLabel(z.i)}${z.ch}为${ku}`, "库", "k-库", [z], "墓库", note));
   });
 
-  const order = { 冲: 1, 刑: 2, 穿: 3, 破: 4, 反吟: 5, 合: 6, 三合: 7, 半合: 7, 拱合: 7, 三会: 7, 暗合: 8, 自合: 8, 伏吟: 9, 禄: 10, 库: 11 };
+  const order = { 冲: 1, 刑: 2, 穿: 3, 破: 4, 绝: 5, 反吟: 6, 合: 7, 三合: 8, 半合: 8, 拱合: 8, 三会: 8, 暗合: 9, 自合: 9, 伏吟: 10, 禄: 11, 库: 12 };
   return found.sort((x, y) => (order[x.kindLabel] || 99) - (order[y.kindLabel] || 99));
 }
 
@@ -773,9 +778,13 @@ function explainDirected(a, b) {
       if (CHUAN_SHENG.includes(ca + cb) || CHUAN_SHENG.includes(cb + ca)) return `${ca}${cb}相穿（生穿），暗中损耗。`;
       if (CHUAN_KE.includes(ca + cb) || CHUAN_KE.includes(cb + ca)) return `${ca}${cb}相穿（克穿），直接卡住生路。`;
       if (PO_PAIRS.includes(ca + cb) || PO_PAIRS.includes(cb + ca)) return `${ca}${cb}相破，完整性受损。`;
-      if (ANHE_PAIRS.includes(ca + cb) || ANHE_PAIRS.includes(cb + ca)) return `${ca}${cb}暗合，藏干私下勾连。`;
+      const isAnhePair = ANHE_PAIRS.includes(ca + cb) || ANHE_PAIRS.includes(cb + ca);
+      const isJuePair = JUE_PAIRS.includes(ca + cb) || JUE_PAIRS.includes(cb + ca);
+      if (isAnhePair && isJuePair) return `${ca}${cb}兼具暗合与绝的口径：暗合看暗线牵连，绝看明气不通。`;
+      if (isAnhePair) return `${ca}${cb}暗合，藏干私下勾连。`;
+      if (isJuePair) return `${ca}${cb}相绝，气机不接、缘分变薄。`;
       const sh = SANHE.find(g => g.slice(0, 3).includes(ca) && g.slice(0, 3).includes(cb));
-      if (sh) return `${ca}${cb}同属${sh.slice(0, 3).join("")}三合${sh[3]}局，气脉一家。`;
+      if (sh) return `${ca}${cb}同属${sh.slice(0, 3).join("")}三合${sh[3]}体系，气脉相近；是否成局仍看三字齐全和中神是否被坏。`;
       const hui = SANHUI.find(g => g.slice(0, 3).includes(ca) && g.slice(0, 3).includes(cb));
       if (hui) return `${ca}${cb}同属${hui.slice(0, 3).join("")}三会${hui[3]}方，季节同气。`;
       const xing = XING_GROUPS.find(g => g.chars.includes(ca) && g.chars.includes(cb));
@@ -1230,10 +1239,11 @@ function relQuizPool() {
   CHUAN_SHENG.concat(CHUAN_KE).forEach(k => pool.push({ a: k[0], b: k[1], label: "相穿", node: "穿" }));
   PO_PAIRS.forEach(k => pool.push({ a: k[0], b: k[1], label: "相破", node: "六破" }));
   ANHE_PAIRS.forEach(k => pool.push({ a: k[0], b: k[1], label: "暗合", node: "暗合" }));
-  SANHE.forEach(([s, z, m]) => pool.push({ a: s, b: m, label: "三合", node: "地支三合" }));
+  JUE_PAIRS.forEach(k => pool.push({ a: k[0], b: k[1], label: "相绝", node: "绝" }));
+  SANHE.forEach(([s, z, m]) => pool.push({ a: s, b: m, label: "拱合", node: "地支三合" }));
   return pool;
 }
-const REL_LABELS = ["六冲", "六合", "三合", "相穿", "相破", "暗合"];
+const REL_LABELS = ["六冲", "六合", "拱合", "相穿", "相破", "暗合", "相绝"];
 
 function makeQuizQuestion(scope) {
   const pool = scopeNodes(scope);
@@ -1324,6 +1334,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🧹 全站口径审校——统一六合/暗合、子卯破刑、六害穿、三合成局与绝暗合重叠说明"],
     ["26.7.9", "📚 PDF 笔记口径校准——以八初中/八高/八公材料为主，补三合破局、生克穿、墓库大限和反例提醒"],
     ["26.7.9", "⚑ 搜索加反例优先——先看不能这样断、反例、不成立条件，再看常规象义"],
     ["26.7.9", "🏷️ 命例本加标签筛选——自动建议感情、财运、冲、穿、桃花等标签，导入导出保留"],
