@@ -1126,24 +1126,57 @@ function chartExportSnapshot(arr) {
 }
 
 function chartPathSteps(bazi, season, combos, rels, shensha, nayin) {
-  const day = `${bazi[2]}${bazi[6]}`;
-  const steps = [];
-  if (season) {
-    steps.push({ title: "1. 先定气候", body: `${season.month}月为${season.season}，${season.wang}。先看什么得令，别急着下结果。` });
-  }
-  steps.push({ title: "2. 再看日主", body: `日柱${day}，以日干${bazi[2]}为主；其他天干和藏干都先换成十神，再看谁来帮、谁来耗、谁来管。` });
-  if (rels.length || combos.length) {
-    const relTxt = rels.slice(0, 3).map(r => r.name).join("、");
-    const comboTxt = combos.slice(0, 2).map(c => c.nodeTitle).join("、");
-    steps.push({ title: "3. 找被引动的结构", body: [relTxt && `关系：${relTxt}`, comboTxt && `组合：${comboTxt}`].filter(Boolean).join("；") + "。先定位宫位，再取事件。" });
-  }
-  if (shensha.length || nayin.some(n => n.name)) {
-    const ssTxt = shensha.slice(0, 3).map(s => `${s.name}在${slotLabel(s.cell.i)}`).join("、");
-    const nyTxt = nayin.filter(n => n.name).slice(0, 2).map(n => `${n.pillar}${n.name}`).join("、");
-    steps.push({ title: "4. 用神煞纳音补像", body: [ssTxt && `神煞：${ssTxt}`, nyTxt && `纳音：${nyTxt}`].filter(Boolean).join("；") + "。它们补画面，不单独定吉凶。" });
-  }
-  steps.push({ title: "5. 最后写反例", body: "把“不能这样断”写进命例笔记：没有岁运触发、没有宫位证据、没有十神承接的结论，先暂缓。" });
-  return steps;
+  const dayGan = bazi[2], dayZhi = bazi[6], monthZhi = bazi[5];
+  const day = `${dayGan}${dayZhi}`;
+  const dayRoot = (CANG_GAN[dayZhi] || []).includes(dayGan);
+  const sameWxZhi = [4, 5, 6, 7].filter(i => ZHI_WUXING[bazi[i]] === GAN_WUXING[dayGan]).map(i => `${slotLabel(i)}${bazi[i]}`);
+  const ganHeTargets = [0, 1, 3].map(i => {
+    const heEl = GAN_HE[dayGan + bazi[i]] || GAN_HE[bazi[i] + dayGan];
+    return heEl ? `${PILLARS[i]}干${bazi[i]}五合${heEl}` : "";
+  }).filter(Boolean);
+  const dayProduces = [0, 1, 3].map(i => {
+    const god = tenGod(dayGan, bazi[i]);
+    return ["食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"].includes(god) ? `${PILLARS[i]}干${bazi[i]}为${god}` : "";
+  }).filter(Boolean);
+  const relTxt = rels.slice(0, 4).map(r => r.name).join("、") || "未扫到明显合冲刑穿破绝";
+  const comboTxt = combos.slice(0, 3).map(c => c.nodeTitle).join("、") || "暂未扫到高频组合卡";
+  const ssTxt = shensha.slice(0, 3).map(s => `${s.name}在${slotLabel(s.cell.i)}`).join("、");
+  const nyTxt = nayin.filter(n => n.name).slice(0, 2).map(n => `${n.pillar}${n.name}`).join("、");
+  const supplement = [ssTxt && `神煞：${ssTxt}`, nyTxt && `纳音：${nyTxt}`].filter(Boolean).join("；") || "神煞、纳音可作为补像，不单独定吉凶";
+  return [
+    {
+      title: "1. 日干天元先入命",
+      body: `先锁定日干${dayGan}，日柱${day}，所有十神、生克、喜忌都围绕这个“我”展开。`
+    },
+    {
+      title: "2. 干支虚实定状态",
+      body: `${dayGan}坐${dayZhi}${dayRoot ? "，日支藏干见日干，先按有根承载看" : "，日支不藏日干，先留意是否虚透或借根"}；同五行地支${sameWxZhi.length ? `见${sameWxZhi.join("、")}` : "暂未明显出现"}。${season ? `月令${monthZhi}为${season.season}，${season.wang}。` : ""}`
+    },
+    {
+      title: "3. 十干喜忌判吉凶",
+      body: "在状态基础上再判喜忌：先看月令气候、通根虚实、全局生克泄耗。网站提示气候和关系，但喜忌要按本体系十干喜忌法则综合，不用冷冰冰分数。"
+    },
+    {
+      title: "4. 干支意向定方向",
+      body: `${ganHeTargets.length ? `日干相关合象：${ganHeTargets.join("、")}。` : "日干未见明显天干五合。"}${dayProduces.length ? `十神牵引：${dayProduces.join("、")}。` : "外透十神牵引暂不明显。"}用它判断求财、求贵、求技术、求精神等人生意向。`
+    },
+    {
+      title: "5. 十神格局看事情",
+      body: `组合提示：${comboTxt}。点进组合卡看成立条件、不成立条件和不能这样断，先定事情领域，再落到人事。`
+    },
+    {
+      title: "6. 作用方式定性质",
+      body: `作用关系：${relTxt}。合、冲、刑、穿、绝、破、伏吟、反吟决定事件性质；同一十神遇不同作用，结果完全不同。`
+    },
+    {
+      title: "7. 宫位大运限阶段",
+      body: "把上面的象落回年、月、日、时：年看根基早年，月看父母平台，日看自身贴身，时看结果晚年；再配大限和大运，定位人生阶段。"
+    },
+    {
+      title: "8. 大运流年定应期",
+      body: `原局未清不推应期。原局主线清楚后，再在命例笔记写岁运触发：哪步大运、哪年流年引动了哪条组合。${supplement}。`
+    }
+  ];
 }
 
 /* ---------- 学习（间隔复习） ---------- */
@@ -1334,6 +1367,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🧭 排盘取象路径改按八步入命法——日干天元、虚实状态、十干喜忌、意向、格局、作用、宫位大运、岁运应期"],
     ["26.7.9", "🧹 全站口径审校——统一六合/暗合、子卯破刑、六害穿、三合成局与绝暗合重叠说明"],
     ["26.7.9", "📚 PDF 笔记口径校准——以八初中/八高/八公材料为主，补三合破局、生克穿、墓库大限和反例提醒"],
     ["26.7.9", "⚑ 搜索加反例优先——先看不能这样断、反例、不成立条件，再看常规象义"],
@@ -1341,7 +1375,7 @@ if (typeof document !== "undefined") {
     ["26.7.9", "📌 高频词条补小案例——财库、伤官见官、桃花、夫妻宫等加正例、反例、变体"],
     ["26.7.9", "🔎 搜索加同象不同源——把十神、组合、关系、神煞、纳音、宫位来源分开解释"],
     ["26.7.9", "🧾 命例笔记模板化——按初看共象、盘中证据、不能这样断、岁运触发、复盘结论记录"],
-    ["26.7.9", "🧭 排盘加取象路径和学习路线——先定月令，再看日主十神、结构、神煞纳音，最后写反例"],
+    ["26.7.9", "🧭 排盘加取象路径和学习路线——后续已按八步入命法重排，不再用泛化断盘顺序"],
     ["26.7.9", "🕸️ 共象搜索联动象义树——搜到一批词条后可直接在树上高亮命中，看它们分布和连线"],
     ["26.7.9", "📴 PWA 离线缓存——手机添加到主屏幕后可离线打开，联网时仍优先拉新版本"],
     ["26.7.9", "🌿 排盘补月令提纲与纳音逐柱——先看季节气候，再分年/月/日/时纳音各应什么位置"],
@@ -1738,7 +1772,7 @@ if (typeof document !== "undefined") {
       </div>`;
     const pathSection = `
       <section class="ana-section">
-        <div class="ana-head"><h3>取象路径</h3><span class="ana-count">按步骤断，不跳结论</span></div>
+        <div class="ana-head"><h3>八步入命法</h3><span class="ana-count">按八字笔记顺序断，不跳步</span></div>
         <div class="chart-path-list">
           ${pathSteps.map(step => `
             <div class="chart-path-step">
