@@ -472,6 +472,37 @@ mark {
 
 .node-card:active { transform: scale(0.99); }
 
+.anti-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin: 12px 0;
+}
+
+.anti-toggle input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--gold);
+  flex-shrink: 0;
+}
+
+.anti-toggle span {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.anti-toggle small {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
 .node-title-row {
   display: flex;
   align-items: center;
@@ -513,6 +544,28 @@ mark {
 }
 
 .match-lines { margin-top: 8px; }
+
+.anti-lines {
+  border: 1px solid var(--gold);
+  background: var(--gold-soft);
+  border-radius: 10px;
+  padding: 7px 9px;
+  margin-top: 9px;
+}
+
+.anti-line {
+  margin: 0 0 5px;
+  font-size: 12px;
+  color: var(--ink);
+  line-height: 1.5;
+}
+
+.anti-line:last-child { margin-bottom: 0; }
+
+.anti-line b {
+  color: var(--gold);
+  margin-right: 6px;
+}
 
 .match-line {
   font-size: 13px;

@@ -566,6 +566,29 @@ function sourceCompare(results, query) {
   return groups.slice(0, 5);
 }
 
+const ANTI_KEYS = ["不能这样断", "反例", "不成立条件"];
+
+function antiEvidenceOf(node, terms = []) {
+  const out = [];
+  Object.entries(node.branches || {}).forEach(([key, values]) => {
+    const isAnti = ANTI_KEYS.some(k => key.includes(k)) || key === "小案例";
+    if (!isAnti) return;
+    values.forEach(v => {
+      const text = String(v);
+      const isCaseAnti = key === "小案例" && !text.includes("反例");
+      if (isCaseAnti) return;
+      if (terms.length && !terms.some(t => text.includes(t) || node.title.includes(t) || (node.core || []).some(c => c.includes(t)))) return;
+      out.push({ label: key, text });
+    });
+  });
+  return out.slice(0, 3);
+}
+
+function applyAntiFirst(results, terms) {
+  return results.map((r, idx) => ({ ...r, anti: antiEvidenceOf(r.node, terms), originalIndex: idx }))
+    .sort((a, b) => (b.anti.length - a.anti.length) || (b.score - a.score) || (a.originalIndex - b.originalIndex));
+}
+
 /* ---------- 象义树：图数据 ---------- */
 const SYS_COLORS = {
   "five-elements": "#ffd54f",
@@ -1281,6 +1304,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "⚑ 搜索加反例优先——先看不能这样断、反例、不成立条件，再看常规象义"],
     ["26.7.9", "🏷️ 命例本加标签筛选——自动建议感情、财运、冲、穿、桃花等标签，导入导出保留"],
     ["26.7.9", "📌 高频词条补小案例——财库、伤官见官、桃花、夫妻宫等加正例、反例、变体"],
     ["26.7.9", "🔎 搜索加同象不同源——把十神、组合、关系、神煞、纳音、宫位来源分开解释"],
@@ -1323,6 +1347,7 @@ if (typeof document !== "undefined") {
   let selectedSlot = 0;
   let quizOn = storageGet("quiz", false);
   let quizRevealed = { rel: false, ss: false };
+  let antiFirst = storageGet("antiFirst", false);
   let studyScope = storageGet("studyScope", "all");
   if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
   chartStudyPart = storageGet("chartStudyPart", "all");
@@ -1398,11 +1423,14 @@ if (typeof document !== "undefined") {
   }
 
   function nodeCardHtml(result, terms) {
-    const { node, evidence } = result;
+    const { node, evidence, anti } = result;
     const matchLines = (evidence || [])
       .filter(e => e.label !== "词条名")
       .map(e => `<p class="match-line"><b>${escapeHtml(e.label)}</b>${highlight(e.text, terms)}</p>`)
       .join("");
+    const antiLines = (anti || []).map(e =>
+      `<p class="anti-line"><b>${escapeHtml(e.label)}</b>${highlight(e.text, terms)}</p>`
+    ).join("");
     return `
       <button class="node-card" type="button" data-open-node="${escapeHtml(node.id)}">
         <div class="node-title-row">
@@ -1411,6 +1439,7 @@ if (typeof document !== "undefined") {
           <span class="sys-pill">${escapeHtml(node.systemTitle)}</span>
         </div>
         <div class="core-row">${(node.core || []).slice(0, 5).map(c => `<span>${terms ? highlight(c, terms) : escapeHtml(c)}</span>`).join("")}</div>
+        ${antiLines ? `<div class="anti-lines">${antiLines}</div>` : ""}
         ${matchLines ? `<div class="match-lines">${matchLines}</div>` : `<p class="plain-line">${escapeHtml(nodePlain(node))}</p>`}
       </button>`;
   }
@@ -1434,12 +1463,20 @@ if (typeof document !== "undefined") {
       return;
     }
     const terms = query.split(/\s+/).filter(Boolean);
-    const results = searchNodes(query);
+    let results = searchNodes(query);
     if (!results.length) {
       el.searchBody.innerHTML = `<div class="empty-card">没有找到「${escapeHtml(query)}」。换个说法试试，比如“文书”“财库”“子午冲”。</div>`;
       return;
     }
+    if (antiFirst) results = applyAntiFirst(results, terms);
     const summary = overlapSummary(results, terms);
+    const antiCount = results.filter(r => r.anti?.length).length;
+    const antiToggleHtml = `
+      <label class="anti-toggle">
+        <input type="checkbox" data-anti-first ${antiFirst ? "checked" : ""} />
+        <span>反例优先</span>
+        <small>${antiFirst ? `已优先显示 ${antiCount} 条有边界提醒的词条` : "先看不能这样断、反例、不成立条件"}</small>
+      </label>`;
     let overlapHtml = "";
     if (summary && summary.overlaps.length) {
       overlapHtml = `
@@ -1464,7 +1501,7 @@ if (typeof document !== "undefined") {
             <div>${group.hits.map(t => `<button type="button" data-quick="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join("")}</div>
           </div>`).join("")}
       </div>` : "";
-    el.searchBody.innerHTML = overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
+    el.searchBody.innerHTML = antiToggleHtml + overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
   }
 
   /* ---- 排盘页 ---- */
@@ -2696,6 +2733,14 @@ if (typeof document !== "undefined") {
     if (quick) {
       el.globalSearch.value = quick.dataset.quick;
       if (activeTab !== "search" || detailStack.length) switchTab("search");
+      renderSearch();
+      return;
+    }
+
+    const antiToggle = event.target.closest("[data-anti-first]");
+    if (antiToggle) {
+      antiFirst = !!antiToggle.checked;
+      storageSet("antiFirst", antiFirst);
       renderSearch();
       return;
     }
