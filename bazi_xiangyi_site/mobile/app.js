@@ -2,7 +2,7 @@
  * 设计原则：
  * 1. 查询：一个词 -> 共象聚合 -> 为什么匹配 -> 详情
  * 2. 排盘：点选八字，自动标出关系/神煞/纳音/十神，每一项都能点进象义库
- * 3. 学习：先回忆再翻面，认识/模糊/不熟 本地间隔复习
+ * 3. 学习：客观答题为主，对错自动进入本地间隔复习；解析只用于查看
  * 所有检测口径与 data.js 中的象义条目保持一致（四正破、生穿克穿、三刑分组等）。
  */
 
@@ -1367,6 +1367,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🎯 学习页去主观自评——默认客观测验，掌握度只按答题对错更新；解析模式不再出现自评按钮"],
     ["26.7.9", "🧭 排盘取象路径改按八步入命法——日干天元、虚实状态、十干喜忌、意向、格局、作用、宫位大运、岁运应期"],
     ["26.7.9", "🧹 全站口径审校——统一六合/暗合、子卯破刑、六害穿、三合成局与绝暗合重叠说明"],
     ["26.7.9", "📚 PDF 笔记口径校准——以八初中/八高/八公材料为主，补三合破局、生克穿、墓库大限和反例提醒"],
@@ -1394,7 +1395,7 @@ if (typeof document !== "undefined") {
     ["26.7.8", "🐛 修复戊土/午火 id 撞车——以前点戊土会误开午火、共享复习记录"],
     ["26.7.8", "🔗 象义树352条连线全部标注理由——为什么杨柳木连着午火、未土，一看就懂"],
     ["26.7.8", "🌌 象义树上线——131个词条织成发光关系网，点谁亮谁、双指缩放、按体系聚焦"],
-    ["26.7.7", "📱 手机版整体重做——共象聚合查询 / 点选八字自动解盘 / 翻卡间隔复习 / 体系图鉴"]
+    ["26.7.7", "📱 手机版整体重做——共象聚合查询 / 点选八字自动解盘 / 学习复习 / 体系图鉴"]
   ];
   const HINTS = {
     search: "想到一个词，先查共象",
@@ -1419,8 +1420,11 @@ if (typeof document !== "undefined") {
   chartStudyPart = storageGet("chartStudyPart", "all");
   if (!CHART_STUDY_PARTS.some(p => p.id === chartStudyPart)) chartStudyPart = "all";
   let studyNodeId = null;
-  let studyFlipped = false;
-  let studyMode = storageGet("studyMode", "flip"); // flip | quiz
+  let studyMode = storageGet("studyMode", "quiz"); // quiz | explain
+  if (studyMode === "flip" || !["quiz", "explain"].includes(studyMode)) {
+    studyMode = "quiz";
+    storageSet("studyMode", studyMode);
+  }
   let currentQuiz = null;
   let quizChosen = -1;
   let activeSystemId = graph.systems[0]?.id;
@@ -1518,7 +1522,7 @@ if (typeof document !== "undefined") {
         <div class="home-entries">
           <button class="home-entry" type="button" data-entry="search"><span class="entry-badge">查</span><span><strong>查一个象</strong><p>想到词就搜：文书、财库、口舌、搬家……</p></span></button>
           <button class="home-entry" type="button" data-entry="chart"><span class="entry-badge">盘</span><span><strong>输入命例</strong><p>点选八字，冲合穿破、神煞纳音自动标出</p></span></button>
-          <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天学一个</strong><p>翻卡回忆象义，认识/不熟自动安排复习</p></span></button>
+          <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天测一组</strong><p>用选择题检验，不靠主观自评判断会不会</p></span></button>
         </div>
         <div class="dev-log">
           <div class="dev-log-head">开发时间节点</div>
@@ -1818,8 +1822,8 @@ if (typeof document !== "undefined") {
   /* ---- 学习页 ---- */
   function renderStudyMode() {
     el.studyMode.innerHTML = `
-      <button type="button" class="${studyMode === "flip" ? "active" : ""}" data-study-mode="flip">翻卡</button>
-      <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">答题</button>`;
+      <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
+      <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">解析</button>`;
   }
 
   function renderStudyScope() {
@@ -1858,9 +1862,9 @@ if (typeof document !== "undefined") {
   function renderStudyStats() {
     const { ok, doing, fresh } = srsStats(studyScope);
     el.studyStats.innerHTML = `
-      <div class="stat-box s-ok"><b>${ok}</b><span>已掌握</span></div>
-      <div class="stat-box s-doing"><b>${doing}</b><span>学习中</span></div>
-      <div class="stat-box s-new"><b>${fresh}</b><span>未学</span></div>`;
+      <div class="stat-box s-ok"><b>${ok}</b><span>测过关</span></div>
+      <div class="stat-box s-doing"><b>${doing}</b><span>待巩固</span></div>
+      <div class="stat-box s-new"><b>${fresh}</b><span>未测</span></div>`;
   }
 
   function chartStudyReason(nodeId) {
@@ -1875,7 +1879,7 @@ if (typeof document !== "undefined") {
       quizChosen = -1;
     }
     if (!currentQuiz) {
-      el.studyCard.innerHTML = `<div class="empty-card">这个范围里的词条不够出题，换个范围或用翻卡。</div>`;
+      el.studyCard.innerHTML = `<div class="empty-card">这个范围里的词条不够出题。可以换个范围，或切到“解析”看词条。</div>`;
       return;
     }
     const q = currentQuiz;
@@ -1917,7 +1921,6 @@ if (typeof document !== "undefined") {
     if (pickNew || !studyNodeId || !scopeNodes(studyScope).some(n => n.id === studyNodeId)) {
       const next = pickStudyNode(studyScope, studyNodeId);
       studyNodeId = next?.id || null;
-      studyFlipped = false;
     }
     const node = nodeById.get(studyNodeId);
     if (!node) {
@@ -1925,35 +1928,26 @@ if (typeof document !== "undefined") {
       return;
     }
     const srs = srsAll()[node.id];
-    const status = !srs?.seen ? "新词条" : (srs.lv >= 3 ? "已掌握 · 复习" : `熟练度 ${srs.lv}/5`);
+    const status = !srs?.seen ? "未测过" : (srs.lv >= 3 ? "测验通过 · 复习" : `测验进度 ${srs.lv}/5`);
     const chartWhy = chartStudyReason(node.id);
-    if (!studyFlipped) {
-      el.studyCard.innerHTML = `
-        <div class="flash-card">
-          <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)} · ${escapeHtml(status)}</p>
-          <h2 class="flash-title">${escapeHtml(node.title)}</h2>
-          ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
-          <p class="flash-ask">它的核心象义是什么？大白话怎么讲？先自己想。</p>
-        </div>
-        <button class="flash-flip" type="button" data-flip>翻面看答案</button>`;
-    } else {
-      const like = node.branches?.["像什么"];
-      el.studyCard.innerHTML = `
-        <div class="flash-card">
-          <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)}</p>
-          <h2 class="flash-title" style="font-size:28px">${escapeHtml(node.title)}</h2>
-          <div class="flash-core">${(node.core || []).slice(0, 6).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>
-          ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
-          <p class="flash-plain">${escapeHtml(nodePlain(node))}</p>
-          ${like?.length ? `<p class="flash-like">像什么：${escapeHtml(like.slice(0, 4).join("、"))}</p>` : ""}
-        </div>
-        <div class="grade-row">
-          <button class="grade-bad" type="button" data-grade="bad">不熟</button>
-          <button class="grade-mid" type="button" data-grade="mid">模糊</button>
-          <button class="grade-good" type="button" data-grade="good">认识</button>
-        </div>
-        <button class="flash-detail-link" type="button" data-open-node="${escapeHtml(node.id)}">看完整象义（为什么这样取象）</button>`;
-    }
+    const like = node.branches?.["像什么"];
+    const why = node.branches?.["为什么"];
+    const anti = node.branches?.["不能这样断"];
+    el.studyCard.innerHTML = `
+      <div class="flash-card">
+        <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)} · ${escapeHtml(status)}</p>
+        <h2 class="flash-title" style="font-size:28px">${escapeHtml(node.title)}</h2>
+        <div class="flash-core">${(node.core || []).slice(0, 6).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>
+        ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
+        <p class="flash-plain">${escapeHtml(nodePlain(node))}</p>
+        ${like?.length ? `<p class="flash-like">像什么：${escapeHtml(like.slice(0, 4).join("、"))}</p>` : ""}
+        ${why?.length ? `<p class="flash-like">为什么：${escapeHtml(why.slice(0, 2).join("；"))}</p>` : ""}
+        ${anti?.length ? `<p class="flash-like">防误断：${escapeHtml(anti[0])}</p>` : ""}
+      </div>
+      <div class="quiz-after">
+        <button class="flash-detail-link" type="button" data-open-node="${escapeHtml(node.id)}">看完整象义</button>
+        <button class="quiz-next" type="button" data-study-next>换一个解析 →</button>
+      </div>`;
   }
 
   /* ---- 图鉴页 ---- */
@@ -2910,14 +2904,7 @@ if (typeof document !== "undefined") {
       return;
     }
 
-    if (event.target.closest("[data-flip]")) { studyFlipped = true; renderStudy(); return; }
-
-    const grade = event.target.closest("[data-grade]");
-    if (grade) {
-      gradeStudy(studyNodeId, grade.dataset.grade);
-      renderStudy(true);
-      return;
-    }
+    if (event.target.closest("[data-study-next]")) { renderStudy(true); return; }
 
     const quizOpt = event.target.closest("[data-quiz-opt]");
     if (quizOpt) {
