@@ -28,6 +28,7 @@ const CHUAN_KE = ["卯辰", "子未"];
 // 破：按练习体系的四正破口径（详情里附传统六破参考）
 const PO_PAIRS = ["子卯", "子酉", "卯午", "午酉"];
 const ANHE_PAIRS = ["申卯", "亥午", "丑寅", "子巳"];
+const JUE_PAIRS = ["申卯", "亥午", "子巳", "寅酉"];
 // 三刑组（子卯归入破口径，自刑走伏吟附注）
 const XING_GROUPS = [
   { chars: ["寅", "巳", "申"], name: "无恩刑" },
@@ -232,8 +233,8 @@ function scanRelations(bazi) {
       const z1 = zhis[a], z2 = zhis[b];
       const p12 = pairKey(z1.ch, z2.ch), p21 = pairKey(z2.ch, z1.ch);
       if (ZHI_CHONG[z1.ch] === z2.ch) found.push(relItem(`${z1.ch}${z2.ch}六冲`, "冲", "k-冲", [z1, z2], "六冲"));
-      if (CHUAN_SHENG.includes(p12) || CHUAN_SHENG.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属生穿：一边给一边伤，暗中损耗。"));
-      if (CHUAN_KE.includes(p12) || CHUAN_KE.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属克穿：直接卡住生路，损耗更硬。"));
+      if (CHUAN_SHENG.includes(p12) || CHUAN_SHENG.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属生穿：一边给一边伤，多看心性、模式、关系方式转换。"));
+      if (CHUAN_KE.includes(p12) || CHUAN_KE.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}相穿`, "穿", "k-穿", [z1, z2], "穿", "属克穿：直接卡住生路，实质损伤、穿跑穿走的力道更硬。"));
       const liuheEl = ZHI_LIUHE[p12] || ZHI_LIUHE[p21];
       if (liuheEl) found.push(relItem(`${z1.ch}${z2.ch}六合`, "合", "k-合", [z1, z2], "地支六合", `合化倾向${liuheEl}，也可能只是合绊拖住。`));
       if (ANHE_PAIRS.includes(p12) || ANHE_PAIRS.includes(p21)) found.push(relItem(`${z1.ch}${z2.ch}暗合`, "暗合", "k-合", [z1, z2], "暗合"));
@@ -261,16 +262,35 @@ function scanRelations(bazi) {
   });
 
   // 三合 / 半合 / 拱合
+  const pairHas = (chars, a, b) => chars.includes(a) && chars.includes(b);
+  const zhongBrokenBy = (zhong, chars) => {
+    const blockers = [];
+    chars.forEach(ch => {
+      if (ch === zhong) return;
+      const p = zhong + ch, q = ch + zhong;
+      if (ZHI_CHONG[zhong] === ch) blockers.push(`${zhong}${ch}冲`);
+      if (CHUAN_SHENG.includes(p) || CHUAN_SHENG.includes(q) || CHUAN_KE.includes(p) || CHUAN_KE.includes(q)) blockers.push(`${zhong}${ch}穿`);
+      if (PO_PAIRS.includes(p) || PO_PAIRS.includes(q)) blockers.push(`${zhong}${ch}破`);
+      if (JUE_PAIRS.includes(p) || JUE_PAIRS.includes(q)) blockers.push(`${zhong}${ch}绝`);
+    });
+    return blockers;
+  };
   SANHE.forEach(([sheng, zhong, mu, el]) => {
     const hits = zhis.filter(z => [sheng, zhong, mu].includes(z.ch));
     const distinct = [...new Set(hits.map(z => z.ch))];
     if (distinct.length === 3) {
-      found.push(relItem(`${sheng}${zhong}${mu}三合${el}局`, "三合", "k-合", hits, "地支三合"));
+      const broken = zhongBrokenBy(zhong, zhis.map(z => z.ch));
+      const note = broken.length
+        ? `三字齐全，但中神${zhong}见${broken.join("、")}，按本体系要先验破局。`
+        : `三字齐全且未见中神${zhong}被冲穿绝破，三合${el}局较稳。`;
+      found.push(relItem(`${sheng}${zhong}${mu}三合${el}局`, "三合", "k-合", hits, "地支三合", note));
     } else if (distinct.length === 2) {
       if (distinct.includes(zhong)) {
-        found.push(relItem(`${distinct.join("")}半合${el}`, "半合", "k-合", hits, "地支三合", `含中神${zhong}，方向已定，力量减半。`));
+        const hasSheng = pairHas(distinct, sheng, zhong);
+        const pairName = hasSheng ? `${sheng}${zhong}` : `${zhong}${mu}`;
+        found.push(relItem(`${distinct.join("")}半合${el}`, "半合", "k-合", hits, "地支三合", `${pairName}半合，含中神${zhong}，方向已定但不按完整成局。`));
       } else {
-        found.push(relItem(`${distinct.join("")}拱${zhong}`, "拱合", "k-合", hits, "地支三合", `两头拱中神${zhong}，${zhong}虽不在盘上，气已暗聚。`));
+        found.push(relItem(`${distinct.join("")}拱${zhong}`, "拱合", "k-合", hits, "地支三合", `两头拱中神${zhong}，${zhong}未到，多看意向、虚位，等岁运填实。`));
       }
     }
   });
@@ -1304,6 +1324,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "📚 PDF 笔记口径校准——以八初中/八高/八公材料为主，补三合破局、生克穿、墓库大限和反例提醒"],
     ["26.7.9", "⚑ 搜索加反例优先——先看不能这样断、反例、不成立条件，再看常规象义"],
     ["26.7.9", "🏷️ 命例本加标签筛选——自动建议感情、财运、冲、穿、桃花等标签，导入导出保留"],
     ["26.7.9", "📌 高频词条补小案例——财库、伤官见官、桃花、夫妻宫等加正例、反例、变体"],
