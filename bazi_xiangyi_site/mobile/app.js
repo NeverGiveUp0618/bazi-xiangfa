@@ -867,6 +867,7 @@ function normalizeChartBook(value) {
       title: String(item.title || baziTitle(item.bazi)),
       bazi: item.bazi.slice(0, 8),
       note: String(item.note || ""),
+      noteSections: normalizeChartNoteSections(item.noteSections, item.note),
       createdAt: Number(item.createdAt || Date.now()),
       updatedAt: Number(item.updatedAt || item.createdAt || Date.now())
     }));
@@ -874,6 +875,32 @@ function normalizeChartBook(value) {
 
 function chartBookAll() {
   return normalizeChartBook(storageGet("chartBook", []));
+}
+
+const CHART_NOTE_FIELDS = [
+  { id: "firstLook", title: "初看共象", hint: "先写最显眼的重复象：财、文书、冲动、桃花、库、关系等。" },
+  { id: "evidence", title: "盘中证据", hint: "写证据链：哪个字、哪个宫位、哪个关系/十神支持这个象。" },
+  { id: "anti", title: "不能这样断", hint: "写反例和边界：哪些结论现在还不能下。" },
+  { id: "trigger", title: "岁运触发", hint: "写可能被岁运补齐、冲开、合动、引动的位置。" },
+  { id: "review", title: "复盘结论", hint: "事后补：哪些象应了，哪些误取，为什么。" }
+];
+
+function normalizeChartNoteSections(value, legacyNote = "") {
+  const out = Object.fromEntries(CHART_NOTE_FIELDS.map(f => [f.id, ""]));
+  if (value && typeof value === "object") {
+    CHART_NOTE_FIELDS.forEach(f => { out[f.id] = String(value[f.id] || ""); });
+  } else if (legacyNote) {
+    out.firstLook = String(legacyNote);
+  }
+  return out;
+}
+
+function chartNotePlain(sections) {
+  const s = normalizeChartNoteSections(sections);
+  return CHART_NOTE_FIELDS
+    .map(f => s[f.id] ? `${f.title}：${s[f.id]}` : "")
+    .filter(Boolean)
+    .join("\n");
 }
 
 function currentChartEntry(book, arr) {
@@ -984,6 +1011,27 @@ function chartExportSnapshot(arr) {
       };
     })
   };
+}
+
+function chartPathSteps(bazi, season, combos, rels, shensha, nayin) {
+  const day = `${bazi[2]}${bazi[6]}`;
+  const steps = [];
+  if (season) {
+    steps.push({ title: "1. 先定气候", body: `${season.month}月为${season.season}，${season.wang}。先看什么得令，别急着下结果。` });
+  }
+  steps.push({ title: "2. 再看日主", body: `日柱${day}，以日干${bazi[2]}为主；其他天干和藏干都先换成十神，再看谁来帮、谁来耗、谁来管。` });
+  if (rels.length || combos.length) {
+    const relTxt = rels.slice(0, 3).map(r => r.name).join("、");
+    const comboTxt = combos.slice(0, 2).map(c => c.nodeTitle).join("、");
+    steps.push({ title: "3. 找被引动的结构", body: [relTxt && `关系：${relTxt}`, comboTxt && `组合：${comboTxt}`].filter(Boolean).join("；") + "。先定位宫位，再取事件。" });
+  }
+  if (shensha.length || nayin.some(n => n.name)) {
+    const ssTxt = shensha.slice(0, 3).map(s => `${s.name}在${slotLabel(s.cell.i)}`).join("、");
+    const nyTxt = nayin.filter(n => n.name).slice(0, 2).map(n => `${n.pillar}${n.name}`).join("、");
+    steps.push({ title: "4. 用神煞纳音补像", body: [ssTxt && `神煞：${ssTxt}`, nyTxt && `纳音：${nyTxt}`].filter(Boolean).join("；") + "。它们补画面，不单独定吉凶。" });
+  }
+  steps.push({ title: "5. 最后写反例", body: "把“不能这样断”写进命例笔记：没有岁运触发、没有宫位证据、没有十神承接的结论，先暂缓。" });
+  return steps;
 }
 
 /* ---------- 学习（间隔复习） ---------- */
@@ -1173,6 +1221,8 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.9", "🧾 命例笔记模板化——按初看共象、盘中证据、不能这样断、岁运触发、复盘结论记录"],
+    ["26.7.9", "🧭 排盘加取象路径和学习路线——先定月令，再看日主十神、结构、神煞纳音，最后写反例"],
     ["26.7.9", "🕸️ 共象搜索联动象义树——搜到一批词条后可直接在树上高亮命中，看它们分布和连线"],
     ["26.7.9", "📴 PWA 离线缓存——手机添加到主屏幕后可离线打开，联网时仍优先拉新版本"],
     ["26.7.9", "🌿 排盘补月令提纲与纳音逐柱——先看季节气候，再分年/月/日/时纳音各应什么位置"],
@@ -1413,8 +1463,11 @@ if (typeof document !== "undefined") {
       </div>
       ${current ? `
         <div class="chart-note-box">
-          <label for="chartNote">观察笔记</label>
-          <textarea id="chartNote" rows="4" placeholder="先自断：盘中最明显的共象是什么？哪些地方不能直接下断？复盘后再补结论。">${escapeHtml(current.note || "")}</textarea>
+          <div class="chart-note-title">命例复盘模板</div>
+          ${CHART_NOTE_FIELDS.map(field => `
+            <label for="chartNote_${escapeHtml(field.id)}">${escapeHtml(field.title)}</label>
+            <textarea id="chartNote_${escapeHtml(field.id)}" data-chart-note-field="${escapeHtml(field.id)}" rows="2" placeholder="${escapeHtml(field.hint)}">${escapeHtml(current.noteSections?.[field.id] || "")}</textarea>
+          `).join("")}
           <button type="button" data-save-chart-note="${escapeHtml(current.id)}">保存笔记</button>
         </div>` : ""}
       ${rows ? `<div class="chart-book-list">${rows}</div>` : ""}`;
@@ -1440,6 +1493,7 @@ if (typeof document !== "undefined") {
     const combos = detectCombos(bazi);
     const season = monthSeasonInfo(bazi);
     const chartStudyItems = collectChartStudyItems(bazi);
+    const pathSteps = chartPathSteps(bazi, season, combos, rels, shensha, nayin);
     const savedDeck = chartStudyDeck();
     const currentDeckKey = chartStudyItems.map(x => x.id).sort().join("|");
     const savedDeckKey = savedDeck.ids.slice().sort().join("|");
@@ -1516,7 +1570,25 @@ if (typeof document !== "undefined") {
           <button type="button" data-add-chart-study>${isSavedDeck ? "更新卡组" : "加入学"}</button>
           <button type="button" data-go-chart-study ${isSavedDeck ? "" : "disabled"}>去复习</button>
         </div>
+        <div class="study-route-actions">
+          <span>建议路线</span>
+          <button type="button" data-go-chart-study-part="chars" ${isSavedDeck ? "" : "disabled"}>字本身</button>
+          <button type="button" data-go-chart-study-part="gods" ${isSavedDeck ? "" : "disabled"}>十神藏干</button>
+          <button type="button" data-go-chart-study-part="rels" ${isSavedDeck ? "" : "disabled"}>关系组合</button>
+          <button type="button" data-go-chart-study-part="marks" ${isSavedDeck ? "" : "disabled"}>神煞纳音</button>
+        </div>
       </div>`;
+    const pathSection = `
+      <section class="ana-section">
+        <div class="ana-head"><h3>取象路径</h3><span class="ana-count">按步骤断，不跳结论</span></div>
+        <div class="chart-path-list">
+          ${pathSteps.map(step => `
+            <div class="chart-path-step">
+              <strong>${escapeHtml(step.title)}</strong>
+              <p>${escapeHtml(step.body)}</p>
+            </div>`).join("")}
+        </div>
+      </section>`;
     const seasonSection = season ? `
       <section class="ana-section">
         <div class="ana-head"><h3>月令提纲</h3><span class="ana-count">${escapeHtml(season.month)}月 · ${escapeHtml(season.name)}</span></div>
@@ -1530,6 +1602,7 @@ if (typeof document !== "undefined") {
 
     el.chartAnalysis.innerHTML = `
       ${studyDeckSection}
+      ${pathSection}
       ${seasonSection}
       ${comboSection}
       <section class="ana-section">
@@ -2382,11 +2455,15 @@ if (typeof document !== "undefined") {
   }
 
   function saveChartNote(id) {
-    const noteEl = document.querySelector("#chartNote");
     const book = chartBookAll();
     const item = book.find(x => x.id === id);
-    if (!item || !noteEl) return;
-    item.note = noteEl.value.trim();
+    if (!item) return;
+    const sections = {};
+    document.querySelectorAll("[data-chart-note-field]").forEach(input => {
+      sections[input.dataset.chartNoteField] = input.value.trim();
+    });
+    item.noteSections = normalizeChartNoteSections(sections);
+    item.note = chartNotePlain(item.noteSections);
     item.updatedAt = Date.now();
     storageSet("chartBook", book);
     renderChartBook();
@@ -2448,6 +2525,7 @@ if (typeof document !== "undefined") {
             const old = byKey.get(key);
             if (old) {
               old.title = item.title || old.title;
+              old.noteSections = normalizeChartNoteSections(item.noteSections, item.note || old.note);
               old.note = item.note || old.note || "";
               old.updatedAt = Date.now();
             } else {
@@ -2565,6 +2643,18 @@ if (typeof document !== "undefined") {
       if (!chartStudyDeck().ids.length) return;
       studyScope = "chart-current";
       storageSet("studyScope", studyScope);
+      switchTab("study");
+      renderStudy(true);
+      return;
+    }
+
+    const routePartBtn = event.target.closest("[data-go-chart-study-part]");
+    if (routePartBtn) {
+      if (!chartStudyDeck().ids.length) return;
+      studyScope = "chart-current";
+      chartStudyPart = routePartBtn.dataset.goChartStudyPart;
+      storageSet("studyScope", studyScope);
+      storageSet("chartStudyPart", chartStudyPart);
       switchTab("study");
       renderStudy(true);
       return;
