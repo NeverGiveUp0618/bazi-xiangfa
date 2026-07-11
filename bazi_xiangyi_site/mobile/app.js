@@ -978,6 +978,16 @@ function chartNotePlain(sections) {
     .join("\n");
 }
 
+// 复盘笔记草稿：输入即存，防止排盘页任何重渲染吃掉未保存的内容
+function chartNoteDraft() {
+  const d = storageGet("chartNoteDraft", null);
+  return d && d.chartId ? d : null;
+}
+
+function clearChartNoteDraft() {
+  storageSet("chartNoteDraft", null);
+}
+
 function normalizeTags(tags) {
   if (!Array.isArray(tags)) return [];
   return [...new Set(tags.map(t => String(t).trim()).filter(Boolean))].slice(0, 12);
@@ -1367,6 +1377,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.11", "🛟 复盘笔记防丢——输入即存草稿，点盘、选字、切模式都不会吃掉没保存的笔记"],
     ["26.7.9", "📖 进阶资料补充——吸收财运、合象三分、干支互通带象、墓库、空亡神煞等边界口径"],
     ["26.7.9", "🎯 学习页去主观自评——默认客观测验，掌握度只按答题对错更新；解析模式不再出现自评按钮"],
     ["26.7.9", "🧭 排盘取象路径改按八步入命法——日干天元、虚实状态、十干喜忌、意向、格局、作用、宫位大运、岁运应期"],
@@ -1652,21 +1663,29 @@ if (typeof document !== "undefined") {
           <button type="button" class="${chartBookTagFilter ? "" : "active"}" data-chart-tag-filter="">全部</button>
           ${allTags.map(tag => `<button type="button" class="${chartBookTagFilter === tag ? "active" : ""}" data-chart-tag-filter="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}
         </div>` : ""}
-      ${current ? `
-        <div class="chart-note-box">
+      ${current ? (() => {
+        const draft = chartNoteDraft();
+        const useDraft = draft && draft.chartId === current.id;
+        const tagsValue = useDraft ? String(draft.tags || "") : (current.tags || []).join("、");
+        return `
+        <div class="chart-note-box" data-chart-note-draft-for="${escapeHtml(current.id)}">
           <div class="chart-note-title">命例复盘模板</div>
           <label for="chartTags">标签</label>
-          <input id="chartTags" class="chart-tags-input" data-chart-tags-input value="${escapeHtml((current.tags || []).join("、"))}" placeholder="感情、财运、冲、桃花；用顿号或逗号分隔" />
+          <input id="chartTags" class="chart-tags-input" data-chart-tags-input value="${escapeHtml(tagsValue)}" placeholder="感情、财运、冲、桃花；用顿号或逗号分隔" />
           <div class="chart-tag-suggest">
             <span>建议</span>
             ${suggestedChartTags(bazi).map(tag => `<button type="button" data-add-chart-tag="${escapeHtml(tag)}">#${escapeHtml(tag)}</button>`).join("")}
           </div>
           ${CHART_NOTE_FIELDS.map(field => `
             <label for="chartNote_${escapeHtml(field.id)}">${escapeHtml(field.title)}</label>
-            <textarea id="chartNote_${escapeHtml(field.id)}" data-chart-note-field="${escapeHtml(field.id)}" rows="2" placeholder="${escapeHtml(field.hint)}">${escapeHtml(current.noteSections?.[field.id] || "")}</textarea>
+            <textarea id="chartNote_${escapeHtml(field.id)}" data-chart-note-field="${escapeHtml(field.id)}" rows="2" placeholder="${escapeHtml(field.hint)}">${escapeHtml(useDraft ? String(draft.sections?.[field.id] || "") : (current.noteSections?.[field.id] || ""))}</textarea>
           `).join("")}
-          <button type="button" data-save-chart-note="${escapeHtml(current.id)}">保存笔记</button>
-        </div>` : ""}
+          <div class="chart-note-save-row">
+            <button type="button" data-save-chart-note="${escapeHtml(current.id)}">保存笔记</button>
+            ${useDraft ? `<span class="chart-note-draft-hint">草稿已自动保留，点保存才写进命例</span>` : ""}
+          </div>
+        </div>`;
+      })() : ""}
       ${rows ? `<div class="chart-book-list">${rows}</div>` : ""}`;
   }
 
@@ -2655,6 +2674,7 @@ if (typeof document !== "undefined") {
     item.tags = parseTags(document.querySelector("[data-chart-tags-input]")?.value || "");
     item.updatedAt = Date.now();
     storageSet("chartBook", book);
+    clearChartNoteDraft();
     renderChartBook();
   }
 
@@ -2674,6 +2694,7 @@ if (typeof document !== "undefined") {
     if (!item) return;
     if (!confirm(`删除命例「${item.title}」？`)) return;
     storageSet("chartBook", book.filter(x => x.id !== id));
+    if (chartNoteDraft()?.chartId === id) clearChartNoteDraft();
     renderChartBook();
   }
 
@@ -2844,6 +2865,7 @@ if (typeof document !== "undefined") {
       const tags = new Set(parseTags(input.value));
       tags.add(addTagBtn.dataset.addChartTag);
       input.value = [...tags].join("、");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
       return;
     }
 
@@ -2921,6 +2943,21 @@ if (typeof document !== "undefined") {
 
     const system = event.target.closest("[data-system]");
     if (system) { activeSystemId = system.dataset.system; renderLibrary(); return; }
+  });
+
+  // 复盘笔记输入即存草稿：排盘页重渲染或误触也不会丢
+  document.body.addEventListener("input", event => {
+    const box = event.target.closest("[data-chart-note-draft-for]");
+    if (!box) return;
+    if (!event.target.matches("[data-chart-note-field], [data-chart-tags-input]")) return;
+    const sections = {};
+    box.querySelectorAll("[data-chart-note-field]").forEach(t => { sections[t.dataset.chartNoteField] = t.value; });
+    storageSet("chartNoteDraft", {
+      chartId: box.dataset.chartNoteDraftFor,
+      tags: box.querySelector("[data-chart-tags-input]")?.value || "",
+      sections,
+      savedAt: Date.now()
+    });
   });
 
   el.globalSearch.addEventListener("input", renderSearch);

@@ -919,6 +919,19 @@ mark {
   font-weight: 600;
 }
 
+.chart-note-save-row {
+  display: flex;
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.chart-note-draft-hint {
+  font-size: 12px;
+  color: var(--muted);
+}
+
 /* 解读区 */
 .ana-section { margin-top: 16px; }
 
