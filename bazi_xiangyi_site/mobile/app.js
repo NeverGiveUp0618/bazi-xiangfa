@@ -126,11 +126,16 @@ function tenGod(dayGan, otherGan) {
 /* ---------- 排盘：全盘扫描引擎 ---------- */
 // bazi: 8 个字，0-3 为年月日时天干，4-7 为年月日时地支
 
+// 8-11 为叠加的岁运槽位：大运干/大运支/流年干/流年支
+const LUCK_SLOT_LABELS = ["大运干", "大运支", "流年干", "流年支"];
+
 function slotLabel(i) {
+  if (i >= 8) return LUCK_SLOT_LABELS[i - 8] || "";
   return PILLARS[i % 4] + (i < 4 ? "干" : "支");
 }
 
 function palaceOfSlot(i) {
+  if (i >= 8) return i < 10 ? "大运" : "流年";
   const p = i % 4;
   if (p === 2) return i < 4 ? "日主" : "日支";
   return PILLARS[p] + "柱";
@@ -472,6 +477,139 @@ function detectCombos(bazi) {
   if (hasChong) add("冲 + 宫位", "盘中有六冲：重点看冲动了哪个宫位、可能应什么变动。");
   if (has("印星")) add("印 + 文书", `盘中有${godsOf("印星")}：印主文书、证件、学历与庇护，办证签约类事看印。`);
   return out;
+}
+
+/* ---------- 岁运叠加（大运/流年与原局的作用与应期） ---------- */
+// luck: [大运干, 大运支, 流年干, 流年支]，未选为空串
+function luckUnits(luck) {
+  const arr = Array.isArray(luck) ? luck : ["", "", "", ""];
+  const units = [];
+  if (arr[0] || arr[1]) units.push({ name: "大运", gi: 8, zi: 9, gan: arr[0], zhi: arr[1] });
+  if (arr[2] || arr[3]) units.push({ name: "流年", gi: 10, zi: 11, gan: arr[2], zhi: arr[3] });
+  return units;
+}
+
+// 岁运干对日主的十神＝这步运/这年的主题
+function luckGodThemes(bazi, luck) {
+  const dayGan = bazi[2];
+  return luckUnits(luck).filter(u => u.gan).map(u => {
+    const god = tenGod(dayGan, u.gan);
+    const node = nodeByTitle.get(god);
+    return { name: u.name, gan: u.gan, god, nodeId: node?.id || "", brief: nodePlain(node) };
+  });
+}
+
+function scanLuck(bazi, luck) {
+  const found = [];
+  const units = luckUnits(luck);
+  if (!units.length) return found;
+  const dayGan = bazi[2];
+  const natalGans = [0, 1, 2, 3].map(i => ({ i, ch: bazi[i] }));
+  const natalZhis = [4, 5, 6, 7].map(i => ({ i, ch: bazi[i] }));
+  const chongPalaceNote = z => ({
+    4: "冲年支：根基、祖上、早年环境之事被引动。",
+    5: "冲提纲（月令）：全局气候被撼动，应期分量最重。",
+    6: "冲夫妻宫（日支）：婚恋与贴身环境先动。",
+    7: "冲时支：子女、下属、成果落点之事被引动。"
+  }[z.i] || "");
+
+  for (const u of units) {
+    if (u.gan) {
+      const gc = { i: u.gi, ch: u.gan };
+      for (const g of natalGans) {
+        const heEl = GAN_HE[pairKey(u.gan, g.ch)] || GAN_HE[pairKey(g.ch, u.gan)];
+        if (heEl) found.push(relItem(`${u.name}${u.gan}合${slotLabel(g.i)}${g.ch}`, "合", "k-合", [gc, g], "天干五合",
+          `岁运合原局天干，先看合动、合绊${g.i === 2 ? "；合到日主，这步的主题直接找上门" : ""}；欲化${heEl}仍要看月令与通根。`));
+        if (u.gan === g.ch) found.push(relItem(`${u.name}${u.gan}与${slotLabel(g.i)}伏吟`, "伏吟", "k-吟", [gc, g], "伏吟", "岁运见同字：旧事重提，这个字管的事加倍显象。"));
+      }
+    }
+    if (u.zhi) {
+      const zc = { i: u.zi, ch: u.zhi };
+      for (const z of natalZhis) {
+        const p12 = pairKey(u.zhi, z.ch), p21 = pairKey(z.ch, u.zhi);
+        if (ZHI_CHONG[u.zhi] === z.ch) {
+          const kuNote = (KU_MAP[u.zhi] || KU_MAP[z.ch]) ? "又属辰戌丑未之冲，先分开库还是破库。" : "";
+          found.push(relItem(`${u.name}${u.zhi}冲${slotLabel(z.i)}${z.ch}`, "冲", "k-冲", [zc, z], "六冲", `${chongPalaceNote(z)}${kuNote}`));
+        }
+        if (CHUAN_SHENG.includes(p12) || CHUAN_SHENG.includes(p21)) found.push(relItem(`${u.name}${u.zhi}穿${slotLabel(z.i)}${z.ch}`, "穿", "k-穿", [zc, z], "穿", `生穿：${z.i === 6 ? "穿到夫妻宫，" : ""}岁运引动心性与相处模式的转换。`));
+        if (CHUAN_KE.includes(p12) || CHUAN_KE.includes(p21)) found.push(relItem(`${u.name}${u.zhi}穿${slotLabel(z.i)}${z.ch}`, "穿", "k-穿", [zc, z], "穿", `克穿：${z.i === 6 ? "穿到夫妻宫，" : ""}实质损伤更硬，穿跑穿走看这步。`));
+        const liuheEl = ZHI_LIUHE[p12] || ZHI_LIUHE[p21];
+        if (liuheEl) found.push(relItem(`${u.name}${u.zhi}合${slotLabel(z.i)}${z.ch}`, "合", "k-合", [zc, z], "地支六合", `岁运合动原局${z.ch}：${z.i === 6 ? "夫妻宫被合，婚恋之事被引动；" : ""}看是合来、合留还是合绊。`));
+        if (ANHE_PAIRS.includes(p12) || ANHE_PAIRS.includes(p21)) found.push(relItem(`${u.name}${u.zhi}暗合${slotLabel(z.i)}${z.ch}`, "暗合", "k-合", [zc, z], "暗合", "岁运暗合：暗线牵连的人事这段时间浮出来。"));
+        if (JUE_PAIRS.includes(p12) || JUE_PAIRS.includes(p21)) found.push(relItem(`${u.name}${u.zhi}绝${slotLabel(z.i)}${z.ch}`, "绝", "k-破", [zc, z], "绝", "岁运逢绝：气机不接，看是摆脱旧事还是缘分变薄。"));
+        if (PO_PAIRS.includes(p12) || PO_PAIRS.includes(p21)) found.push(relItem(`${u.name}${u.zhi}破${slotLabel(z.i)}${z.ch}`, "破", "k-破", [zc, z], "六破", "四正破口径：岁运来破，旧格局被敲掉一角。"));
+        if (u.zhi === z.ch) {
+          const note = ZI_XING.has(u.zhi) ? `${u.zhi}${u.zhi}并见也构成自刑，反复纠缠更明显。` : "岁运填实伏吟：原局这个字管的事被点名，虚象转实。";
+          found.push(relItem(`${u.name}${u.zhi}与${slotLabel(z.i)}伏吟`, "伏吟", "k-吟", [zc, z], "伏吟", note));
+        }
+      }
+      // 三刑：岁运补字成刑
+      XING_GROUPS.forEach(group => {
+        if (!group.chars.includes(u.zhi)) return;
+        const hits = natalZhis.filter(z => group.chars.includes(z.ch) && z.ch !== u.zhi);
+        const distinct = [...new Set(hits.map(z => z.ch))];
+        if (distinct.length === 2) {
+          found.push(relItem(`${u.name}${u.zhi}补齐${group.chars.join("")}三刑`, "刑", "k-刑", [zc, ...hits], "三刑", `${group.name}：原局半刑被岁运补齐，三字齐动，刑象应期到。`));
+        } else if (distinct.length === 1) {
+          found.push(relItem(`${u.name}${u.zhi}刑${slotLabel(hits[0].i)}${distinct[0]}`, "刑", "k-刑", [zc, ...hits], "三刑", `${group.name}组半刑，由岁运引动，岁运再补${group.chars.find(c => c !== u.zhi && c !== distinct[0])}则全刑。`));
+        }
+      });
+      // 三合：岁运凑齐成局 / 填实拱位
+      SANHE.forEach(([sheng, zhong, mu, el]) => {
+        const trio = [sheng, zhong, mu];
+        if (!trio.includes(u.zhi)) return;
+        const hits = natalZhis.filter(z => trio.includes(z.ch) && z.ch !== u.zhi);
+        const distinct = [...new Set(hits.map(z => z.ch))];
+        if (distinct.length === 2) {
+          found.push(relItem(`${u.name}${u.zhi}凑齐${trio.join("")}三合${el}局`, "三合", "k-合", [zc, ...hits], "地支三合",
+            u.zhi === zhong ? `原局两头拱${zhong}，岁运填实中神：虚位成真，${el}局之事应期最明显。` : `岁运补上${u.zhi}，按三合${el}局成局看（仍要验中神${zhong}是否被冲穿绝破）。`));
+        }
+      });
+      // 三会：岁运会齐
+      SANHUI.forEach(([a, b, c, el]) => {
+        const trio = [a, b, c];
+        if (!trio.includes(u.zhi)) return;
+        const hits = natalZhis.filter(z => trio.includes(z.ch) && z.ch !== u.zhi);
+        const distinct = [...new Set(hits.map(z => z.ch))];
+        if (distinct.length === 2) found.push(relItem(`${u.name}${u.zhi}会齐${trio.join("")}三会${el}方`, "三会", "k-合", [zc, ...hits], "地支三会", `岁运到位会成${el}方，一方之气最旺，${el}所主之事集中应。`));
+      });
+      // 墓库引动
+      if (KU_MAP[u.zhi]) {
+        const caiWx = WUXING_KE[GAN_WUXING[dayGan]];
+        const bits = [];
+        if (CAI_MU_OF_WX[caiWx] === u.zhi) bits.push(`正是日主${dayGan}的财库（财属${caiWx}）`);
+        const inMu = [0, 1, 2, 3].filter(p => GAN_MU[bazi[p]] === u.zhi).map(p => `${PILLARS[p]}干${bazi[p]}`);
+        if (inMu.length) bits.push(`${inMu.join("、")}逢之入墓`);
+        if (bits.length) found.push(relItem(`${u.name}${u.zhi}带${KU_MAP[u.zhi]}`, "库", "k-库", [zc], "墓库", `岁运带库：${bits.join("；")}。库要冲开、刑开才用得上，只入不开反而闭气。`));
+      }
+    }
+    // 岁运柱自合
+    if (u.gan && u.zhi && ZIHE_PILLARS.has(u.gan + u.zhi)) {
+      found.push(relItem(`${u.name}${u.gan}${u.zhi}自合`, "自合", "k-合", [{ i: u.gi, ch: u.gan }, { i: u.zi, ch: u.zhi }], "干支自合", "岁运柱自合：这段时间的事自我纠缠、自己内部消化。"));
+    }
+  }
+
+  // 大运 × 流年
+  const dy = units.find(u => u.name === "大运");
+  const ln = units.find(u => u.name === "流年");
+  if (dy && ln) {
+    if (dy.gan && dy.zhi && dy.gan === ln.gan && dy.zhi === ln.zhi) {
+      found.push(relItem(`岁运并临（${dy.gan}${dy.zhi}）`, "伏吟", "k-吟", [{ i: 8, ch: dy.gan }, { i: 9, ch: dy.zhi }, { i: 10, ch: ln.gan }, { i: 11, ch: ln.zhi }], "伏吟", "大运流年同干支：同一股气双倍压过来，这一年最容易见大事。"));
+    } else {
+      if (dy.gan && ln.gan) {
+        const heEl = GAN_HE[pairKey(dy.gan, ln.gan)] || GAN_HE[pairKey(ln.gan, dy.gan)];
+        if (heEl) found.push(relItem(`大运${dy.gan}合流年${ln.gan}`, "合", "k-合", [{ i: 8, ch: dy.gan }, { i: 10, ch: ln.gan }], "天干五合", "运与年相合：两股外来之气纠在一起，事情多有牵扯。"));
+      }
+      if (dy.zhi && ln.zhi) {
+        if (ZHI_CHONG[dy.zhi] === ln.zhi) found.push(relItem(`大运${dy.zhi}冲流年${ln.zhi}`, "冲", "k-冲", [{ i: 9, ch: dy.zhi }, { i: 11, ch: ln.zhi }], "六冲", "运与太岁相冲：外环境本身动荡，再看各自牵动原局哪个宫位。"));
+        const pk = pairKey(dy.zhi, ln.zhi), qk = pairKey(ln.zhi, dy.zhi);
+        if (ZHI_LIUHE[pk] || ZHI_LIUHE[qk]) found.push(relItem(`大运${dy.zhi}合流年${ln.zhi}`, "合", "k-合", [{ i: 9, ch: dy.zhi }, { i: 11, ch: ln.zhi }], "地支六合", "运与太岁相合：外环境合成一股劲，顺逆都被放大。"));
+      }
+    }
+  }
+
+  const order = { 冲: 1, 刑: 2, 穿: 3, 破: 4, 绝: 5, 合: 6, 三合: 7, 三会: 7, 暗合: 8, 自合: 8, 伏吟: 9, 库: 10 };
+  return found.sort((x, y) => (order[x.kindLabel] || 99) - (order[y.kindLabel] || 99));
 }
 
 /* ---------- 搜索与共象聚合 ---------- */
@@ -1162,7 +1300,7 @@ function chartExportSnapshot(arr) {
   };
 }
 
-function chartPathSteps(bazi, season, combos, rels, shensha, nayin) {
+function chartPathSteps(bazi, season, combos, rels, shensha, nayin, luckInfo) {
   const dayGan = bazi[2], dayZhi = bazi[6], monthZhi = bazi[5];
   const day = `${dayGan}${dayZhi}`;
   const dayRoot = (CANG_GAN[dayZhi] || []).includes(dayGan);
@@ -1211,7 +1349,14 @@ function chartPathSteps(bazi, season, combos, rels, shensha, nayin) {
     },
     {
       title: "8. 大运流年定应期",
-      body: `原局未清不推应期。原局主线清楚后，再在命例笔记写岁运触发：哪步大运、哪年流年引动了哪条组合。${supplement}。`
+      body: (() => {
+        const units = luckInfo?.units || [];
+        const items = luckInfo?.items || [];
+        if (!units.length) return `原局未清不推应期。原局主线清楚后，在下方「岁运应象」叠上大运/流年干支，看哪条组合被引动。${supplement}。`;
+        const desc = units.map(u => `${u.name}${u.gan}${u.zhi}`).join("、");
+        if (!items.length) return `当前叠加${desc}：与原局没有扫到明显冲合刑穿破绝，先按平运看，主题回到岁运干的十神。${supplement}。`;
+        return `当前叠加${desc}：引动 ${items.slice(0, 3).map(x => x.name).join("、")}${items.length > 3 ? ` 等 ${items.length} 条` : ""}。原局主线清楚后，这些就是应期入口，详见「岁运应象」。${supplement}。`;
+      })()
     }
   ];
 }
@@ -1385,6 +1530,7 @@ if (typeof document !== "undefined") {
     quickRow: document.querySelector("#quickRow"),
     searchBody: document.querySelector("#searchBody"),
     baziGrid: document.querySelector("#baziGrid"),
+    luckGrid: document.querySelector("#luckGrid"),
     charPicker: document.querySelector("#charPicker"),
     quizMode: document.querySelector("#quizMode"),
     resetBazi: document.querySelector("#resetBazi"),
@@ -1404,6 +1550,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.11", "🗓️ 大运流年叠加上线——排盘页选岁运干支，自动扫引动：冲提纲、穿夫妻宫、补齐三刑、填实拱位、开财库、岁运并临，八步第8步直接报应期入口"],
     ["26.7.11", "🕸️ 象义树孤岛清零——财富载体、干支虚实、时柱接入关系网，新增26条连线全部配好理由"],
     ["26.7.11", "🛟 复盘笔记防丢——输入即存草稿，点盘、选字、切模式都不会吃掉没保存的笔记"],
     ["26.7.9", "📖 进阶资料补充——吸收财运、合象三分、干支互通带象、墓库、空亡神煞等边界口径"],
@@ -1451,6 +1598,8 @@ if (typeof document !== "undefined") {
   let activeTab = "search";
   let bazi = storageGet("bazi", ["甲", "乙", "丙", "丁", "子", "丑", "午", "酉"]);
   if (!Array.isArray(bazi) || bazi.length !== 8) bazi = ["甲", "乙", "丙", "丁", "子", "丑", "午", "酉"];
+  let luck = storageGet("luck", ["", "", "", ""]);
+  if (!Array.isArray(luck) || luck.length !== 4) luck = ["", "", "", ""];
   let selectedSlot = 0;
   let quizOn = storageGet("quiz", false);
   let quizRevealed = { rel: false, ss: false };
@@ -1640,20 +1789,44 @@ if (typeof document !== "undefined") {
     }
     el.baziGrid.innerHTML = cellsHtml.join("");
 
-    const isGan = selectedSlot < 4;
+    // 岁运叠加格（槽位 8-11）
+    const luckCells = LUCK_SLOT_LABELS.map((lab, k) => {
+      const i = 8 + k;
+      const ch = luck[k];
+      const wx = ch ? (k % 2 === 0 ? GAN_WUXING[ch] : ZHI_WUXING[ch]) : "";
+      const sub = !ch ? "" : (k % 2 === 0 ? tenGod(bazi[2], ch) : (CANG_GAN[ch] || []).join(" "));
+      return `
+        <button type="button" class="bazi-cell luck-cell ${selectedSlot === i ? "active" : ""} ${ch ? "" : "empty"}" data-slot="${i}">
+          <span class="slot">${lab}</span>
+          <span class="char ${ch ? "wx-" + wx : ""}">${escapeHtml(ch || "＋")}</span>
+          <span class="god">${escapeHtml(sub)}</span>
+        </button>`;
+    }).join("");
+    el.luckGrid.innerHTML = `
+      <div class="luck-head">
+        <strong>岁运叠加</strong>
+        <span>选大运/流年，看引动与应期</span>
+        ${luck.some(Boolean) ? `<button type="button" class="ghost-btn" data-luck-clear>清空</button>` : ""}
+      </div>
+      <div class="luck-cells">${luckCells}</div>`;
+
+    const isLuck = selectedSlot >= 8;
+    const isGan = isLuck ? selectedSlot % 2 === 0 : selectedSlot < 4;
     const pool = isGan ? GAN : ZHI;
-    const pillarGan = bazi[selectedSlot % 4];
+    const pillarGan = isLuck ? luck[selectedSlot - 9] : bazi[selectedSlot % 4];
+    const curChar = isLuck ? luck[selectedSlot - 8] : bazi[selectedSlot];
     let hint = "";
-    if (!isGan) {
-      hint = `<p class="picker-hint">正选 ${slotLabel(selectedSlot)}。提示：真实八字里阳干配阳支、阴干配阴支（本柱天干为${escapeHtml(pillarGan)}）。</p>`;
+    if (!isGan && pillarGan) {
+      hint = `<p class="picker-hint">正选 ${slotLabel(selectedSlot)}。提示：真实${isLuck ? "干支" : "八字"}里阳干配阳支、阴干配阴支（本柱天干为${escapeHtml(pillarGan)}）。</p>`;
     } else {
       hint = `<p class="picker-hint">正选 ${slotLabel(selectedSlot)}。</p>`;
     }
     // 天干10字每行5个（甲乙丙丁戊 / 己庚辛壬癸），地支12字每行6个
     el.charPicker.className = "char-picker " + (isGan ? "cols-5" : "cols-6");
-    el.charPicker.innerHTML = hint + pool.map(ch => {
-      const dim = !isGan && (GAN_IDX[pillarGan] % 2) !== (ZHI_IDX[ch] % 2);
-      return `<button type="button" class="${bazi[selectedSlot] === ch ? "active" : ""} ${dim ? "dim" : ""}" data-char="${ch}">${ch}</button>`;
+    const clearBtn = isLuck ? `<button type="button" class="picker-none ${curChar ? "" : "active"}" data-char="">不选</button>` : "";
+    el.charPicker.innerHTML = hint + clearBtn + pool.map(ch => {
+      const dim = !isGan && pillarGan && (GAN_IDX[pillarGan] % 2) !== (ZHI_IDX[ch] % 2);
+      return `<button type="button" class="${curChar === ch ? "active" : ""} ${dim ? "dim" : ""}" data-char="${ch}">${ch}</button>`;
     }).join("");
 
     el.quizMode.checked = !!quizOn;
@@ -1737,7 +1910,10 @@ if (typeof document !== "undefined") {
     const combos = detectCombos(bazi);
     const season = monthSeasonInfo(bazi);
     const chartStudyItems = collectChartStudyItems(bazi);
-    const pathSteps = chartPathSteps(bazi, season, combos, rels, shensha, nayin);
+    const luckItems = scanLuck(bazi, luck);
+    const luckThemes = luckGodThemes(bazi, luck);
+    const luckUnitsArr = luckUnits(luck);
+    const pathSteps = chartPathSteps(bazi, season, combos, rels, shensha, nayin, { units: luckUnitsArr, items: luckItems });
     const savedDeck = chartStudyDeck();
     const currentDeckKey = chartStudyItems.map(x => x.id).sort().join("|");
     const savedDeckKey = savedDeck.ids.slice().sort().join("|");
@@ -1804,6 +1980,16 @@ if (typeof document !== "undefined") {
         <div class="ana-head"><h3>组合提示</h3><span class="ana-count">${combos.length} 组</span></div>
         ${comboBody}
       </section>` : "";
+    const luckSection = luckUnitsArr.length ? `
+      <section class="ana-section luck-section">
+        <div class="ana-head"><h3>岁运应象</h3><span class="ana-count">${luckUnitsArr.map(u => u.name + u.gan + u.zhi).join(" ")} · ${luckItems.length} 条</span></div>
+        ${luckThemes.map(t => `
+          <button class="info-row" type="button" ${t.nodeId ? `data-open-node="${escapeHtml(t.nodeId)}"` : ""}>
+            <div class="row-line"><strong>${escapeHtml(t.name)}干${escapeHtml(t.gan)}为${escapeHtml(t.god)}</strong><span class="where">这${t.name === "大运" ? "步运" : "一年"}的主题字</span></div>
+            <p class="brief">${escapeHtml(t.brief)}</p>
+          </button>`).join("")}
+        ${luckItems.length ? luckItems.map(relCardHtml).join("") : `<div class="empty-card">岁运与原局没有扫到明显冲合刑穿破绝，先按平运平年看，主题回到岁运干的十神。</div>`}
+      </section>` : "";
     const studyDeckSection = `
       <div class="chart-study-box">
         <div>
@@ -1849,6 +2035,7 @@ if (typeof document !== "undefined") {
       ${pathSection}
       ${seasonSection}
       ${comboSection}
+      ${luckSection}
       <section class="ana-section">
         <div class="ana-head"><h3>干支关系</h3><span class="ana-count">${rels.length} 条</span></div>
         ${relBody}
@@ -2860,11 +3047,26 @@ if (typeof document !== "undefined") {
 
     const charBtn = event.target.closest("[data-char]");
     if (charBtn) {
-      bazi[selectedSlot] = charBtn.dataset.char;
-      storageSet("bazi", bazi);
-      quizRevealed = { rel: false, ss: false };
-      const next = ENTRY_ORDER[(ENTRY_ORDER.indexOf(selectedSlot) + 1) % 8];
-      selectedSlot = next;
+      const ch = charBtn.dataset.char || "";
+      if (selectedSlot >= 8) {
+        luck[selectedSlot - 8] = ch;
+        storageSet("luck", luck);
+        selectedSlot = selectedSlot < 11 ? selectedSlot + 1 : 8;
+      } else {
+        if (!ch) return;
+        bazi[selectedSlot] = ch;
+        storageSet("bazi", bazi);
+        quizRevealed = { rel: false, ss: false };
+        selectedSlot = ENTRY_ORDER[(ENTRY_ORDER.indexOf(selectedSlot) + 1) % 8];
+      }
+      renderChart();
+      return;
+    }
+
+    if (event.target.closest("[data-luck-clear]")) {
+      luck = ["", "", "", ""];
+      storageSet("luck", luck);
+      if (selectedSlot >= 8) selectedSlot = 8;
       renderChart();
       return;
     }
@@ -2992,9 +3194,11 @@ if (typeof document !== "undefined") {
   el.clearSearch.addEventListener("click", () => { el.globalSearch.value = ""; renderSearch(); });
   el.resetBazi.addEventListener("click", () => {
     bazi = ["甲", "乙", "丙", "丁", "子", "丑", "午", "酉"];
+    luck = ["", "", "", ""];
     selectedSlot = 0;
     quizRevealed = { rel: false, ss: false };
     storageSet("bazi", bazi);
+    storageSet("luck", luck);
     renderChart();
   });
   el.quizMode.addEventListener("change", () => {

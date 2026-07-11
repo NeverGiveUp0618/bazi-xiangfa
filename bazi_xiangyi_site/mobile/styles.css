@@ -694,6 +694,55 @@ mark {
   margin: 0;
 }
 
+.char-picker .picker-none {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  font-family: inherit;
+  padding: 6px 0;
+  color: var(--muted);
+}
+
+.char-picker .picker-none.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+/* 岁运叠加格 */
+.luck-grid {
+  margin-top: 10px;
+  border: 1px dashed var(--gold);
+  border-radius: var(--radius);
+  padding: 8px 8px 9px;
+  background: var(--card-soft);
+}
+
+.luck-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 2px 7px;
+}
+
+.luck-head strong {
+  font-size: 13px;
+  color: var(--gold);
+}
+
+.luck-head span {
+  flex: 1;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.luck-cells {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.luck-cell.empty .char { color: var(--muted); opacity: 0.6; }
+
 .quiz-toggle {
   display: flex;
   align-items: center;
