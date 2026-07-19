@@ -1618,13 +1618,29 @@ if (typeof document !== "undefined") {
   let quizChosen = -1;
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
+  const viewScroll = {};
+  let currentViewKey = null;
+  try { history.scrollRestoration = "manual"; } catch { /* 忽略 */ }
+
+  function getViewKey(view) {
+    return view === "detail" ? `detail:${detailStack[detailStack.length - 1] || ""}` : `tab:${view}`;
+  }
+
+  function restoreViewScroll(key) {
+    const top = viewScroll[key] || 0;
+    const restore = () => window.scrollTo({ top, left: 0, behavior: "auto" });
+    restore();
+    requestAnimationFrame(() => { restore(); requestAnimationFrame(restore); });
+  }
 
   /* ---- 视图切换 ---- */
   function showView(view) {
+    if (currentViewKey) viewScroll[currentViewKey] = window.scrollY;
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`));
     document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === (view === "detail" ? activeTab : view)));
     el.topHint.textContent = HINTS[view] || "";
-    window.scrollTo({ top: 0 });
+    currentViewKey = getViewKey(view);
+    restoreViewScroll(currentViewKey);
     if (view === "tree") treeStart(); else treeStop();
   }
 
