@@ -1319,6 +1319,12 @@ mark {
 }
 
 /* ---- 学习 ---- */
+.daily-study{margin:10px 0 14px;padding:15px;border:1px solid var(--line);border-radius:18px;background:var(--card);box-shadow:var(--shadow)}
+.daily-study-head{display:flex;justify-content:space-between;gap:12px;align-items:baseline;margin-bottom:10px}
+.daily-study-head strong{font-size:17px}.daily-study-head span{font-size:12px;color:var(--muted)}
+.daily-study-topic{font-size:13px;color:var(--gold);margin-bottom:10px}
+.daily-study-list{display:grid;gap:7px}.daily-study-list button{width:100%;border:1px solid var(--line);border-radius:12px;background:var(--card-soft);color:var(--ink);padding:10px 12px;text-align:left;font-size:13px}
+.daily-study-list button::after{content:'›';float:right;color:var(--accent);font-size:18px;line-height:12px}
 .scope-row {
   display: flex;
   gap: 8px;

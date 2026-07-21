@@ -1537,6 +1537,7 @@ if (typeof document !== "undefined") {
     chartBook: document.querySelector("#chartBook"),
     chartAnalysis: document.querySelector("#chartAnalysis"),
     studyMode: document.querySelector("#studyMode"),
+    dailyStudy: document.querySelector("#dailyStudy"),
     studyScope: document.querySelector("#studyScope"),
     chartStudyFilter: document.querySelector("#chartStudyFilter"),
     studyStats: document.querySelector("#studyStats"),
@@ -2071,6 +2072,19 @@ if (typeof document !== "undefined") {
   }
 
   /* ---- 学习页 ---- */
+  function renderDailyStudy() {
+    const day = Math.floor(Date.now() / DAY_MS);
+    const sys = graph.systems[day % graph.systems.length];
+    el.dailyStudy.innerHTML = `
+      <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span></div>
+      <div class="daily-study-topic">今日主题：${escapeHtml(sys.title)}</div>
+      <div class="daily-study-list">
+        <button type="button" data-daily-study="explain" data-daily-scope="${escapeHtml(sys.id)}">① 精读 1 条核心象义</button>
+        <button type="button" data-daily-study="quiz" data-daily-scope="${escapeHtml(sys.id)}">② 完成 3 道今日测验</button>
+        <button type="button" data-daily-study="chart">③ 用排盘验证 1 次</button>
+      </div>`;
+  }
+
   function renderStudyMode() {
     el.studyMode.innerHTML = `
       <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
@@ -2164,6 +2178,7 @@ if (typeof document !== "undefined") {
   }
 
   function renderStudy(pickNew = false) {
+    renderDailyStudy();
     renderStudyMode();
     renderStudyScope();
     renderChartStudyFilter();
@@ -3008,6 +3023,15 @@ if (typeof document !== "undefined") {
 
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
+    const daily = event.target.closest("[data-daily-study]");
+    if (daily) {
+      const action = daily.dataset.dailyStudy;
+      if (action === "chart") { switchTab("chart"); return; }
+      studyScope = daily.dataset.dailyScope || "all";
+      studyMode = action;
+      storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
+      renderStudy(true); return;
+    }
     const nav = event.target.closest("[data-view]");
     if (nav) { switchTab(nav.dataset.view); return; }
 
