@@ -2075,13 +2075,18 @@ if (typeof document !== "undefined") {
   function renderDailyStudy() {
     const day = Math.floor(Date.now() / DAY_MS);
     const sys = graph.systems[day % graph.systems.length];
+    const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
+    const done = storageGet(`daily-${dateKey}`, {});
+    const item = (id, label, action, scope = "") => `<div class="daily-study-item">
+      <button type="button" class="daily-check ${done[id] ? "done" : ""}" data-daily-check="${id}" aria-label="标记完成">${done[id] ? "✓" : "○"}</button>
+      <button type="button" class="daily-go" data-daily-study="${action}" ${scope ? `data-daily-scope="${escapeHtml(scope)}"` : ""}>${label}</button></div>`;
     el.dailyStudy.innerHTML = `
       <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span></div>
       <div class="daily-study-topic">今日主题：${escapeHtml(sys.title)}</div>
       <div class="daily-study-list">
-        <button type="button" data-daily-study="explain" data-daily-scope="${escapeHtml(sys.id)}">① 精读 1 条核心象义</button>
-        <button type="button" data-daily-study="quiz" data-daily-scope="${escapeHtml(sys.id)}">② 完成 3 道今日测验</button>
-        <button type="button" data-daily-study="chart">③ 用排盘验证 1 次</button>
+        ${item("read", "① 精读 1 条核心象义", "explain", sys.id)}
+        ${item("quiz", "② 完成 3 道今日测验", "quiz", sys.id)}
+        ${item("chart", "③ 用排盘验证 1 次", "chart")}
       </div>`;
   }
 
@@ -3023,6 +3028,12 @@ if (typeof document !== "undefined") {
 
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
+    const dailyCheck = event.target.closest("[data-daily-check]");
+    if (dailyCheck) {
+      const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
+      const done = storageGet(`daily-${dateKey}`, {}), id = dailyCheck.dataset.dailyCheck;
+      done[id] = !done[id]; storageSet(`daily-${dateKey}`, done); renderDailyStudy(); return;
+    }
     const daily = event.target.closest("[data-daily-study]");
     if (daily) {
       const action = daily.dataset.dailyStudy;
@@ -3030,6 +3041,7 @@ if (typeof document !== "undefined") {
       studyScope = daily.dataset.dailyScope || "all";
       studyMode = action;
       storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
+      switchTab("study");
       renderStudy(true); return;
     }
     const nav = event.target.closest("[data-view]");
