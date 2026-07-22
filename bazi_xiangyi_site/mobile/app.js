@@ -2096,6 +2096,13 @@ if (typeof document !== "undefined") {
     if (id !== "quiz" || done.quizCount >= 3) done[id] = true;
     storageSet(key, done); renderDailyStudy();
   }
+  let dailyReadToken = 0;
+  function trackDailyReading(scope) {
+    const token = ++dailyReadToken;
+    setTimeout(() => {
+      if (token === dailyReadToken && activeTab === "study" && studyMode === "explain" && studyScope === scope) markDailyAuto("read");
+    }, 8000);
+  }
 
   function renderStudyMode() {
     el.studyMode.innerHTML = `
@@ -3044,7 +3051,9 @@ if (typeof document !== "undefined") {
       studyMode = action;
       storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
       switchTab("study");
-      renderStudy(true); return;
+      renderStudy(true);
+      if (action === "explain") trackDailyReading(studyScope);
+      return;
     }
     const nav = event.target.closest("[data-view]");
     if (nav) { switchTab(nav.dataset.view); return; }
