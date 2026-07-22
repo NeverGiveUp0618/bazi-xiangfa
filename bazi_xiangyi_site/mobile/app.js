@@ -3291,4 +3291,5 @@ if (typeof document !== "undefined") {
   renderChart();
   renderStudy();
   renderLibrary();
+  try { const _ss=srsStats("all"); parent.postMessage({type:"yst-progress",app:"xiangfa",text:`测过关 ${_ss.ok} · 学习中 ${_ss.doing} · 新内容 ${_ss.fresh}`},"https://nevergiveup0618.github.io"); } catch(e) {}
 }
