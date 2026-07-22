@@ -2269,7 +2269,7 @@ if (typeof document !== "undefined") {
       .map(([k, values]) => {
         const short = values.every(v => String(v).length <= 8);
         const body = short
-          ? `<div class="chip-row">${values.map(v => `<button type="button" class="chip" data-quick="${escapeHtml(v)}">${escapeHtml(v)}</button>`).join("")}</div>`
+          ? `<div class="chip-row">${values.map(v => `<span class="chip">${escapeHtml(v)}</span>`).join("")}</div>`
           : `<ul>${values.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
         return `<div class="branch-block"><h4>${escapeHtml(k)}</h4>${body}</div>`;
       }).join("");
@@ -2296,7 +2296,7 @@ if (typeof document !== "undefined") {
         <span class="type-pill">${escapeHtml(node.type)}</span>
       </div>
       <p class="detail-sys">${escapeHtml(node.systemTitle)}</p>
-      <div class="detail-core">${(node.core || []).map(c => `<button type="button" data-quick="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join("")}</div>
+      <div class="detail-core">${(node.core || []).map(c => `<span class="detail-core-tag">${escapeHtml(c)}</span>`).join("")}</div>
       ${plainBlocks}
       ${otherBlocks}
       ${node.rules?.length ? `<div class="branch-block"><h4>判断提醒</h4><ul>${node.rules.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}

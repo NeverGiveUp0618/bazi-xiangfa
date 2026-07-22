@@ -2002,7 +2002,8 @@ mark {
   margin-bottom: 14px;
 }
 
-.detail-core button {
+.detail-core-tag {
+  display: inline-block;
   background: var(--accent-soft);
   color: var(--accent-ink);
   border: none;
