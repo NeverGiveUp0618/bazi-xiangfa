@@ -3042,7 +3042,6 @@ if (typeof document !== "undefined") {
       if (action === "chart") { switchTab("chart"); return; }
       studyScope = daily.dataset.dailyScope || "all";
       studyMode = action;
-      if (action === "explain") markDailyAuto("read");
       storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
       switchTab("study");
       renderStudy(true); return;
@@ -3212,7 +3211,7 @@ if (typeof document !== "undefined") {
       return;
     }
 
-    if (event.target.closest("[data-study-next]")) { renderStudy(true); return; }
+    if (event.target.closest("[data-study-next]")) { markDailyAuto("read"); renderStudy(true); return; }
 
     const quizOpt = event.target.closest("[data-quiz-opt]");
     if (quizOpt) {
