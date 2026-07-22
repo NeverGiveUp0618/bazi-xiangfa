@@ -2078,7 +2078,7 @@ if (typeof document !== "undefined") {
     const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
     const done = storageGet(`daily-${dateKey}`, {});
     const item = (id, label, action, scope = "") => `<div class="daily-study-item">
-      <button type="button" class="daily-check ${done[id] ? "done" : ""}" data-daily-check="${id}" aria-label="标记完成">${done[id] ? "✓" : "○"}</button>
+      <button type="button" class="daily-check ${done[id] ? "done" : ""}" disabled aria-label="${done[id] ? "系统已确认完成" : "等待系统确认"}">${done[id] ? "✓" : "○"}</button>
       <button type="button" class="daily-go" data-daily-study="${action}" ${scope ? `data-daily-scope="${escapeHtml(scope)}"` : ""}>${label}</button></div>`;
     el.dailyStudy.innerHTML = `
       <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span></div>
@@ -2088,6 +2088,13 @@ if (typeof document !== "undefined") {
         ${item("quiz", "② 完成 3 道今日测验", "quiz", sys.id)}
         ${item("chart", "③ 用排盘验证 1 次", "chart")}
       </div>`;
+  }
+  function markDailyAuto(id) {
+    const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
+    const key = `daily-${dateKey}`, done = storageGet(key, {});
+    if (id === "quiz") done.quizCount = (done.quizCount || 0) + 1;
+    if (id !== "quiz" || done.quizCount >= 3) done[id] = true;
+    storageSet(key, done); renderDailyStudy();
   }
 
   function renderStudyMode() {
@@ -3024,22 +3031,18 @@ if (typeof document !== "undefined") {
     currentQuiz = null;
     renderAnalysis();
     renderStudy(true);
+    markDailyAuto("chart");
   }
 
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
-    const dailyCheck = event.target.closest("[data-daily-check]");
-    if (dailyCheck) {
-      const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
-      const done = storageGet(`daily-${dateKey}`, {}), id = dailyCheck.dataset.dailyCheck;
-      done[id] = !done[id]; storageSet(`daily-${dateKey}`, done); renderDailyStudy(); return;
-    }
     const daily = event.target.closest("[data-daily-study]");
     if (daily) {
       const action = daily.dataset.dailyStudy;
       if (action === "chart") { switchTab("chart"); return; }
       studyScope = daily.dataset.dailyScope || "all";
       studyMode = action;
+      if (action === "explain") markDailyAuto("read");
       storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
       switchTab("study");
       renderStudy(true); return;
@@ -3124,9 +3127,9 @@ if (typeof document !== "undefined") {
     }
 
     const reveal = event.target.closest("[data-reveal]");
-    if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); return; }
+    if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); markDailyAuto("chart"); return; }
 
-    if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); return; }
+    if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); markDailyAuto("chart"); return; }
     if (event.target.closest("[data-export-charts]")) { exportCharts(); return; }
     if (event.target.closest("[data-import-charts]")) { importCharts(); return; }
 
@@ -3216,6 +3219,7 @@ if (typeof document !== "undefined") {
       if (quizChosen >= 0 || !currentQuiz) return;
       quizChosen = Number(quizOpt.dataset.quizOpt);
       if (currentQuiz.nodeId) gradeStudy(currentQuiz.nodeId, currentQuiz.options[quizChosen].correct ? "good" : "bad");
+      markDailyAuto("quiz");
       renderStudyStats();
       renderQuiz();
       return;
