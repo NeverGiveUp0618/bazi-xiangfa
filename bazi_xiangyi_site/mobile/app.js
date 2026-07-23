@@ -752,6 +752,177 @@ function applyAntiFirst(results, terms) {
     .sort((a, b) => (b.anti.length - a.anti.length) || (b.score - a.score) || (a.originalIndex - b.originalIndex));
 }
 
+/* ---------- 根性与推象模型 ---------- */
+const ROOT_OVERRIDES = {
+  "阴阳": ["显隐", "动静", "内外", "开合"],
+  "木": ["生发", "向上", "条达", "伸展"],
+  "火": ["发热", "发光", "上炎", "显现"],
+  "土": ["承载", "包容", "稳定", "转化"],
+  "金": ["坚硬", "收敛", "裁断", "规则"],
+  "水": ["流动", "向下", "渗透", "智慧"],
+  "正印": ["生我", "庇护", "吸收", "承载"],
+  "偏印": ["生我", "偏门", "灵感", "孤独"],
+  "比肩": ["同我", "并列", "自主", "分担"],
+  "劫财": ["同我", "争夺", "行动", "分流"],
+  "食神": ["我生", "温和输出", "享受", "滋养"],
+  "伤官": ["我生", "锋利表达", "突破", "反规则"],
+  "正财": ["我克", "稳定占有", "经营", "现实"],
+  "偏财": ["我克", "流动资源", "机会", "交际"],
+  "正官": ["克我", "规则", "名分", "自律"],
+  "七杀": ["克我", "压力", "竞争", "决断"],
+  "甲木": ["向上", "挺直", "开拓", "担当"],
+  "乙木": ["柔韧", "攀附", "曲折", "适应"],
+  "丙火": ["太阳", "外放", "照见", "传播"],
+  "丁火": ["灯火", "专注", "文明", "持续"],
+  "戊土": ["高厚", "承载", "守中", "稳定"],
+  "己土": ["田园", "包容", "培育", "转化"],
+  "庚金": ["刚硬", "改革", "执行", "裁断"],
+  "辛金": ["精致", "锋利", "规则", "价值"],
+  "壬水": ["江海", "流动", "汇聚", "变化"],
+  "癸水": ["雨露", "渗透", "细密", "滋润"],
+  "天干五合": ["牵引", "绑定", "合作", "牵制"],
+  "地支六合": ["吸引", "连接", "合留", "合绊"],
+  "地支三合": ["汇聚", "成局", "同气", "集团"],
+  "六冲": ["对立", "位移", "打散", "变化"],
+  "穿": ["暗伤", "破坏连接", "不协调", "深入"],
+  "六破": ["破损", "松动", "失约", "不完整"],
+  "三刑": ["纠结", "反复", "压力", "失衡"],
+  "墓库": ["收藏", "封闭", "积蓄", "开合"],
+  "乾兑 -> 金象辅助": ["刚健居上", "圆满坚硬", "贵重光泽", "裁断规则"],
+  "震巽 -> 木象辅助": ["发动生长", "风行渗入", "细长伸展", "传播变化"],
+  "离 -> 火象辅助": ["明亮显现", "附着传播", "文明礼仪", "外热内虚"],
+  "坎 -> 水象辅助": ["流动下陷", "幽深危险", "智慧渗透", "劳苦变化"],
+  "坤艮 -> 土象辅助": ["承载包容", "停止界限", "厚重稳定", "孕育收藏"]
+};
+
+const DIMENSIONS = [
+  { id: "shape", title: "形", hint: "外形、质地、颜色和身体形态", keys: /物象|事物|身体|颜色|形态|外形|材质|器物|自然/ },
+  { id: "nature", title: "性", hint: "性情、气质、感受和吉凶倾向", keys: /心理|性情|气质|优点|风险|吉凶|特征|特点/ },
+  { id: "position", title: "位", hint: "人物角色、宫位、空间位置和社会层级", keys: /人物|六亲|宫位|方位|场所|位置|家庭|八字落点/ },
+  { id: "motion", title: "动", hint: "动作、关系、变化方式和事件性质", keys: /事件|事项|动作|关系|组合|判断|分辨|作用|表现/ },
+  { id: "use", title: "用", hint: "功能、职业、用途和现实落点", keys: /职业|功能|用途|行业|工作|应用|文书|财富|疾病/ }
+];
+
+const SEARCH_CONTEXTS = [
+  { id: "all", title: "不限主题", words: [] },
+  { id: "career", title: "事业", words: ["职业", "工作", "事业", "单位", "领导", "规则", "名誉", "权力", "技能"] },
+  { id: "love", title: "感情", words: ["婚恋", "夫妻", "配偶", "感情", "桃花", "关系", "吸引", "家庭"] },
+  { id: "wealth", title: "财运", words: ["财富", "钱财", "财物", "经营", "客户", "资源", "交易", "收入"] },
+  { id: "health", title: "健康", words: ["身体", "疾病", "疼痛", "脏腑", "气血", "药物", "健康", "精神"] },
+  { id: "family", title: "家庭", words: ["父母", "子女", "长辈", "家庭", "房屋", "祖辈", "兄弟", "六亲"] },
+  { id: "environment", title: "环境", words: ["场所", "地点", "方位", "环境", "建筑", "道路", "房屋", "自然"] }
+];
+
+const SEARCH_LENSES = [
+  { id: "all", title: "全部落点", keys: null },
+  { id: "person", title: "人物", keys: /人物|六亲|家庭|角色/ },
+  { id: "event", title: "事件", keys: /事件|事项|判断|表现|关系|组合/ },
+  { id: "object", title: "物品", keys: /物象|事物|器物|文书|财富/ },
+  { id: "body", title: "身体", keys: /身体|疾病|健康/ },
+  { id: "place", title: "地点", keys: /场所|方位|环境|位置/ }
+];
+
+function rootEssences(node) {
+  return (ROOT_OVERRIDES[node.title] || node.core || []).slice(0, 4);
+}
+
+function dimensionForKey(key) {
+  return DIMENSIONS.find(d => d.keys.test(key)) || { id: "use", title: "用", hint: "把根性落到现实用途和具体事物" };
+}
+
+function dimensionGroups(node) {
+  const groups = new Map(DIMENSIONS.map(d => [d.id, { ...d, values: [] }]));
+  Object.entries(node.branches || {}).forEach(([key, values]) => {
+    if (ANTI_KEYS.some(k => key.includes(k)) || /提醒|口径|反例|为什么|大白话|像什么/.test(key)) return;
+    const dim = dimensionForKey(key);
+    const group = groups.get(dim.id);
+    values.forEach(v => {
+      const text = String(v);
+      if (text.length <= 12 && group.values.length < 8 && !group.values.includes(text)) group.values.push(text);
+    });
+  });
+  return [...groups.values()].filter(g => g.values.length);
+}
+
+function derivationBridge(key, dim) {
+  if (/人物|六亲/.test(key)) return "落到人事角色";
+  if (/身体|疾病/.test(key)) return "落到身体形位";
+  if (/场所|方位|环境/.test(key)) return "落到空间位置";
+  if (/职业|行业|工作/.test(key)) return "落到社会功能";
+  if (/事件|事项|关系|组合/.test(key)) return "落到行为与关系";
+  if (/物象|事物|器物/.test(key)) return "取其形态与质地";
+  if (/心理|性情|气质/.test(key)) return "内化为性情感受";
+  return `沿“${dim.title}”维度展开`;
+}
+
+function contextProfile(contextId) {
+  return SEARCH_CONTEXTS.find(c => c.id === contextId) || SEARCH_CONTEXTS[0];
+}
+
+function lensProfile(lensId) {
+  return SEARCH_LENSES.find(c => c.id === lensId) || SEARCH_LENSES[0];
+}
+
+function nodeText(node) {
+  return [
+    node.title, ...(node.core || []),
+    ...Object.entries(node.branches || {}).flatMap(([k, vs]) => [k, ...vs]),
+    ...(node.rules || [])
+  ].join(" ");
+}
+
+function contextBoost(node, contextId, lensId) {
+  const context = contextProfile(contextId);
+  const lens = lensProfile(lensId);
+  const text = nodeText(node);
+  let score = context.words.reduce((sum, w) => sum + (text.includes(w) ? 9 : 0), 0);
+  if (lens.keys) {
+    Object.entries(node.branches || {}).forEach(([key, values]) => {
+      if (lens.keys.test(key)) score += 16 + Math.min(values.length, 6);
+    });
+  }
+  return score;
+}
+
+function derivationExamples(node, options = {}) {
+  const roots = rootEssences(node);
+  if (!roots.length) return [];
+  const context = contextProfile(options.context || "all");
+  const lens = lensProfile(options.lens || "all");
+  const rows = [];
+  Object.entries(node.branches || {}).forEach(([key, values]) => {
+    if (/大白话|为什么|像什么|提醒|风险|不能这样断|反例|口径|使用提醒/.test(key)) return;
+    if (lens.keys && !lens.keys.test(key)) return;
+    const dim = dimensionForKey(key);
+    values.forEach((value, i) => {
+      const term = String(value);
+      if (term.length > 12) return;
+      const contextScore = context.words.reduce((sum, w) => sum + (term.includes(w) || key.includes(w) ? 2 : 0), 0);
+      rows.push({
+        term,
+        key,
+        dim,
+        root: roots[(i + key.length) % roots.length],
+        bridge: derivationBridge(key, dim),
+        score: contextScore
+      });
+    });
+  });
+  return rows
+    .sort((a, b) => b.score - a.score || a.key.localeCompare(b.key, "zh-CN"))
+    .filter((x, i, arr) => arr.findIndex(y => y.term === x.term) === i)
+    .slice(0, options.limit || 10);
+}
+
+function derivationPathText(row) {
+  return `${row.root} → ${row.bridge} → ${row.term}`;
+}
+
+function rankResultsByContext(results, contextId, lensId) {
+  return results.map((r, index) => ({ ...r, contextScore: contextBoost(r.node, contextId, lensId), originalIndex: index }))
+    .sort((a, b) => (b.contextScore - a.contextScore) || (b.score - a.score) || (a.originalIndex - b.originalIndex));
+}
+
 /* ---------- 象义树：图数据 ---------- */
 const SYS_COLORS = {
   "five-elements": "#ffd54f",
@@ -1361,6 +1532,27 @@ function chartPathSteps(bazi, season, combos, rels, shensha, nayin, luckInfo) {
   ];
 }
 
+function chartDerivationRows(items, contextId) {
+  const rows = [];
+  items.forEach(item => {
+    const node = nodeById.get(item.id);
+    if (!node) return;
+    derivationExamples(node, { context: contextId, limit: 3 }).forEach(path => {
+      rows.push({ ...path, node, source: item.source, why: item.why });
+    });
+  });
+  const termSources = new Map();
+  rows.forEach(row => {
+    if (!termSources.has(row.term)) termSources.set(row.term, new Set());
+    termSources.get(row.term).add(row.node.id);
+  });
+  return rows
+    .map(row => ({ ...row, evidenceCount: termSources.get(row.term)?.size || 1 }))
+    .sort((a, b) => (b.evidenceCount - a.evidenceCount) || (b.score - a.score))
+    .filter((row, i, arr) => arr.findIndex(x => x.node.id === row.node.id && x.term === row.term) === i)
+    .slice(0, 8);
+}
+
 /* ---------- 学习（间隔复习） ---------- */
 const SRS_IVL_DAYS = [0.5, 1, 3, 7, 15, 30];
 
@@ -1395,21 +1587,6 @@ function pickStudyNode(scope, excludeId) {
   if (fresh.length) return fresh[Math.floor(Math.random() * fresh.length)];
   const rest = pool.filter(n => n.id !== excludeId);
   return rest.length ? rest[Math.floor(Math.random() * rest.length)] : pool[0];
-}
-
-function pickReviewNode(scope) {
-  const srs = srsAll();
-  const pool = scopeNodes(scope);
-  if (!pool.length) return null;
-  const now = Date.now();
-  const reviewed = pool.filter(n => srs[n.id]?.seen);
-  if (!reviewed.length) return pickStudyNode(scope, null);
-  return reviewed.sort((a, b) => {
-    const sa = srs[a.id], sb = srs[b.id];
-    const aDue = sa.due <= now ? 0 : 1;
-    const bDue = sb.due <= now ? 0 : 1;
-    return (aDue - bDue) || (sa.lv - sb.lv) || (sa.due - sb.due);
-  })[0];
 }
 
 function gradeStudy(nodeId, grade) {
@@ -1475,13 +1652,54 @@ function relQuizPool() {
 }
 const REL_LABELS = ["六冲", "六合", "拱合", "相穿", "相破", "暗合", "相绝"];
 
-function makeQuizQuestion(scope, forcedNode = null) {
+function makePathQuestion(node, pool) {
+  const row = derivationExamples(node, { limit: 12 })[0];
+  if (!row) return null;
+  const correct = derivationPathText(row);
+  const otherTerms = pool.filter(n => n.id !== node.id).flatMap(n => derivationExamples(n, { limit: 2 }));
+  const distract = shuffle(otherTerms).slice(0, 3).map((x, i) => {
+    if (i === 0) return `${row.root} → ${x.bridge} → ${x.term}`;
+    if (i === 1) return `${x.root} → ${row.bridge} → ${row.term}`;
+    return derivationPathText(x);
+  });
+  if (distract.length < 3) return null;
+  return {
+    kind: "path",
+    nodeId: node.id,
+    prompt: `「${node.title}」推出“${row.term}”，哪条路径最合理？`,
+    options: shuffle([{ text: correct, correct: true }, ...distract.map(text => ({ text, correct: false }))]),
+    why: `先抓根性“${row.root}”，再${row.bridge}，所以可落到“${row.term}”。`
+  };
+}
+
+function makeContextQuestion(node, pool) {
+  const groups = Object.entries(node.branches || {}).filter(([key, values]) =>
+    values.some(v => String(v).length <= 10) && !/大白话|为什么|像什么|提醒|风险|不能这样断|反例|口径/.test(key)
+  );
+  if (!groups.length) return null;
+  const [key, values] = shuffle(groups)[0];
+  const correct = values.find(v => String(v).length <= 10);
+  const otherValues = groups.filter(([k]) => k !== key).flatMap(([, vs]) => vs.filter(v => String(v).length <= 10));
+  const fallback = pool.filter(n => n.id !== node.id).flatMap(n => Object.values(n.branches || {}).flat()).filter(v => String(v).length <= 10);
+  const distract = sample(otherValues.length >= 3 ? otherValues : fallback, 3, new Set([correct]));
+  if (!correct || distract.length < 3) return null;
+  const dim = dimensionForKey(key);
+  return {
+    kind: "context",
+    nodeId: node.id,
+    prompt: `现在重点看“${key}”，「${node.title}」应优先取哪个象？`,
+    options: shuffle([{ text: String(correct), correct: true }, ...distract.map(text => ({ text: String(text), correct: false }))]),
+    why: `问题限定在“${key}”，要先沿“${dim.title}”维筛选；“${correct}”属于这一层，其他象不是永远错误，只是当前不优先。`
+  };
+}
+
+function makeQuizQuestion(scope, forcedNode = null, forcedKind = "") {
   const pool = scopeNodes(scope);
   if (!pool.length) return null;
   const relOk = scope === "all" || scope === "relations" || scope === "branches";
 
   // 约 1/3 概率出地支关系题
-  if (!forcedNode && relOk && Math.random() < 0.34) {
+  if (!forcedNode && !forcedKind && relOk && Math.random() < 0.2) {
     const q = relQuizPool()[Math.floor(Math.random() * relQuizPool().length)];
     const node = nodeByTitle.get(q.node);
     const distract = sample(REL_LABELS, 3, new Set([q.label]));
@@ -1497,6 +1715,15 @@ function makeQuizQuestion(scope, forcedNode = null) {
 
   const node = forcedNode || pickStudyNode(scope, null);
   if (!node) return null;
+  const roll = Math.random();
+  if (forcedKind === "path" || (!forcedKind && roll < 0.34)) {
+    const q = makePathQuestion(node, pool);
+    if (q) return q;
+  }
+  if (forcedKind === "context" || (!forcedKind && roll < 0.62)) {
+    const q = makeContextQuestion(node, pool);
+    if (q) return q;
+  }
   const cores = (node.core || []).filter(Boolean);
   const canReverse = cores.length >= 3;
 
@@ -1524,7 +1751,7 @@ function makeQuizQuestion(scope, forcedNode = null) {
     (n.core || []).forEach(c => { if (c.length <= 5 && !own.has(c)) distractPool.push(c); });
   });
   const distract = sample(distractPool, 3, new Set([correct]));
-  if (distract.length < 3) return forcedNode ? null : makeQuizQuestion(scope); // 干扰项不足，换一题
+  if (distract.length < 3) return forcedNode ? null : makeQuizQuestion(scope, null, forcedKind); // 干扰项不足，换一题
   const options = shuffle([{ text: correct, correct: true }, ...distract.map(t => ({ text: t, correct: false }))]);
   return {
     kind: "toCore",
@@ -1566,6 +1793,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.23", "🧠 象义学习改为根性推导——详情显示一核五维与生成路径，新增推导练习、情境测验、搜索筛选、排盘证据链和象义树生成链"],
     ["26.7.11", "🗓️ 大运流年叠加上线——排盘页选岁运干支，自动扫引动：冲提纲、穿夫妻宫、补齐三刑、填实拱位、开财库、岁运并临，八步第8步直接报应期入口"],
     ["26.7.11", "🕸️ 象义树孤岛清零——财富载体、干支虚实、时柱接入关系网，新增26条连线全部配好理由"],
     ["26.7.11", "🛟 复盘笔记防丢——输入即存草稿，点盘、选字、切模式都不会吃掉没保存的笔记"],
@@ -1601,10 +1829,10 @@ if (typeof document !== "undefined") {
     ["26.7.7", "📱 手机版整体重做——共象聚合查询 / 点选八字自动解盘 / 学习复习 / 体系图鉴"]
   ];
   const HINTS = {
-    search: "想到一个词，先查共象",
-    chart: "点格子选字，全盘自动标注",
-    study: "先自己回忆，再翻面对答案",
-    tree: "131个词条织成一张网，点谁看谁",
+    search: "先定情境，再从根性推出可用象",
+    chart: "看根性、盘中来源与现实落点怎样连起来",
+    study: "少背清单，多练从根性现场推象",
+    tree: "看根性怎样长成现实象，再看跨词关联",
     library: "按体系慢慢翻",
     detail: "完整象义"
   };
@@ -1620,19 +1848,28 @@ if (typeof document !== "undefined") {
   let quizOn = storageGet("quiz", false);
   let quizRevealed = { rel: false, ss: false };
   let antiFirst = storageGet("antiFirst", false);
+  let searchContext = storageGet("searchContext", "all");
+  if (!SEARCH_CONTEXTS.some(x => x.id === searchContext)) searchContext = "all";
+  let searchLens = storageGet("searchLens", "all");
+  if (!SEARCH_LENSES.some(x => x.id === searchLens)) searchLens = "all";
+  let chartContext = storageGet("chartContext", "all");
+  if (!SEARCH_CONTEXTS.some(x => x.id === chartContext)) chartContext = "all";
   let studyScope = storageGet("studyScope", "all");
   if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
   chartStudyPart = storageGet("chartStudyPart", "all");
   if (!CHART_STUDY_PARTS.some(p => p.id === chartStudyPart)) chartStudyPart = "all";
   let studyNodeId = null;
-  let studyMode = storageGet("studyMode", "quiz"); // quiz | explain
-  if (studyMode === "flip" || !["quiz", "explain"].includes(studyMode)) {
+  let studyMode = storageGet("studyMode", "quiz"); // quiz | derive | explain
+  if (studyMode === "flip" || !["quiz", "derive", "explain"].includes(studyMode)) {
     studyMode = "quiz";
     storageSet("studyMode", studyMode);
   }
   let currentQuiz = null;
   let quizChosen = -1;
-  let dailyReviewPending = false;
+  let dailyQuizKind = "";
+  let deriveNodeId = null;
+  let deriveDraft = "";
+  let deriveRevealed = false;
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
   const viewScroll = {};
@@ -1714,8 +1951,22 @@ if (typeof document !== "undefined") {
     ).join("");
   }
 
+  function searchFilterHtml() {
+    return `
+      <div class="context-filter">
+        <div class="context-filter-head"><strong>先定情境，再选象</strong><span>同一个符号在不同问题里，优先象不同</span></div>
+        <div class="context-filter-row">
+          ${SEARCH_CONTEXTS.map(c => `<button type="button" class="${searchContext === c.id ? "active" : ""}" data-search-context="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+        </div>
+        <div class="context-filter-row lens-row">
+          ${SEARCH_LENSES.map(c => `<button type="button" class="${searchLens === c.id ? "active" : ""}" data-search-lens="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+        </div>
+      </div>`;
+  }
+
   function nodeCardHtml(result, terms) {
     const { node, evidence, anti } = result;
+    const path = derivationExamples(node, { context: searchContext, lens: searchLens, limit: 1 })[0];
     const matchLines = (evidence || [])
       .filter(e => e.label !== "词条名")
       .map(e => `<p class="match-line"><b>${escapeHtml(e.label)}</b>${highlight(e.text, terms)}</p>`)
@@ -1731,6 +1982,7 @@ if (typeof document !== "undefined") {
           <span class="sys-pill">${escapeHtml(node.systemTitle)}</span>
         </div>
         <div class="core-row">${(node.core || []).slice(0, 5).map(c => `<span>${terms ? highlight(c, terms) : escapeHtml(c)}</span>`).join("")}</div>
+        ${path ? `<p class="card-derive"><b>推导</b>${escapeHtml(derivationPathText(path))}</p>` : ""}
         ${antiLines ? `<div class="anti-lines">${antiLines}</div>` : ""}
         ${matchLines ? `<div class="match-lines">${matchLines}</div>` : `<p class="plain-line">${escapeHtml(nodePlain(node))}</p>`}
       </button>`;
@@ -1741,10 +1993,16 @@ if (typeof document !== "undefined") {
     renderQuickRow(query);
     if (!query) {
       el.searchBody.innerHTML = `
+        <div class="method-banner">
+          <strong>象义不是清单，是推导过程</strong>
+          <p>先抓根性，再沿形、性、位、动、用展开；最后用问题、位置、状态和其他线索筛选。</p>
+          <div><span>根性</span><i>→</i><span>五维</span><i>→</i><span>情境</span><i>→</i><span>双证</span></div>
+        </div>
+        ${searchFilterHtml()}
         <div class="home-entries">
           <button class="home-entry" type="button" data-entry="search"><span class="entry-badge">查</span><span><strong>查一个象</strong><p>想到词就搜：文书、财库、口舌、搬家……</p></span></button>
           <button class="home-entry" type="button" data-entry="chart"><span class="entry-badge">盘</span><span><strong>输入命例</strong><p>点选八字，冲合穿破、神煞纳音自动标出</p></span></button>
-          <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天测一组</strong><p>用选择题检验，不靠主观自评判断会不会</p></span></button>
+          <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天推一组</strong><p>先理解根性，再自己推出三个现实象</p></span></button>
         </div>
         <div class="dev-log">
           <div class="dev-log-head">开发时间节点</div>
@@ -1760,6 +2018,7 @@ if (typeof document !== "undefined") {
       el.searchBody.innerHTML = `<div class="empty-card">没有找到「${escapeHtml(query)}」。换个说法试试，比如“文书”“财库”“子午冲”。</div>`;
       return;
     }
+    results = rankResultsByContext(results, searchContext, searchLens);
     if (antiFirst) results = applyAntiFirst(results, terms);
     const summary = overlapSummary(results, terms);
     const antiCount = results.filter(r => r.anti?.length).length;
@@ -1793,7 +2052,12 @@ if (typeof document !== "undefined") {
             <div>${group.hits.map(t => `<button type="button" data-quick="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join("")}</div>
           </div>`).join("")}
       </div>` : "";
-    el.searchBody.innerHTML = antiToggleHtml + overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
+    const context = contextProfile(searchContext);
+    const lens = lensProfile(searchLens);
+    const contextNote = searchContext !== "all" || searchLens !== "all"
+      ? `<div class="context-result-note">正在按“${escapeHtml(context.title)} · ${escapeHtml(lens.title)}”优先排序；这是筛选方向，不代表其他象不存在。</div>`
+      : "";
+    el.searchBody.innerHTML = searchFilterHtml() + contextNote + antiToggleHtml + overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
   }
 
   /* ---- 排盘页 ---- */
@@ -1947,6 +2211,7 @@ if (typeof document !== "undefined") {
     const luckThemes = luckGodThemes(bazi, luck);
     const luckUnitsArr = luckUnits(luck);
     const pathSteps = chartPathSteps(bazi, season, combos, rels, shensha, nayin, { units: luckUnitsArr, items: luckItems });
+    const deriveRows = chartDerivationRows(chartStudyItems, chartContext);
     const savedDeck = chartStudyDeck();
     const currentDeckKey = chartStudyItems.map(x => x.id).sort().join("|");
     const savedDeckKey = savedDeck.ids.slice().sort().join("|");
@@ -2041,6 +2306,22 @@ if (typeof document !== "undefined") {
           <button type="button" data-go-chart-study-part="marks" ${isSavedDeck ? "" : "disabled"}>神煞纳音</button>
         </div>
       </div>`;
+    const deriveSection = `
+      <section class="ana-section chart-derive-section">
+        <div class="ana-head"><h3>本盘取象推导链</h3><span class="ana-count">先定主题，再看证据</span></div>
+        <div class="chart-context-row">
+          ${SEARCH_CONTEXTS.map(c => `<button type="button" class="${chartContext === c.id ? "active" : ""}" data-chart-context="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+        </div>
+        <p class="chart-derive-note">这里展示的是候选方向：根性 → 盘中来源 → 现实落点。出现两个以上独立来源，才值得优先验证。</p>
+        <div class="chart-derive-list">
+          ${deriveRows.map(row => `
+            <button type="button" class="chart-derive-row" data-open-node="${escapeHtml(row.node.id)}">
+              <div><strong>${escapeHtml(row.node.title)}</strong><span>${escapeHtml(row.source || row.node.systemTitle)}</span><em class="${row.evidenceCount >= 2 ? "multi" : ""}">${row.evidenceCount >= 2 ? `多线索 ×${row.evidenceCount}` : "单线索候选"}</em></div>
+              <p><b>${escapeHtml(row.root)}</b><i>→</i><span>${escapeHtml(row.bridge)}</span><i>→</i><b>${escapeHtml(row.term)}</b></p>
+              <small>盘中依据：${escapeHtml(row.why || "由当前干支、十神或关系扫描进入")}</small>
+            </button>`).join("")}
+        </div>
+      </section>`;
     const pathSection = `
       <section class="ana-section">
         <div class="ana-head"><h3>八步入命法</h3><span class="ana-count">按八字笔记顺序断，不跳步</span></div>
@@ -2065,6 +2346,7 @@ if (typeof document !== "undefined") {
 
     el.chartAnalysis.innerHTML = `
       ${studyDeckSection}
+      ${deriveSection}
       ${pathSection}
       ${seasonSection}
       ${comboSection}
@@ -2100,29 +2382,29 @@ if (typeof document !== "undefined") {
       <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span></div>
       <div class="daily-study-topic">今日主题：${escapeHtml(sys.title)}</div>
       <div class="daily-study-list">
-        ${item("read", "① 精读 1 条核心象义", "explain", sys.id)}
-        ${item("quiz", "② 完成 3 道今日测验", "quiz", sys.id)}
-        ${item("review", "③ 复习 1 个薄弱点", "review")}
+        ${item("root", "① 理解 1 个根性", "explain", sys.id)}
+        ${item("derive", "② 自己推出 3 个象", "derive", sys.id)}
+        ${item("context", "③ 完成 1 道情境取象题", "context", sys.id)}
       </div>`;
   }
   function markDailyAuto(id) {
     const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
     const key = `daily-${dateKey}`, done = storageGet(key, {});
-    if (id === "quiz") done.quizCount = (done.quizCount || 0) + 1;
-    if (id !== "quiz" || done.quizCount >= 3) done[id] = true;
+    done[id] = true;
     storageSet(key, done); renderDailyStudy();
   }
   let dailyReadToken = 0;
   function trackDailyReading(scope) {
     const token = ++dailyReadToken;
     setTimeout(() => {
-      if (token === dailyReadToken && activeTab === "study" && studyMode === "explain" && studyScope === scope) markDailyAuto("read");
+      if (token === dailyReadToken && activeTab === "study" && studyMode === "explain" && studyScope === scope) markDailyAuto("root");
     }, 8000);
   }
 
   function renderStudyMode() {
     el.studyMode.innerHTML = `
       <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
+      <button type="button" class="${studyMode === "derive" ? "active" : ""}" data-study-mode="derive">推导</button>
       <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">解析</button>`;
   }
 
@@ -2175,14 +2457,9 @@ if (typeof document !== "undefined") {
 
   function renderQuiz(pickNew = false) {
     if (pickNew || !currentQuiz) {
-      if (dailyReviewPending) {
-        const reviewNode = pickReviewNode(studyScope);
-        currentQuiz = reviewNode ? makeQuizQuestion(reviewNode.systemId, reviewNode) : makeQuizQuestion(studyScope);
-        if (currentQuiz) currentQuiz.dailyReview = true;
-        dailyReviewPending = false;
-      } else {
-        currentQuiz = makeQuizQuestion(studyScope);
-      }
+      currentQuiz = makeQuizQuestion(studyScope, null, dailyQuizKind);
+      if (currentQuiz && dailyQuizKind === "context") currentQuiz.dailyContext = true;
+      dailyQuizKind = "";
       quizChosen = -1;
     }
     if (!currentQuiz) {
@@ -2192,7 +2469,7 @@ if (typeof document !== "undefined") {
     const q = currentQuiz;
     const answered = quizChosen >= 0;
     const chosenCorrect = answered && q.options[quizChosen].correct;
-    const kindLabel = { rel: "地支关系", toTitle: "由象猜词", toCore: "由词选象" }[q.kind] || "";
+    const kindLabel = { rel: "地支关系", path: "推导路径", context: "情境筛选", toTitle: "由象猜词", toCore: "由词选象" }[q.kind] || "";
     const opts = q.options.map((o, i) => {
       let cls = "quiz-opt";
       if (answered) {
@@ -2219,6 +2496,36 @@ if (typeof document !== "undefined") {
       </div>`;
   }
 
+  function renderDerivePractice(pickNew = false) {
+    if (pickNew || !deriveNodeId || !scopeNodes(studyScope).some(n => n.id === deriveNodeId)) {
+      deriveNodeId = pickStudyNode(studyScope, deriveNodeId)?.id || null;
+      deriveDraft = "";
+      deriveRevealed = false;
+    }
+    const node = nodeById.get(deriveNodeId);
+    if (!node) {
+      el.studyCard.innerHTML = `<div class="empty-card">这个范围里暂时没有可做推导练习的词条。</div>`;
+      return;
+    }
+    const roots = rootEssences(node);
+    const paths = derivationExamples(node, { limit: 6 });
+    el.studyCard.innerHTML = `
+      <div class="derive-practice">
+        <p class="quiz-kind">开放推象 · 不要求和资料库一字不差</p>
+        <h3>从「${escapeHtml(node.title)}」推出 3 个现实象</h3>
+        <p class="derive-root-prompt">只给根性：${roots.map(r => `<b>${escapeHtml(r)}</b>`).join(" ")}</p>
+        <p class="derive-help">试着分别从形、性、位、动、用里选三个方向。重点是说得出“为什么”，不是背标准答案。</p>
+        <textarea data-derive-input rows="4" placeholder="例如：根性 → 经过什么维度 → 推出什么象">${escapeHtml(deriveDraft)}</textarea>
+        <button type="button" class="derive-reveal" data-derive-reveal ${deriveDraft.trim() ? "" : "disabled"}>${deriveRevealed ? "参考路径已展开" : "写完后看参考路径"}</button>
+        ${deriveRevealed ? `
+          <div class="derive-reference">
+            <strong>参考，不是唯一答案</strong>
+            ${paths.map(row => `<p>${escapeHtml(derivationPathText(row))}<small>${escapeHtml(row.dim.title)} · ${escapeHtml(row.key)}</small></p>`).join("")}
+            <button type="button" data-derive-next>换一个词继续推 →</button>
+          </div>` : ""}
+      </div>`;
+  }
+
   function renderStudy(pickNew = false) {
     renderDailyStudy();
     renderStudyMode();
@@ -2226,6 +2533,7 @@ if (typeof document !== "undefined") {
     renderChartStudyFilter();
     renderStudyStats();
     if (studyMode === "quiz") { renderQuiz(pickNew); return; }
+    if (studyMode === "derive") { renderDerivePractice(pickNew); return; }
     if (pickNew || !studyNodeId || !scopeNodes(studyScope).some(n => n.id === studyNodeId)) {
       const next = pickStudyNode(studyScope, studyNodeId);
       studyNodeId = next?.id || null;
@@ -2241,13 +2549,17 @@ if (typeof document !== "undefined") {
     const like = node.branches?.["像什么"];
     const why = node.branches?.["为什么"];
     const anti = node.branches?.["不能这样断"];
+    const roots = rootEssences(node);
+    const paths = derivationExamples(node, { limit: 3 });
     el.studyCard.innerHTML = `
       <div class="flash-card">
         <p class="flash-meta">${escapeHtml(node.systemTitle)} · ${escapeHtml(node.type)} · ${escapeHtml(status)}</p>
         <h2 class="flash-title" style="font-size:28px">${escapeHtml(node.title)}</h2>
-        <div class="flash-core">${(node.core || []).slice(0, 6).map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>
+        <p class="flash-root-label">今天只记根性</p>
+        <div class="flash-core">${roots.map(c => `<span>${escapeHtml(c)}</span>`).join("")}</div>
         ${chartWhy ? `<p class="flash-chart-why">${escapeHtml(chartWhy)}</p>` : ""}
         <p class="flash-plain">${escapeHtml(nodePlain(node))}</p>
+        ${paths.length ? `<div class="flash-paths">${paths.map(row => `<p>${escapeHtml(derivationPathText(row))}</p>`).join("")}</div>` : ""}
         ${like?.length ? `<p class="flash-like">像什么：${escapeHtml(like.slice(0, 4).join("、"))}</p>` : ""}
         ${why?.length ? `<p class="flash-like">为什么：${escapeHtml(why.slice(0, 2).join("；"))}</p>` : ""}
         ${anti?.length ? `<p class="flash-like">防误断：${escapeHtml(anti[0])}</p>` : ""}
@@ -2276,6 +2588,9 @@ if (typeof document !== "undefined") {
 
   function renderDetail(node) {
     const branches = Object.entries(node.branches || {});
+    const roots = rootEssences(node);
+    const dimensions = dimensionGroups(node);
+    const paths = derivationExamples(node, { limit: 8 });
     const plainBlocks = PLAIN_KEYS
       .filter(k => node.branches?.[k]?.length)
       .map(k => {
@@ -2319,10 +2634,44 @@ if (typeof document !== "undefined") {
         <span class="type-pill">${escapeHtml(node.type)}</span>
       </div>
       <p class="detail-sys">${escapeHtml(node.systemTitle)}</p>
-      <div class="detail-core">${(node.core || []).map(c => `<span class="detail-core-tag">${escapeHtml(c)}</span>`).join("")}</div>
+      <section class="root-model-card">
+        <div class="root-model-head"><span>一核</span><strong>先理解根性，不背完整清单</strong></div>
+        <div class="detail-core">${roots.map(c => `<span class="detail-core-tag">${escapeHtml(c)}</span>`).join("")}</div>
+        <p>这些是「${escapeHtml(node.title)}」最稳定的底层性质；其余人物、物品和事件象，都应从这里推出。</p>
+      </section>
+      ${dimensions.length ? `
+        <section class="dimension-card">
+          <div class="root-model-head"><span>五维</span><strong>沿形、性、位、动、用展开</strong></div>
+          <div class="dimension-grid">
+            ${dimensions.map(dim => `
+              <div class="dimension-cell">
+                <b>${escapeHtml(dim.title)}</b>
+                <small>${escapeHtml(dim.hint)}</small>
+                <p>${escapeHtml(dim.values.slice(0, 4).join("、"))}</p>
+              </div>`).join("")}
+          </div>
+        </section>` : ""}
+      ${paths.length ? `
+        <section class="derive-path-card">
+          <div class="root-model-head"><span>推导</span><strong>具体象是怎样长出来的</strong></div>
+          <div class="derive-path-list">
+            ${paths.map(row => `
+              <div class="derive-path-row">
+                <span>${escapeHtml(row.root)}</span><i>→</i><em>${escapeHtml(row.bridge)}</em><i>→</i><b>${escapeHtml(row.term)}</b>
+                <small>${escapeHtml(row.dim.title)} · ${escapeHtml(row.key)}</small>
+              </div>`).join("")}
+          </div>
+        </section>` : ""}
+      <section class="filter-proof-card">
+        <div><span>三筛</span><p><b>问什么</b> · <b>落哪里</b> · <b>处于什么状态/关系</b></p></div>
+        <div><span>双证</span><p>具体结论至少再找一个独立线索支持；只有单线索时，先保留为候选象。</p></div>
+      </section>
       ${plainBlocks}
-      ${otherBlocks}
-      ${node.rules?.length ? `<div class="branch-block"><h4>判断提醒</h4><ul>${node.rules.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+      ${node.rules?.length ? `<div class="branch-block condition-block"><h4>三筛 · 什么时候才能这样取</h4><ul>${node.rules.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+      <details class="meaning-library">
+        <summary>展开现实类象资料库 <small>需要时查，不要求背</small></summary>
+        <div class="meaning-library-body">${otherBlocks}</div>
+      </details>
       ${relChips ? `<div class="branch-block"><h4>关联词条</h4><div class="relation-links">${relChips}</div></div>` : ""}`;
   }
 
@@ -2683,12 +3032,14 @@ if (typeof document !== "undefined") {
     }
     // 状态三：无选中
     if (tree.selected < 0) {
-      treeInfo.innerHTML = `<span class="hint">点词看关联 · 点开后可"连一条取象路径" · 双指缩放</span>`;
+      treeInfo.innerHTML = `<span class="hint">点一个词先看根性怎样长成现实象 · 再连跨词条取象路径 · 双指缩放</span>`;
       return;
     }
     // 状态四：单点选中
     const gn = tree.n[tree.selected];
     const node = nodeById.get(gn.id);
+    const roots = rootEssences(node);
+    const generated = derivationExamples(node, { limit: 5 });
     const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 12);
     const nbRows = nbs.map(nb => {
       const reason = explainPair(node, nodeById.get(nb.id));
@@ -2704,7 +3055,16 @@ if (typeof document !== "undefined") {
           <strong>${escapeHtml(gn.title)}</strong>
           <span class="tc-sys" style="color:${gn.color}">${escapeHtml(node.systemTitle)}</span>
         </div>
-        <p class="tc-core">${escapeHtml((node.core || []).slice(0, 5).join(" · "))}</p>
+        <div class="tc-root">
+          <span>根性</span>
+          <p>${escapeHtml(roots.join(" · "))}</p>
+        </div>
+        ${generated.length ? `
+          <div class="tc-generate">
+            <strong>根性生成树</strong>
+            ${generated.map(row => `<p><b>${escapeHtml(row.root)}</b><i>→</i><span>${escapeHtml(row.bridge)}</span><i>→</i><em>${escapeHtml(row.term)}</em></p>`).join("")}
+          </div>` : ""}
+        ${nbRows ? `<div class="tc-related-title">跨词条关联</div>` : ""}
         ${nbRows ? `<div class="tc-nb-list">${nbRows}</div>` : ""}
         <div class="tc-actions">
           <button class="tc-path-btn" type="button" data-path-start="${gn.i}">从这里连一条取象路径 →</button>
@@ -3061,7 +3421,6 @@ if (typeof document !== "undefined") {
     currentQuiz = null;
     renderAnalysis();
     renderStudy(true);
-    markDailyAuto("chart");
   }
 
   /* ---- 事件 ---- */
@@ -3069,10 +3428,10 @@ if (typeof document !== "undefined") {
     const daily = event.target.closest("[data-daily-study]");
     if (daily) {
       const action = daily.dataset.dailyStudy;
-      if (action === "review") {
-        studyScope = "all";
+      if (action === "context") {
+        studyScope = daily.dataset.dailyScope || "all";
         studyMode = "quiz";
-        dailyReviewPending = true;
+        dailyQuizKind = "context";
         currentQuiz = null;
         storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
         switchTab("study");
@@ -3137,6 +3496,30 @@ if (typeof document !== "undefined") {
       return;
     }
 
+    const searchContextBtn = event.target.closest("[data-search-context]");
+    if (searchContextBtn) {
+      searchContext = searchContextBtn.dataset.searchContext;
+      storageSet("searchContext", searchContext);
+      renderSearch();
+      return;
+    }
+
+    const searchLensBtn = event.target.closest("[data-search-lens]");
+    if (searchLensBtn) {
+      searchLens = searchLensBtn.dataset.searchLens;
+      storageSet("searchLens", searchLens);
+      renderSearch();
+      return;
+    }
+
+    const chartContextBtn = event.target.closest("[data-chart-context]");
+    if (chartContextBtn) {
+      chartContext = chartContextBtn.dataset.chartContext;
+      storageSet("chartContext", chartContext);
+      renderAnalysis();
+      return;
+    }
+
     const slot = event.target.closest("[data-slot]");
     if (slot) { selectedSlot = Number(slot.dataset.slot); renderChart(); return; }
 
@@ -3167,9 +3550,9 @@ if (typeof document !== "undefined") {
     }
 
     const reveal = event.target.closest("[data-reveal]");
-    if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); markDailyAuto("chart"); return; }
+    if (reveal) { quizRevealed[reveal.dataset.reveal] = true; renderAnalysis(); return; }
 
-    if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); markDailyAuto("chart"); return; }
+    if (event.target.closest("[data-save-chart]")) { saveCurrentChart(); return; }
     if (event.target.closest("[data-export-charts]")) { exportCharts(); return; }
     if (event.target.closest("[data-import-charts]")) { importCharts(); return; }
 
@@ -3236,7 +3619,7 @@ if (typeof document !== "undefined") {
     if (studyModeBtn) {
       studyMode = studyModeBtn.dataset.studyMode;
       storageSet("studyMode", studyMode);
-      renderStudy();
+      renderStudy(studyMode === "derive");
       return;
     }
 
@@ -3252,15 +3635,24 @@ if (typeof document !== "undefined") {
       return;
     }
 
-    if (event.target.closest("[data-study-next]")) { markDailyAuto("read"); renderStudy(true); return; }
+    if (event.target.closest("[data-study-next]")) { markDailyAuto("root"); renderStudy(true); return; }
+
+    if (event.target.closest("[data-derive-reveal]")) {
+      if (!deriveDraft.trim()) return;
+      deriveRevealed = true;
+      markDailyAuto("derive");
+      renderDerivePractice();
+      return;
+    }
+
+    if (event.target.closest("[data-derive-next]")) { renderDerivePractice(true); return; }
 
     const quizOpt = event.target.closest("[data-quiz-opt]");
     if (quizOpt) {
       if (quizChosen >= 0 || !currentQuiz) return;
       quizChosen = Number(quizOpt.dataset.quizOpt);
       if (currentQuiz.nodeId) gradeStudy(currentQuiz.nodeId, currentQuiz.options[quizChosen].correct ? "good" : "bad");
-      markDailyAuto("quiz");
-      if (currentQuiz.dailyReview) markDailyAuto("review");
+      if (currentQuiz.dailyContext) markDailyAuto("context");
       renderStudyStats();
       renderQuiz();
       return;
@@ -3274,6 +3666,12 @@ if (typeof document !== "undefined") {
 
   // 复盘笔记输入即存草稿：排盘页重渲染或误触也不会丢
   document.body.addEventListener("input", event => {
+    if (event.target.matches("[data-derive-input]")) {
+      deriveDraft = event.target.value;
+      const button = event.target.closest(".derive-practice")?.querySelector("[data-derive-reveal]");
+      if (button) button.disabled = !deriveDraft.trim();
+      return;
+    }
     const box = event.target.closest("[data-chart-note-draft-for]");
     if (!box) return;
     if (!event.target.matches("[data-chart-note-field], [data-chart-tags-input]")) return;
