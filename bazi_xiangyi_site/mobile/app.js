@@ -1397,6 +1397,21 @@ function pickStudyNode(scope, excludeId) {
   return rest.length ? rest[Math.floor(Math.random() * rest.length)] : pool[0];
 }
 
+function pickReviewNode(scope) {
+  const srs = srsAll();
+  const pool = scopeNodes(scope);
+  if (!pool.length) return null;
+  const now = Date.now();
+  const reviewed = pool.filter(n => srs[n.id]?.seen);
+  if (!reviewed.length) return pickStudyNode(scope, null);
+  return reviewed.sort((a, b) => {
+    const sa = srs[a.id], sb = srs[b.id];
+    const aDue = sa.due <= now ? 0 : 1;
+    const bDue = sb.due <= now ? 0 : 1;
+    return (aDue - bDue) || (sa.lv - sb.lv) || (sa.due - sb.due);
+  })[0];
+}
+
 function gradeStudy(nodeId, grade) {
   const srs = srsAll();
   const e = srs[nodeId] || { lv: 0, due: 0, seen: 0 };
@@ -1460,13 +1475,13 @@ function relQuizPool() {
 }
 const REL_LABELS = ["六冲", "六合", "拱合", "相穿", "相破", "暗合", "相绝"];
 
-function makeQuizQuestion(scope) {
+function makeQuizQuestion(scope, forcedNode = null) {
   const pool = scopeNodes(scope);
   if (!pool.length) return null;
   const relOk = scope === "all" || scope === "relations" || scope === "branches";
 
   // 约 1/3 概率出地支关系题
-  if (relOk && Math.random() < 0.34) {
+  if (!forcedNode && relOk && Math.random() < 0.34) {
     const q = relQuizPool()[Math.floor(Math.random() * relQuizPool().length)];
     const node = nodeByTitle.get(q.node);
     const distract = sample(REL_LABELS, 3, new Set([q.label]));
@@ -1480,7 +1495,7 @@ function makeQuizQuestion(scope) {
     };
   }
 
-  const node = pickStudyNode(scope, null);
+  const node = forcedNode || pickStudyNode(scope, null);
   if (!node) return null;
   const cores = (node.core || []).filter(Boolean);
   const canReverse = cores.length >= 3;
@@ -1509,7 +1524,7 @@ function makeQuizQuestion(scope) {
     (n.core || []).forEach(c => { if (c.length <= 5 && !own.has(c)) distractPool.push(c); });
   });
   const distract = sample(distractPool, 3, new Set([correct]));
-  if (distract.length < 3) return makeQuizQuestion(scope); // 干扰项不足，换一题
+  if (distract.length < 3) return forcedNode ? null : makeQuizQuestion(scope); // 干扰项不足，换一题
   const options = shuffle([{ text: correct, correct: true }, ...distract.map(t => ({ text: t, correct: false }))]);
   return {
     kind: "toCore",
@@ -1617,6 +1632,7 @@ if (typeof document !== "undefined") {
   }
   let currentQuiz = null;
   let quizChosen = -1;
+  let dailyReviewPending = false;
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
   const viewScroll = {};
@@ -2086,7 +2102,7 @@ if (typeof document !== "undefined") {
       <div class="daily-study-list">
         ${item("read", "① 精读 1 条核心象义", "explain", sys.id)}
         ${item("quiz", "② 完成 3 道今日测验", "quiz", sys.id)}
-        ${item("chart", "③ 用排盘验证 1 次", "chart")}
+        ${item("review", "③ 复习 1 个薄弱点", "review")}
       </div>`;
   }
   function markDailyAuto(id) {
@@ -2159,7 +2175,14 @@ if (typeof document !== "undefined") {
 
   function renderQuiz(pickNew = false) {
     if (pickNew || !currentQuiz) {
-      currentQuiz = makeQuizQuestion(studyScope);
+      if (dailyReviewPending) {
+        const reviewNode = pickReviewNode(studyScope);
+        currentQuiz = reviewNode ? makeQuizQuestion(reviewNode.systemId, reviewNode) : makeQuizQuestion(studyScope);
+        if (currentQuiz) currentQuiz.dailyReview = true;
+        dailyReviewPending = false;
+      } else {
+        currentQuiz = makeQuizQuestion(studyScope);
+      }
       quizChosen = -1;
     }
     if (!currentQuiz) {
@@ -3046,7 +3069,16 @@ if (typeof document !== "undefined") {
     const daily = event.target.closest("[data-daily-study]");
     if (daily) {
       const action = daily.dataset.dailyStudy;
-      if (action === "chart") { switchTab("chart"); return; }
+      if (action === "review") {
+        studyScope = "all";
+        studyMode = "quiz";
+        dailyReviewPending = true;
+        currentQuiz = null;
+        storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
+        switchTab("study");
+        renderStudy(true);
+        return;
+      }
       studyScope = daily.dataset.dailyScope || "all";
       studyMode = action;
       storageSet("studyScope", studyScope); storageSet("studyMode", studyMode);
@@ -3228,6 +3260,7 @@ if (typeof document !== "undefined") {
       quizChosen = Number(quizOpt.dataset.quizOpt);
       if (currentQuiz.nodeId) gradeStudy(currentQuiz.nodeId, currentQuiz.options[quizChosen].correct ? "good" : "bad");
       markDailyAuto("quiz");
+      if (currentQuiz.dailyReview) markDailyAuto("review");
       renderStudyStats();
       renderQuiz();
       return;
