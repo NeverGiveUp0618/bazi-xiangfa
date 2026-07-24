@@ -1787,12 +1787,15 @@ if (typeof document !== "undefined") {
     systemTabs: document.querySelector("#systemTabs"),
     systemDesc: document.querySelector("#systemDesc"),
     libraryNodes: document.querySelector("#libraryNodes"),
+    guideBack: document.querySelector("#guideBack"),
+    guideBody: document.querySelector("#guideBody"),
     detailBack: document.querySelector("#detailBack"),
     detailCard: document.querySelector("#detailCard")
   };
 
   const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
   const CHANGELOG = [
+    ["26.7.24", "📘 共通根性教程上线——系统讲解根性、五维、三筛、双证，配乾、冲、正印示例和每日练习模板"],
     ["26.7.23", "🧠 象义学习改为根性推导——详情显示一核五维与生成路径，新增推导练习、情境测验、搜索筛选、排盘证据链和象义树生成链"],
     ["26.7.11", "🗓️ 大运流年叠加上线——排盘页选岁运干支，自动扫引动：冲提纲、穿夫妻宫、补齐三刑、填实拱位、开财库、岁运并临，八步第8步直接报应期入口"],
     ["26.7.11", "🕸️ 象义树孤岛清零——财富载体、干支虚实、时柱接入关系网，新增26条连线全部配好理由"],
@@ -1834,6 +1837,7 @@ if (typeof document !== "undefined") {
     study: "少背清单，多练从根性现场推象",
     tree: "看根性怎样长成现实象，再看跨词关联",
     library: "按体系慢慢翻",
+    guide: "从根性出发，练习推象、筛象和验证",
     detail: "完整象义"
   };
   // 录入顺序：年干→年支→月干→月支→日干→日支→时干→时支
@@ -1891,7 +1895,7 @@ if (typeof document !== "undefined") {
   function showView(view) {
     if (currentViewKey) viewScroll[currentViewKey] = window.scrollY;
     document.querySelectorAll(".view").forEach(v => v.classList.toggle("active", v.id === `view-${view}`));
-    document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === (view === "detail" ? activeTab : view)));
+    document.querySelectorAll(".bottom-nav button").forEach(b => b.classList.toggle("active", b.dataset.view === (view === "detail" || view === "guide" ? activeTab : view)));
     el.topHint.textContent = HINTS[view] || "";
     currentViewKey = getViewKey(view);
     restoreViewScroll(currentViewKey);
@@ -1930,6 +1934,13 @@ if (typeof document !== "undefined") {
 
   window.addEventListener("popstate", event => {
     const st = event.state || {};
+    if (st.guide) {
+      detailStack = [];
+      activeTab = st.tab || activeTab;
+      renderGuide();
+      showView("guide");
+      return;
+    }
     if (st.detail?.length) {
       detailStack = st.detail.slice();
       const node = nodeById.get(detailStack[detailStack.length - 1]);
@@ -1997,6 +2008,7 @@ if (typeof document !== "undefined") {
           <strong>象义不是清单，是推导过程</strong>
           <p>先抓根性，再沿形、性、位、动、用展开；最后用问题、位置、状态和其他线索筛选。</p>
           <div><span>根性</span><i>→</i><span>五维</span><i>→</i><span>情境</span><i>→</i><span>双证</span></div>
+          <button type="button" data-open-guide>打开共通根性教程 →</button>
         </div>
         ${searchFilterHtml()}
         <div class="home-entries">
@@ -2058,6 +2070,154 @@ if (typeof document !== "undefined") {
       ? `<div class="context-result-note">正在按“${escapeHtml(context.title)} · ${escapeHtml(lens.title)}”优先排序；这是筛选方向，不代表其他象不存在。</div>`
       : "";
     el.searchBody.innerHTML = searchFilterHtml() + contextNote + antiToggleHtml + overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
+  }
+
+  /* ---- 共通根性教程 ---- */
+  function renderGuide() {
+    el.guideBody.innerHTML = `
+      <header class="guide-hero">
+        <span>取象基本功</span>
+        <h2>共通根性：不背一百个象，也能现场推出可用象</h2>
+        <p>具体象义是树叶，根性是树根。学习目标不是记住每片树叶，而是知道它为什么从这条根上长出来。</p>
+        <div><b>根性</b><i>→</i><b>五维展开</b><i>→</i><b>情境筛选</b><i>→</i><b>双证验证</b></div>
+      </header>
+
+      <nav class="guide-toc" aria-label="教程目录">
+        <button type="button" data-guide-anchor="guide-what">什么是根性</button>
+        <button type="button" data-guide-anchor="guide-use">五步使用法</button>
+        <button type="button" data-guide-anchor="guide-cases">三个示例</button>
+        <button type="button" data-guide-anchor="guide-common">为什么共通</button>
+        <button type="button" data-guide-anchor="guide-practice">每日练习</button>
+        <button type="button" data-guide-anchor="guide-level">能力进阶</button>
+      </nav>
+
+      <section class="guide-section" id="guide-what">
+        <span class="guide-kicker">第一章</span>
+        <h3>共通根性到底是什么</h3>
+        <p>共通根性是一个符号最稳定的底层动作、性质、位置和关系。它不是最终断语，更不是另一份要背的新清单。</p>
+        <div class="guide-callout">
+          <b>先记住这句话</b>
+          <p>根性负责产生候选象；问题、位置和状态负责删除不相关的象。</p>
+        </div>
+        <div class="guide-compare">
+          <div><small>不推荐</small><strong>乾＝父亲、领导、头、政府、珠宝、圆形……</strong><p>把所有结果平铺出来，只能靠死记。</p></div>
+          <div><small>推荐</small><strong>乾＝居上、统领、刚健、圆满、尊贵</strong><p>从少数根性分别推到人物、身体、空间和物品。</p></div>
+        </div>
+      </section>
+
+      <section class="guide-section" id="guide-use">
+        <span class="guide-kicker">第二章</span>
+        <h3>实际使用的五个步骤</h3>
+        <ol class="guide-steps">
+          <li><b>提取根性</b><p>它是什么性质？怎样运动？处在什么位置？与别人怎样发生关系？</p></li>
+          <li><b>沿五维展开</b><p><em>形</em>看外形质地，<em>性</em>看性情感受，<em>位</em>看人物空间，<em>动</em>看变化关系，<em>用</em>看职业功能。</p></li>
+          <li><b>根据问题筛选</b><p>问事业、感情、财运、健康时，同一个符号的优先象完全不同。</p></li>
+          <li><b>回到位置和状态</b><p>看它落在哪里，是旺、弱、受生、受克、被合、被冲、入墓还是空亡。</p></li>
+          <li><b>寻找第二条证据</b><p>只有单线索时保留为候选；两个以上独立来源共同指向，才提高判断优先级。</p></li>
+        </ol>
+        <div class="guide-formula">
+          <span>完整取象公式</span>
+          <strong>根性 → 五维候选 → 问题筛选 → 位置状态 → 双证验证 → 现实判断</strong>
+        </div>
+      </section>
+
+      <section class="guide-section" id="guide-cases">
+        <span class="guide-kicker">第三章</span>
+        <h3>三个完整示例</h3>
+        <details class="guide-case" open>
+          <summary><b>乾</b><span>从“居上、统领”推出领导、头部和高处</span></summary>
+          <div class="guide-case-body">
+            <p class="guide-roots"><b>根性</b><span>居上</span><span>统领</span><span>刚健</span><span>圆满</span><span>尊贵</span></p>
+            <div class="guide-tree-text">
+              <p><b>居上</b> → 身体最高处 → <strong>头部</strong></p>
+              <p><b>居上</b> → 组织最高层 → <strong>领导</strong></p>
+              <p><b>统领</b> → 社会管理机构 → <strong>政府机关</strong></p>
+              <p><b>刚健</b> → 坚硬的物质形态 → <strong>金属、机器</strong></p>
+              <p><b>圆满尊贵</b> → 形状与价值 → <strong>圆形器物、珠宝</strong></p>
+            </div>
+            <p class="guide-filter"><b>怎样筛：</b>问事业优先看领导和管理；问健康优先看头部；问环境优先看高处；问物品再看金属、圆形和贵重。</p>
+          </div>
+        </details>
+
+        <details class="guide-case">
+          <summary><b>冲</b><span>从“对立、位移、打散”推出不同领域的变化</span></summary>
+          <div class="guide-case-body">
+            <p class="guide-roots"><b>根性</b><span>对立</span><span>位移</span><span>打散</span><span>快速变化</span></p>
+            <div class="guide-tree-text">
+              <p><b>位移</b> → 工作领域 → <strong>岗位、地点变化</strong></p>
+              <p><b>对立打散</b> → 感情领域 → <strong>争执、分开</strong></p>
+              <p><b>冲击破开</b> → 健康领域 → <strong>急性问题、碰撞、手术候选</strong></p>
+            </div>
+            <p class="guide-filter"><b>怎样筛：</b>冲月柱多看平台和父母环境，冲日支多看贴身状态和夫妻关系，冲时柱多看结果、晚年和子女。只有一冲，不应把搬家、离婚、手术全部说一遍。</p>
+          </div>
+        </details>
+
+        <details class="guide-case">
+          <summary><b>正印</b><span>从“生我、庇护、吸收、承载”推出人事与物象</span></summary>
+          <div class="guide-case-body">
+            <p class="guide-roots"><b>根性</b><span>生我</span><span>庇护</span><span>吸收</span><span>承载</span></p>
+            <div class="guide-tree-text">
+              <p><b>庇护</b> → 人物角色 → <strong>母亲、长辈、保护者</strong></p>
+              <p><b>吸收</b> → 学习能力 → <strong>知识、学历、教育</strong></p>
+              <p><b>承载</b> → 现实凭证 → <strong>文书、证件、房屋</strong></p>
+              <p><b>单位背书</b> → 社会功能 → <strong>资格、编制、福利</strong></p>
+            </div>
+            <p class="guide-filter"><b>怎样筛：</b>问事业优先看学历、资质和单位保护；问家庭再看母亲长辈；问房产文书才看房屋、合同和证件。</p>
+          </div>
+        </details>
+      </section>
+
+      <section class="guide-section" id="guide-common">
+        <span class="guide-kicker">第四章</span>
+        <h3>为什么叫“共通”根性</h3>
+        <p>不同术数、不同符号，可能通过不同机制指向同一个现实事物。例如“领导”：</p>
+        <div class="guide-source-list">
+          <p><b>乾</b><span>居上、统领 → 领导</span></p>
+          <p><b>八字官杀</b><span>规则、约束、管理 → 领导</span></p>
+          <p><b>奇门值符</b><span>核心、主事、统摄全局 → 领导</span></p>
+          <p><b>六爻官鬼</b><span>职位、管理、权力压力 → 领导</span></p>
+        </div>
+        <div class="guide-warning">
+          <b>共通不等于混用</b>
+          <p>共同的是底层逻辑，具体成立仍服从各自术数规则。八字见官杀，不能因此照搬乾卦所有类象；神煞、纳音和其他术数资料也不能脱离本体系独断。</p>
+        </div>
+      </section>
+
+      <section class="guide-section" id="guide-practice">
+        <span class="guide-kicker">第五章</span>
+        <h3>每天5～10分钟怎样练</h3>
+        <div class="guide-template">
+          <p><b>今日符号：</b>________</p>
+          <p><b>一、根性：</b>写3～4个底层性质</p>
+          <p><b>二、自己推三个象：</b>根性 → 维度 → 现实象</p>
+          <p><b>三、限定一个问题：</b>事业 / 感情 / 财运 / 健康 / 家庭</p>
+          <p><b>四、主动排除：</b>哪些象虽然成立，但本次不优先</p>
+          <p><b>五、第二证据：</b>盘里还有什么独立线索也指向它</p>
+        </div>
+        <div class="guide-callout">
+          <b>练习重点</b>
+          <p>只要推导路径合理，不必和资料库一字不差。真正的进步不仅是能推出更多象，更是能删掉与当前问题无关的象。</p>
+        </div>
+        <button type="button" class="guide-practice-btn" data-guide-practice>进入开放推象练习 →</button>
+      </section>
+
+      <section class="guide-section" id="guide-level">
+        <span class="guide-kicker">第六章</span>
+        <h3>能力提高的四个层级</h3>
+        <div class="guide-levels">
+          <div><b>1</b><span><strong>认象</strong><small>知道一个符号常见的意思</small></span></div>
+          <div><b>2</b><span><strong>推象</strong><small>能说明它为什么可以代表这个</small></span></div>
+          <div><b>3</b><span><strong>筛象</strong><small>能根据问题、位置和状态留下少数候选</small></span></div>
+          <div><b>4</b><span><strong>验象</strong><small>能用多线索和现实反馈修正自己的路径</small></span></div>
+        </div>
+        <blockquote>初学者问“它代表什么”；进阶者问“为什么能代表”；熟练者问“当前条件下，哪个象最应该留下”。</blockquote>
+      </section>`;
+  }
+
+  function openGuide() {
+    renderGuide();
+    showView("guide");
+    history.pushState({ tab: activeTab, guide: true }, "");
   }
 
   /* ---- 排盘页 ---- */
@@ -2379,7 +2539,7 @@ if (typeof document !== "undefined") {
       <button type="button" class="daily-check ${done[id] ? "done" : ""}" disabled aria-label="${done[id] ? "系统已确认完成" : "等待系统确认"}">${done[id] ? "✓" : "○"}</button>
       <button type="button" class="daily-go" data-daily-study="${action}" ${scope ? `data-daily-scope="${escapeHtml(scope)}"` : ""}>${label}</button></div>`;
     el.dailyStudy.innerHTML = `
-      <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span></div>
+      <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span><button type="button" data-open-guide>教程</button></div>
       <div class="daily-study-topic">今日主题：${escapeHtml(sys.title)}</div>
       <div class="daily-study-list">
         ${item("root", "① 理解 1 个根性", "explain", sys.id)}
@@ -2405,7 +2565,8 @@ if (typeof document !== "undefined") {
     el.studyMode.innerHTML = `
       <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
       <button type="button" class="${studyMode === "derive" ? "active" : ""}" data-study-mode="derive">推导</button>
-      <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">解析</button>`;
+      <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">解析</button>
+      <button type="button" class="study-guide-btn" data-open-guide>教程</button>`;
   }
 
   function renderStudyScope() {
@@ -3425,6 +3586,25 @@ if (typeof document !== "undefined") {
 
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
+    if (event.target.closest("[data-open-guide]")) { openGuide(); return; }
+
+    const guideAnchor = event.target.closest("[data-guide-anchor]");
+    if (guideAnchor) {
+      document.getElementById(guideAnchor.dataset.guideAnchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+
+    if (event.target.closest("[data-guide-practice]")) {
+      studyScope = "all";
+      studyMode = "derive";
+      deriveNodeId = null;
+      storageSet("studyScope", studyScope);
+      storageSet("studyMode", studyMode);
+      switchTab("study");
+      renderStudy(true);
+      return;
+    }
+
     const daily = event.target.closest("[data-daily-study]");
     if (daily) {
       const action = daily.dataset.dailyStudy;
@@ -3703,6 +3883,10 @@ if (typeof document !== "undefined") {
     renderAnalysis();
   });
   el.detailBack.addEventListener("click", goBack);
+  el.guideBack.addEventListener("click", () => {
+    if (history.state?.guide) history.back();
+    else showView(activeTab);
+  });
 
   // 顶部刷新条：带时间戳强刷，绕过 GitHub Pages 缓存看到新版
   const updateBar = document.querySelector("#updateBar");
