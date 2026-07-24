@@ -1,9 +1,10 @@
-const CACHE_NAME = "bazi-xiangyi-mobile-20260724-root-guide-2";
+const CACHE_NAME = "bazi-xiangyi-mobile-20260724-simplified-2";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./data.js",
+  "./cross_arts_data.js",
   "./app.js",
   "./manifest.webmanifest",
   "../preview.png"

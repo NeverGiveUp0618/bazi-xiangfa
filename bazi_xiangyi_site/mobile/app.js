@@ -1,8 +1,8 @@
 /* ===== 象义随身 · 手机版 =====
  * 设计原则：
  * 1. 查询：一个词 -> 共象聚合 -> 为什么匹配 -> 详情
- * 2. 排盘：点选八字，自动标出关系/神煞/纳音/十神，每一项都能点进象义库
- * 3. 学习：客观答题为主，对错自动进入本地间隔复习；解析只用于查看
+ * 2. 学习：按看根性 → 推象 → 情境题的单线流程练习
+ * 3. 图鉴：按术数和体系逐层浏览；排盘与象义树降为专项/进阶入口
  * 所有检测口径与 data.js 中的象义条目保持一致（四正破、生穿克穿、三刑分组等）。
  */
 
@@ -76,7 +76,19 @@ const NAYIN_NAMES = [
 ];
 
 /* ---------- 数据索引 ---------- */
-const nodes = graph.systems.flatMap(sys => sys.nodes.map(n => ({ ...n, systemId: sys.id, systemTitle: sys.title })));
+const TRADITION_META = graph.traditions || [
+  { id: "all", title: "全部" },
+  { id: "bazi", title: "八字" }
+];
+const traditionById = new Map(TRADITION_META.map(item => [item.id, item]));
+const nodes = graph.systems.flatMap(sys => sys.nodes.map(n => ({
+  ...n,
+  systemId: sys.id,
+  systemTitle: sys.title,
+  tradition: sys.tradition || "bazi",
+  traditionTitle: traditionById.get(sys.tradition || "bazi")?.title || "八字",
+  sharedWith: n.sharedWith || []
+})));
 const nodeById = new Map(nodes.map(n => [n.id, n]));
 const nodeByTitle = new Map(nodes.map(n => [n.title, n]));
 
@@ -640,6 +652,8 @@ function matchNode(node, terms) {
       if (text && evidence.length < 6) evidence.push({ label, text, s });
     };
     if (node.title.includes(term)) add(100, "词条名", node.title);
+    if ((node.aliases || []).some(alias => String(alias).includes(term))) add(82, "别名", (node.aliases || []).join("、"));
+    if (node.systemTitle.includes(term) || node.traditionTitle.includes(term)) add(55, "术数来源", `${node.traditionTitle} · ${node.systemTitle}`);
     (node.core || []).forEach(c => { if (c.includes(term)) add(46, "核心象", node.core.join("、")); });
     Object.entries(node.branches || {}).forEach(([key, values]) => {
       if (key.includes(term)) add(26, "分类", key + "：" + values.slice(0, 6).join("、"));
@@ -668,65 +682,17 @@ function matchNode(node, terms) {
   return { node, score, evidence: lines };
 }
 
-function searchNodes(query, limit = 20) {
+function searchNodes(query, limit = 40, tradition = "all") {
   const terms = query.trim().split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
-  return nodes
+  const pool = tradition === "all"
+    ? nodes
+    : nodes.filter(node => node.tradition === tradition || node.sharedWith.includes(tradition));
+  return pool
     .map(n => matchNode(n, terms))
     .filter(Boolean)
     .sort((a, b) => b.score - a.score || a.node.title.localeCompare(b.node.title, "zh-CN"))
     .slice(0, limit);
-}
-
-const OVERLAP_SKIP_KEYS = new Set(["大白话", "为什么", "提醒", "使用提醒", "怎么用", "实战例子", "风险", "判断", "口径差异"]);
-
-function overlapSummary(results, terms) {
-  const top = results.slice(0, 12);
-  if (top.length < 2) return null;
-  const wordNodes = new Map(); // word -> Set(nodeId)
-  top.forEach(({ node }) => {
-    const pool = [...(node.core || [])];
-    Object.entries(node.branches || {}).forEach(([key, values]) => {
-      if (OVERLAP_SKIP_KEYS.has(key)) return;
-      values.forEach(v => { if (typeof v === "string" && v.length <= 6) pool.push(v); });
-    });
-    const words = new Set(pool.filter(w => typeof w === "string" && w.length >= 2 && w.length <= 6 && !/[，。、：；\s]/.test(w)));
-    words.forEach(w => {
-      if (terms.some(t => w === t)) return;
-      if (!wordNodes.has(w)) wordNodes.set(w, new Set());
-      wordNodes.get(w).add(node.id);
-    });
-  });
-  const overlaps = [...wordNodes.entries()]
-    .map(([word, set]) => ({ word, count: set.size }))
-    .filter(x => x.count >= 2)
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-  const sysCount = new Map();
-  top.forEach(({ node }) => sysCount.set(node.systemTitle, (sysCount.get(node.systemTitle) || 0) + 1));
-  const dist = [...sysCount.entries()].sort((a, b) => b[1] - a[1]);
-  return { overlaps, dist, topCount: top.length };
-}
-
-function sourceCompare(results, query) {
-  const specs = [
-    { id: "ten-gods", title: "十神来的象", why: "从人事关系和资源角色取象，比如印为文书庇护、财为钱物客户、官为规则名分。" },
-    { id: "combo-cards", title: "组合来的象", why: "多个十神、宫位或关系叠在一起，先看条件是否成立，再看反例。" },
-    { id: "relations", title: "干支关系来的象", why: "冲合刑穿破让字与字发生作用，重点看哪个宫位被引动。" },
-    { id: "shen-sha", title: "神煞来的象", why: "神煞补画面和场景，不单独定吉凶，要回到宫位与十神。" },
-    { id: "nayin", title: "纳音来的象", why: "纳音补充一柱的质地和背景，年/月/日/时应的位置不同。" },
-    { id: "palace-luck", title: "宫位岁运来的象", why: "同一个象落年/月/日/时，应到长辈、平台、自己婚恋、结果子女会不同。" }
-  ];
-  const groups = specs.map(spec => ({
-    ...spec,
-    hits: results.filter(r => r.node.systemId === spec.id).slice(0, 4).map(r => r.node.title)
-  })).filter(g => g.hits.length);
-  const known = new Set(specs.map(s => s.id));
-  const other = results.filter(r => !known.has(r.node.systemId)).slice(0, 4).map(r => r.node.title);
-  if (other.length) {
-    groups.push({ id: "other", title: "本象来的象", why: `直接从字、五行或资料映射里命中「${query}」，先看本义，再看是否与其他来源重叠。`, hits: other });
-  }
-  return groups.slice(0, 5);
 }
 
 const ANTI_KEYS = ["不能这样断", "反例", "不成立条件"];
@@ -745,11 +711,6 @@ function antiEvidenceOf(node, terms = []) {
     });
   });
   return out.slice(0, 3);
-}
-
-function applyAntiFirst(results, terms) {
-  return results.map((r, idx) => ({ ...r, anti: antiEvidenceOf(r.node, terms), originalIndex: idx }))
-    .sort((a, b) => (b.anti.length - a.anti.length) || (b.score - a.score) || (a.originalIndex - b.originalIndex));
 }
 
 /* ---------- 根性与推象模型 ---------- */
@@ -865,7 +826,7 @@ function lensProfile(lensId) {
 
 function nodeText(node) {
   return [
-    node.title, ...(node.core || []),
+    node.title, node.systemTitle, node.traditionTitle, ...(node.aliases || []), ...(node.core || []),
     ...Object.entries(node.branches || {}).flatMap(([k, vs]) => [k, ...vs]),
     ...(node.rules || [])
   ].join(" ");
@@ -935,7 +896,16 @@ const SYS_COLORS = {
   "relations": "#26c6da",
   "shen-sha": "#c158dc",
   "nayin": "#d4e157",
-  "palace-luck": "#9575cd"
+  "palace-luck": "#9575cd",
+  "liuren-generals": "#ffb74d",
+  "liuren-spirits": "#8d6e63",
+  "qimen-trigrams": "#80cbc4",
+  "qimen-doors": "#ff8a80",
+  "qimen-stars": "#90caf9",
+  "qimen-deities": "#ce93d8",
+  "liuyao-kin": "#a5d6a7",
+  "liuyao-spirits": "#ffcc80",
+  "liuyao-positions": "#b39ddb"
 };
 
 // 少量类别词别名，帮孤立节点接回网络
@@ -1560,6 +1530,10 @@ function srsAll() { return storageGet("srs", {}); }
 
 function scopeNodes(scope) {
   if (scope === "chart-current") return chartStudyNodesByPart(chartStudyPart);
+  if (scope.startsWith("tradition:")) {
+    const tradition = scope.split(":")[1];
+    return nodes.filter(node => node.tradition === tradition || node.sharedWith.includes(tradition));
+  }
   return scope === "all" ? nodes : nodes.filter(n => n.systemId === scope);
 }
 
@@ -1769,6 +1743,7 @@ if (typeof document !== "undefined") {
     topHint: document.querySelector("#topHint"),
     globalSearch: document.querySelector("#globalSearch"),
     clearSearch: document.querySelector("#clearSearch"),
+    traditionRow: document.querySelector("#traditionRow"),
     quickRow: document.querySelector("#quickRow"),
     searchBody: document.querySelector("#searchBody"),
     baziGrid: document.querySelector("#baziGrid"),
@@ -1784,6 +1759,7 @@ if (typeof document !== "undefined") {
     chartStudyFilter: document.querySelector("#chartStudyFilter"),
     studyStats: document.querySelector("#studyStats"),
     studyCard: document.querySelector("#studyCard"),
+    libraryTraditions: document.querySelector("#libraryTraditions"),
     systemTabs: document.querySelector("#systemTabs"),
     systemDesc: document.querySelector("#systemDesc"),
     libraryNodes: document.querySelector("#libraryNodes"),
@@ -1793,8 +1769,9 @@ if (typeof document !== "undefined") {
     detailCard: document.querySelector("#detailCard")
   };
 
-  const QUICK_TERMS = ["文书", "财富", "竞争", "表达", "规则", "母亲", "财库", "冲", "合", "穿", "纳音"];
+  const QUICK_TERMS = ["领导", "文书", "财富", "口舌", "婚姻", "疾病", "盗失", "道路", "房产", "隐秘", "合作"];
   const CHANGELOG = [
+    ["26.7.24", "🧭 第三阶段四术共库上线——接入大六壬24、奇门33、六爻13个核心节点，与八字共用根性、五维、双证和学习训练"],
     ["26.7.24", "📘 共通根性教程上线——系统讲解根性、五维、三筛、双证，配乾、冲、正印示例和每日练习模板"],
     ["26.7.23", "🧠 象义学习改为根性推导——详情显示一核五维与生成路径，新增推导练习、情境测验、搜索筛选、排盘证据链和象义树生成链"],
     ["26.7.11", "🗓️ 大运流年叠加上线——排盘页选岁运干支，自动扫引动：冲提纲、穿夫妻宫、补齐三刑、填实拱位、开财库、岁运并临，八步第8步直接报应期入口"],
@@ -1851,7 +1828,6 @@ if (typeof document !== "undefined") {
   let selectedSlot = 0;
   let quizOn = storageGet("quiz", false);
   let quizRevealed = { rel: false, ss: false };
-  let antiFirst = storageGet("antiFirst", false);
   let searchContext = storageGet("searchContext", "all");
   if (!SEARCH_CONTEXTS.some(x => x.id === searchContext)) searchContext = "all";
   let searchLens = storageGet("searchLens", "all");
@@ -1874,6 +1850,10 @@ if (typeof document !== "undefined") {
   let deriveNodeId = null;
   let deriveDraft = "";
   let deriveRevealed = false;
+  let activeTradition = storageGet("activeTradition", "all");
+  if (!TRADITION_META.some(item => item.id === activeTradition)) activeTradition = "all";
+  let libraryTradition = storageGet("libraryTradition", "bazi");
+  if (!TRADITION_META.some(item => item.id === libraryTradition && item.id !== "all")) libraryTradition = "bazi";
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
   const viewScroll = {};
@@ -1962,114 +1942,89 @@ if (typeof document !== "undefined") {
     ).join("");
   }
 
+  function renderTraditionRows() {
+    const searchHtml = TRADITION_META.map(item =>
+      `<button type="button" class="${activeTradition === item.id ? "active" : ""}" data-tradition="${escapeHtml(item.id)}">${escapeHtml(item.title)}</button>`
+    ).join("");
+    const libraryHtml = TRADITION_META.filter(item => item.id !== "all").map(item =>
+      `<button type="button" class="${libraryTradition === item.id ? "active" : ""}" data-library-tradition="${escapeHtml(item.id)}">${escapeHtml(item.title)}</button>`
+    ).join("");
+    el.traditionRow.innerHTML = searchHtml;
+    el.libraryTraditions.innerHTML = libraryHtml;
+  }
+
   function searchFilterHtml() {
+    const context = contextProfile(searchContext);
+    const lens = lensProfile(searchLens);
+    const active = searchContext !== "all" || searchLens !== "all";
     return `
-      <div class="context-filter">
-        <div class="context-filter-head"><strong>先定情境，再选象</strong><span>同一个符号在不同问题里，优先象不同</span></div>
-        <div class="context-filter-row">
-          ${SEARCH_CONTEXTS.map(c => `<button type="button" class="${searchContext === c.id ? "active" : ""}" data-search-context="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+      <details class="context-filter" ${active ? "open" : ""}>
+        <summary><strong>高级筛选</strong><span>${active ? `${escapeHtml(context.title)} · ${escapeHtml(lens.title)}` : "按情境与落点缩小范围"}</span></summary>
+        <div class="context-filter-body">
+          <div class="context-filter-row">
+            ${SEARCH_CONTEXTS.map(c => `<button type="button" class="${searchContext === c.id ? "active" : ""}" data-search-context="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+          </div>
+          <div class="context-filter-row lens-row">
+            ${SEARCH_LENSES.map(c => `<button type="button" class="${searchLens === c.id ? "active" : ""}" data-search-lens="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
+          </div>
         </div>
-        <div class="context-filter-row lens-row">
-          ${SEARCH_LENSES.map(c => `<button type="button" class="${searchLens === c.id ? "active" : ""}" data-search-lens="${c.id}">${escapeHtml(c.title)}</button>`).join("")}
-        </div>
-      </div>`;
+      </details>`;
   }
 
   function nodeCardHtml(result, terms) {
-    const { node, evidence, anti } = result;
+    const { node } = result;
     const path = derivationExamples(node, { context: searchContext, lens: searchLens, limit: 1 })[0];
-    const matchLines = (evidence || [])
-      .filter(e => e.label !== "词条名")
-      .map(e => `<p class="match-line"><b>${escapeHtml(e.label)}</b>${highlight(e.text, terms)}</p>`)
-      .join("");
-    const antiLines = (anti || []).map(e =>
-      `<p class="anti-line"><b>${escapeHtml(e.label)}</b>${highlight(e.text, terms)}</p>`
-    ).join("");
+    const boundary = antiEvidenceOf(node, terms || [])[0]?.text
+      || node.rules?.[0]
+      || node.branches?.["使用提醒"]?.[0]
+      || "具体结论需结合位置、状态，并再找一条独立证据。";
     return `
       <button class="node-card" type="button" data-open-node="${escapeHtml(node.id)}">
         <div class="node-title-row">
           <strong>${terms ? highlight(node.title, terms) : escapeHtml(node.title)}</strong>
-          <span class="type-pill">${escapeHtml(node.type)}</span>
-          <span class="sys-pill">${escapeHtml(node.systemTitle)}</span>
+          <span class="sys-pill">${escapeHtml(node.traditionTitle)} · ${escapeHtml(node.systemTitle)}</span>
         </div>
-        <div class="core-row">${(node.core || []).slice(0, 5).map(c => `<span>${terms ? highlight(c, terms) : escapeHtml(c)}</span>`).join("")}</div>
+        <div class="core-row">${rootEssences(node).slice(0, 4).map(c => `<span>${terms ? highlight(c, terms) : escapeHtml(c)}</span>`).join("")}</div>
         ${path ? `<p class="card-derive"><b>推导</b>${escapeHtml(derivationPathText(path))}</p>` : ""}
-        ${antiLines ? `<div class="anti-lines">${antiLines}</div>` : ""}
-        ${matchLines ? `<div class="match-lines">${matchLines}</div>` : `<p class="plain-line">${escapeHtml(nodePlain(node))}</p>`}
+        <p class="card-boundary"><b>边界</b>${escapeHtml(boundary)}</p>
       </button>`;
   }
 
   function renderSearch() {
     const query = el.globalSearch.value.trim();
+    renderTraditionRows();
     renderQuickRow(query);
     if (!query) {
+      const activeTitle = traditionById.get(activeTradition)?.title || "四术共查";
+      const activeCount = activeTradition === "all"
+        ? nodes.length
+        : nodes.filter(node => node.tradition === activeTradition || node.sharedWith.includes(activeTradition)).length;
       el.searchBody.innerHTML = `
-        <div class="method-banner">
-          <strong>象义不是清单，是推导过程</strong>
-          <p>先抓根性，再沿形、性、位、动、用展开；最后用问题、位置、状态和其他线索筛选。</p>
-          <div><span>根性</span><i>→</i><span>五维</span><i>→</i><span>情境</span><i>→</i><span>双证</span></div>
-          <button type="button" data-open-guide>打开共通根性教程 →</button>
-        </div>
-        ${searchFilterHtml()}
-        <div class="home-entries">
-          <button class="home-entry" type="button" data-entry="search"><span class="entry-badge">查</span><span><strong>查一个象</strong><p>想到词就搜：文书、财库、口舌、搬家……</p></span></button>
-          <button class="home-entry" type="button" data-entry="chart"><span class="entry-badge">盘</span><span><strong>输入命例</strong><p>点选八字，冲合穿破、神煞纳音自动标出</p></span></button>
-          <button class="home-entry" type="button" data-entry="study"><span class="entry-badge">学</span><span><strong>今天推一组</strong><p>先理解根性，再自己推出三个现实象</p></span></button>
-        </div>
-        <div class="dev-log">
-          <div class="dev-log-head">开发时间节点</div>
-          <div class="dev-log-list">
-            ${CHANGELOG.map(([d, t]) => `<div class="dev-log-row"><span class="dev-log-date">${escapeHtml(d)}</span><span class="dev-log-text">${escapeHtml(t)}</span></div>`).join("")}
-          </div>
+        <div class="start-card">
+          <strong>${escapeHtml(activeTitle)} · ${activeCount} 个象义节点</strong>
+          <p>搜现实词，看八字、大六壬、奇门、六爻分别从哪里取象。</p>
+          <p><b>先看根性</b> → 推出具体象 → 用位置、状态与第二条证据验证。</p>
+          <small>不确定搜什么？点上方“文书、财富、口舌”等快捷词。</small>
         </div>`;
       return;
     }
     const terms = query.split(/\s+/).filter(Boolean);
-    let results = searchNodes(query);
+    let results = searchNodes(query, 40, activeTradition);
     if (!results.length) {
-      el.searchBody.innerHTML = `<div class="empty-card">没有找到「${escapeHtml(query)}」。换个说法试试，比如“文书”“财库”“子午冲”。</div>`;
+      const range = traditionById.get(activeTradition)?.title || "当前范围";
+      el.searchBody.innerHTML = searchFilterHtml() + `<div class="empty-card">${escapeHtml(range)}没有找到「${escapeHtml(query)}」。可切到“四术共查”，或换个说法试试，比如“文书”“领导”“口舌”。</div>`;
       return;
     }
     results = rankResultsByContext(results, searchContext, searchLens);
-    if (antiFirst) results = applyAntiFirst(results, terms);
-    const summary = overlapSummary(results, terms);
-    const antiCount = results.filter(r => r.anti?.length).length;
-    const antiToggleHtml = `
-      <label class="anti-toggle">
-        <input type="checkbox" data-anti-first ${antiFirst ? "checked" : ""} />
-        <span>反例优先</span>
-        <small>${antiFirst ? `已优先显示 ${antiCount} 条有边界提醒的词条` : "先看不能这样断、反例、不成立条件"}</small>
-      </label>`;
-    let overlapHtml = "";
-    if (summary && summary.overlaps.length) {
-      overlapHtml = `
-        <div class="overlap-card">
-          <h3>共象聚合</h3>
-          <p class="overlap-note">「${escapeHtml(query)}」命中 ${results.length} 条。下面这些象在多条词条里重复出现——重叠越多，取象越稳：</p>
-          <div class="chip-row">
-            ${summary.overlaps.map(o => `<button type="button" class="chip ${o.count >= 3 ? "hot" : ""}" data-quick="${escapeHtml(o.word)}">${escapeHtml(o.word)}<small>×${o.count}</small></button>`).join("")}
-          </div>
-          <p class="sys-dist">常落体系：${summary.dist.slice(0, 4).map(([s, c]) => `${escapeHtml(s)} ${c}条`).join(" · ")}</p>
-          <button type="button" class="tree-search-btn" data-tree-search="${escapeHtml(query)}">在象义树看这批命中 →</button>
-        </div>`;
-    }
-    const compare = sourceCompare(results, query);
-    const compareHtml = compare.length >= 2 ? `
-      <div class="source-compare-card">
-        <h3>同象不同源</h3>
-        ${compare.map(group => `
-          <div class="source-compare-row">
-            <strong>${escapeHtml(group.title)}</strong>
-            <p>${escapeHtml(group.why)}</p>
-            <div>${group.hits.map(t => `<button type="button" data-quick="${escapeHtml(t)}">${escapeHtml(t)}</button>`).join("")}</div>
-          </div>`).join("")}
-      </div>` : "";
     const context = contextProfile(searchContext);
     const lens = lensProfile(searchLens);
     const contextNote = searchContext !== "all" || searchLens !== "all"
       ? `<div class="context-result-note">正在按“${escapeHtml(context.title)} · ${escapeHtml(lens.title)}”优先排序；这是筛选方向，不代表其他象不存在。</div>`
       : "";
-    el.searchBody.innerHTML = searchFilterHtml() + contextNote + antiToggleHtml + overlapHtml + compareHtml + results.map(r => nodeCardHtml(r, terms)).join("");
+    el.searchBody.innerHTML = searchFilterHtml()
+      + contextNote
+      + `<p class="result-count">找到 ${results.length} 条 · 点开看完整象义与来源</p>`
+      + results.map(r => nodeCardHtml(r, terms)).join("");
   }
 
   /* ---- 共通根性教程 ---- */
@@ -2211,7 +2166,14 @@ if (typeof document !== "undefined") {
           <div><b>4</b><span><strong>验象</strong><small>能用多线索和现实反馈修正自己的路径</small></span></div>
         </div>
         <blockquote>初学者问“它代表什么”；进阶者问“为什么能代表”；熟练者问“当前条件下，哪个象最应该留下”。</blockquote>
-      </section>`;
+      </section>
+      <details class="about-panel">
+        <summary>关于与近期更新</summary>
+        <p>象义随身用于四术共通象义的查询、推导和复习；八字排盘已独立到专项工具，关联网络作为详情页的进阶工具保留。</p>
+        <div class="dev-log-list">
+          ${CHANGELOG.slice(0, 6).map(([d, t]) => `<div class="dev-log-row"><span class="dev-log-date">${escapeHtml(d)}</span><span class="dev-log-text">${escapeHtml(t)}</span></div>`).join("")}
+        </div>
+      </details>`;
   }
 
   function openGuide() {
@@ -2533,19 +2495,25 @@ if (typeof document !== "undefined") {
   function renderDailyStudy() {
     const day = Math.floor(Date.now() / DAY_MS);
     const sys = graph.systems[day % graph.systems.length];
+    const dailyScope = `tradition:${sys.tradition || "bazi"}`;
     const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
     const done = storageGet(`daily-${dateKey}`, {});
-    const item = (id, label, action, scope = "") => `<div class="daily-study-item">
-      <button type="button" class="daily-check ${done[id] ? "done" : ""}" disabled aria-label="${done[id] ? "系统已确认完成" : "等待系统确认"}">${done[id] ? "✓" : "○"}</button>
-      <button type="button" class="daily-go" data-daily-study="${action}" ${scope ? `data-daily-scope="${escapeHtml(scope)}"` : ""}>${label}</button></div>`;
+    const steps = [
+      { id: "root", label: "看根性", action: "explain" },
+      { id: "derive", label: "推三象", action: "derive" },
+      { id: "context", label: "做一题", action: "context" }
+    ];
+    const next = steps.find(step => !done[step.id]);
     el.dailyStudy.innerHTML = `
-      <div class="daily-study-head"><strong>今日学习清单</strong><span>约 5–10 分钟</span><button type="button" data-open-guide>教程</button></div>
-      <div class="daily-study-topic">今日主题：${escapeHtml(sys.title)}</div>
-      <div class="daily-study-list">
-        ${item("root", "① 理解 1 个根性", "explain", sys.id)}
-        ${item("derive", "② 自己推出 3 个象", "derive", sys.id)}
-        ${item("context", "③ 完成 1 道情境取象题", "context", sys.id)}
-      </div>`;
+      <div class="daily-study-head"><strong>今日一组</strong><span>约 5 分钟</span></div>
+      <div class="daily-study-topic">${escapeHtml(sys.title)}</div>
+      <div class="daily-flow">
+        ${steps.map((step, index) => `<span class="${done[step.id] ? "done" : next?.id === step.id ? "current" : ""}"><b>${done[step.id] ? "✓" : index + 1}</b>${step.label}</span>`).join("<i>→</i>")}
+        <i>→</i><span class="${next ? "" : "done"}"><b>${next ? "4" : "✓"}</b>完成</span>
+      </div>
+      <button type="button" class="daily-primary" ${next ? `data-daily-study="${next.action}" data-daily-scope="${escapeHtml(dailyScope)}"` : "disabled"}>
+        ${next ? `继续：${next.label} →` : "今日已完成"}
+      </button>`;
   }
   function markDailyAuto(id) {
     const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
@@ -2563,21 +2531,32 @@ if (typeof document !== "undefined") {
 
   function renderStudyMode() {
     el.studyMode.innerHTML = `
-      <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
-      <button type="button" class="${studyMode === "derive" ? "active" : ""}" data-study-mode="derive">推导</button>
-      <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">解析</button>
-      <button type="button" class="study-guide-btn" data-open-guide>教程</button>`;
+      <details>
+        <summary>自由练习 <span>${studyMode === "quiz" ? "测验" : studyMode === "derive" ? "推导" : "看解析"}</span></summary>
+        <div>
+          <button type="button" class="${studyMode === "quiz" ? "active" : ""}" data-study-mode="quiz">测验</button>
+          <button type="button" class="${studyMode === "derive" ? "active" : ""}" data-study-mode="derive">推导</button>
+          <button type="button" class="${studyMode === "explain" ? "active" : ""}" data-study-mode="explain">看解析</button>
+          <button type="button" class="study-guide-btn" data-open-guide>方法</button>
+        </div>
+      </details>`;
   }
 
   function renderStudyScope() {
-    const deck = chartStudyDeck();
     const scopes = [
       { id: "all", title: "全部" },
-      { id: "chart-current", title: deck.ids.length ? `盘中象 ${deck.ids.length}` : "盘中象" },
-      ...graph.systems.map(s => ({ id: s.id, title: s.title }))
+      ...TRADITION_META.filter(item => item.id !== "all").map(item => ({
+        id: `tradition:${item.id}`,
+        title: item.title
+      }))
     ];
+    if (!scopes.some(s => s.id === studyScope)) {
+      const oldSystem = graph.systems.find(system => system.id === studyScope);
+      studyScope = oldSystem ? `tradition:${oldSystem.tradition || "bazi"}` : "all";
+      storageSet("studyScope", studyScope);
+    }
     el.studyScope.innerHTML = scopes.map(s =>
-      `<button type="button" class="${studyScope === s.id ? "active" : ""}" data-scope="${escapeHtml(s.id)}" ${s.id === "chart-current" && !deck.ids.length ? "disabled" : ""}>${escapeHtml(s.title)}</button>`
+      `<button type="button" class="${studyScope === s.id ? "active" : ""}" data-scope="${escapeHtml(s.id)}">${escapeHtml(s.title)}</button>`
     ).join("");
   }
 
@@ -2733,14 +2712,22 @@ if (typeof document !== "undefined") {
 
   /* ---- 图鉴页 ---- */
   function renderLibrary() {
-    el.systemTabs.innerHTML = graph.systems.map(s =>
+    renderTraditionRows();
+    const systems = graph.systems.filter(system => (system.tradition || "bazi") === libraryTradition);
+    if (!systems.some(system => system.id === activeSystemId)) activeSystemId = systems[0]?.id || graph.systems[0]?.id;
+    el.systemTabs.innerHTML = systems.map(s =>
       `<button type="button" class="${s.id === activeSystemId ? "active" : ""}" data-system="${escapeHtml(s.id)}">${escapeHtml(s.title)}</button>`
     ).join("");
-    const sys = graph.systems.find(s => s.id === activeSystemId) || graph.systems[0];
-    el.systemDesc.textContent = `${sys.desc || ""}（${sys.nodes.length} 条）`;
+    const sys = systems.find(s => s.id === activeSystemId) || systems[0] || graph.systems[0];
+    el.systemDesc.textContent = `${sys.desc || ""}（${sys.nodes.length} 条 · ${traditionById.get(sys.tradition || "bazi")?.title || "八字"}）`;
     el.libraryNodes.innerHTML = sys.nodes.map(n => {
       const full = nodeById.get(n.id) || n;
-      return nodeCardHtml({ node: full, evidence: [] }, null);
+      return `
+        <button class="library-node" type="button" data-open-node="${escapeHtml(full.id)}">
+          <strong>${escapeHtml(full.title)}</strong>
+          <span>${rootEssences(full).slice(0, 4).map(escapeHtml).join(" · ")}</span>
+          <i>›</i>
+        </button>`;
     }).join("");
   }
 
@@ -2794,7 +2781,7 @@ if (typeof document !== "undefined") {
         <h2>${escapeHtml(node.title)}</h2>
         <span class="type-pill">${escapeHtml(node.type)}</span>
       </div>
-      <p class="detail-sys">${escapeHtml(node.systemTitle)}</p>
+      <p class="detail-sys">${escapeHtml(node.traditionTitle)} · ${escapeHtml(node.systemTitle)}</p>
       <section class="root-model-card">
         <div class="root-model-head"><span>一核</span><strong>先理解根性，不背完整清单</strong></div>
         <div class="detail-core">${roots.map(c => `<span class="detail-core-tag">${escapeHtml(c)}</span>`).join("")}</div>
@@ -2827,8 +2814,14 @@ if (typeof document !== "undefined") {
         <div><span>三筛</span><p><b>问什么</b> · <b>落哪里</b> · <b>处于什么状态/关系</b></p></div>
         <div><span>双证</span><p>具体结论至少再找一个独立线索支持；只有单线索时，先保留为候选象。</p></div>
       </section>
+      ${node.source ? `
+        <section class="source-card">
+          <div class="root-model-head"><span>来源</span><strong>本条象义从哪里整理</strong></div>
+          <p>${escapeHtml(node.source)}</p>
+        </section>` : ""}
       ${plainBlocks}
       ${node.rules?.length ? `<div class="branch-block condition-block"><h4>三筛 · 什么时候才能这样取</h4><ul>${node.rules.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
+      <button type="button" class="detail-tree-entry" data-tree-node="${escapeHtml(node.id)}">查看关联网络 <span>进阶</span> →</button>
       <details class="meaning-library">
         <summary>展开现实类象资料库 <small>需要时查，不要求背</small></summary>
         <div class="meaning-library-body">${otherBlocks}</div>
@@ -3279,7 +3272,7 @@ if (typeof document !== "undefined") {
   }
 
   function showSearchInTree(query) {
-    const results = searchNodes(query);
+    const results = searchNodes(query, 80, activeTradition);
     if (!results.length) return;
     switchTab("tree");
     treeStart();
@@ -3644,6 +3637,21 @@ if (typeof document !== "undefined") {
     const treeSearch = event.target.closest("[data-tree-search]");
     if (treeSearch) { showSearchInTree(treeSearch.dataset.treeSearch); return; }
 
+    const treeNode = event.target.closest("[data-tree-node]");
+    if (treeNode) {
+      showView("tree");
+      treeStart();
+      const index = tree.idxById.get(treeNode.dataset.treeNode);
+      if (index !== undefined) selectTreeNode(index);
+      return;
+    }
+
+    if (event.target.closest("[data-tree-exit]")) {
+      if (detailStack.length) showView("detail");
+      else switchTab(["search", "study", "library"].includes(activeTab) ? activeTab : "search");
+      return;
+    }
+
     if (event.target.closest("[data-tree-search-clear]")) {
       clearTreeSearch();
       renderTreeInfo();
@@ -3668,11 +3676,26 @@ if (typeof document !== "undefined") {
       return;
     }
 
-    const antiToggle = event.target.closest("[data-anti-first]");
-    if (antiToggle) {
-      antiFirst = !!antiToggle.checked;
-      storageSet("antiFirst", antiFirst);
+    const tradition = event.target.closest("[data-tradition]");
+    if (tradition) {
+      activeTradition = tradition.dataset.tradition;
+      storageSet("activeTradition", activeTradition);
+      const systems = activeTradition === "all"
+        ? graph.systems
+        : graph.systems.filter(system => (system.tradition || "bazi") === activeTradition);
+      if (!systems.some(system => system.id === activeSystemId)) activeSystemId = systems[0]?.id || graph.systems[0]?.id;
       renderSearch();
+      renderLibrary();
+      return;
+    }
+
+    const libraryTraditionBtn = event.target.closest("[data-library-tradition]");
+    if (libraryTraditionBtn) {
+      libraryTradition = libraryTraditionBtn.dataset.libraryTradition;
+      storageSet("libraryTradition", libraryTradition);
+      const systems = graph.systems.filter(system => (system.tradition || "bazi") === libraryTradition);
+      activeSystemId = systems[0]?.id || graph.systems[0]?.id;
+      renderLibrary();
       return;
     }
 
