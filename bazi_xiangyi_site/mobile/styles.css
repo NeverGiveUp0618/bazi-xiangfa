@@ -2450,12 +2450,16 @@ mark {
 .guide-case summary b {
   display: inline-grid;
   place-items: center;
-  width: 31px;
+  min-width: 31px;
   height: 31px;
+  padding: 0 8px;
   margin-right: 8px;
   border-radius: 9px;
   background: rgba(180, 139, 59, .12);
   color: var(--gold);
+  line-height: 1;
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .guide-case summary span {
