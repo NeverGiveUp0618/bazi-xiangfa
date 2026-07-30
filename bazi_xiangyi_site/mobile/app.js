@@ -1653,8 +1653,13 @@ function makeContextQuestion(node, pool) {
   if (!groups.length) return null;
   const [key, values] = shuffle(groups)[0];
   const correct = values.find(v => String(v).length <= 10);
-  const otherValues = groups.filter(([k]) => k !== key).flatMap(([, vs]) => vs.filter(v => String(v).length <= 10));
-  const fallback = pool.filter(n => n.id !== node.id).flatMap(n => Object.values(n.branches || {}).flat()).filter(v => String(v).length <= 10);
+  // 干扰项必须排除本栏的全部取值：像「地支六合·组合」是「生合+克合」的合集、
+  // 「火·物象」与「火·职业」也有天然重词，若只排除 correct 这一个字符串，
+  // 抽到同栏的另一个值就会出现「两个选项都对」的坏题。
+  const ownSet = new Set(values.map(String));
+  const usable = v => String(v).length <= 10 && !ownSet.has(String(v));
+  const otherValues = groups.filter(([k]) => k !== key).flatMap(([, vs]) => vs.filter(usable));
+  const fallback = pool.filter(n => n.id !== node.id).flatMap(n => Object.values(n.branches || {}).flat()).filter(usable);
   const distract = sample(otherValues.length >= 3 ? otherValues : fallback, 3, new Set([correct]));
   if (!correct || distract.length < 3) return null;
   const dim = dimensionForKey(key);
