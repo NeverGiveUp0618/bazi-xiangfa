@@ -1941,10 +1941,25 @@ if (typeof document !== "undefined") {
   });
 
   /* ---- 查询页 ---- */
+  /* 横向条：把选中项滚进可视范围。
+     只改容器自身的 scrollLeft，不用 scrollIntoView——后者会连带滚动整个页面。 */
+  function scrollActiveIntoView(row) {
+    if (!row) return;
+    const act = row.querySelector("button.active");
+    if (!act) return;
+    if (row.scrollWidth <= row.clientWidth) return;      // 没溢出就不用动
+    const target = act.offsetLeft - (row.clientWidth - act.offsetWidth) / 2;
+    const max = row.scrollWidth - row.clientWidth;
+    row.scrollLeft = Math.max(0, Math.min(target, max));
+  }
+
   function renderQuickRow(query) {
     el.quickRow.innerHTML = QUICK_TERMS.map(t =>
       `<button type="button" class="${query === t ? "active" : ""}" data-quick="${escapeHtml(t)}">${escapeHtml(t)}</button>`
     ).join("");
+    // QUICK_TERMS 有 11 项，靠后的（隐秘/合作等）选中后会落在可视区外、
+    // 只在右边缘露出一角，看着像"显示不全"。渲染后归位。
+    scrollActiveIntoView(el.quickRow);
   }
 
   function renderTraditionRows() {
@@ -1956,6 +1971,8 @@ if (typeof document !== "undefined") {
     ).join("");
     el.traditionRow.innerHTML = searchHtml;
     el.libraryTraditions.innerHTML = libraryHtml;
+    scrollActiveIntoView(el.traditionRow);
+    scrollActiveIntoView(el.libraryTraditions);
   }
 
   function searchFilterHtml() {

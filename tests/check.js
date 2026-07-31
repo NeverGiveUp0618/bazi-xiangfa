@@ -77,6 +77,31 @@ t('实跑 makeContextQuestion：每题唯一正解',()=>{
   console.log(`   （穷举 ${n} 个可出题栏位）`);
   return bad.length?bad.slice(0,5).join(' | ')+(bad.length>5?` …共${bad.length}`:''):true});
 
+console.log('\n【横向条：选中项须滚进可视范围】');
+t('存在 scrollActiveIntoView 且只动容器 scrollLeft',()=>{
+  if(!/function scrollActiveIntoView\(row\)/.test(app))return '函数缺失';
+  const body=app.slice(app.indexOf('function scrollActiveIntoView'),app.indexOf('function scrollActiveIntoView')+700);
+  if(/scrollIntoView\(/.test(body))return '用了 scrollIntoView，会连带滚动整页';
+  if(!/row\.scrollLeft\s*=/.test(body))return '未设置 row.scrollLeft';
+  if(!/scrollWidth\s*<=\s*row\.clientWidth/.test(body))return '缺「未溢出则不动」的短路';
+  return true});
+t('renderQuickRow 渲染后调用归位',()=>{
+  const i=app.indexOf('function renderQuickRow');
+  const seg=app.slice(i,i+700);
+  return /scrollActiveIntoView\(el\.quickRow\)/.test(seg)||'renderQuickRow 未调用'});
+t('术数条与图鉴条同样归位',()=>{
+  const i=app.indexOf('function renderTraditionRows');
+  const seg=app.slice(i,i+900);
+  const miss=[];
+  if(!/scrollActiveIntoView\(el\.traditionRow\)/.test(seg))miss.push('traditionRow');
+  if(!/scrollActiveIntoView\(el\.libraryTraditions\)/.test(seg))miss.push('libraryTraditions');
+  return miss.length?'未归位: '+miss.join(','):true});
+t('QUICK_TERMS 条数多到会溢出（故必须归位）',()=>{
+  const m=app.match(/const QUICK_TERMS = \[([^\]]*)\]/);
+  if(!m)return '未找到 QUICK_TERMS';
+  const n=(m[1].match(/"/g)||[]).length/2;
+  return n>=8?true:`仅 ${n} 项，若已缩短可放宽此断言`});
+
 console.log('\n【死文件提示】');
 t('根级 index.html 只做跳转、不加载脚本',()=>{
   const h=fs.readFileSync(R+'index.html','utf8');
