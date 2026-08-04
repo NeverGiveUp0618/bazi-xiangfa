@@ -1,0 +1,8 @@
+{
+  "name": "bazi-xiangyi",
+  "private": true,
+  "scripts": {
+    "test": "for f in tests/*.js; do echo \"\n=== $f ===\"; node \"$f\" || exit 1; done"
+  },
+  "devDependencies": { "jsdom": "^24.1.3" }
+}
