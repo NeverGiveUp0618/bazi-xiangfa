@@ -80,7 +80,42 @@ const TRADITION_META = graph.traditions || [
   { id: "all", title: "全部" },
   { id: "bazi", title: "八字" }
 ];
+/* ---------- 「我在学」：一个主修范围，全站统一 ----------
+ * 之前查/学/库三处各存各的范围、默认还不一样（all / all / bazi），
+ * 每切一个页签面对的内容集合就变一次；今日一组更是在 20 个体系里按天轮，
+ * 20 天里有 9 天推的是用不上的术——这就是"庞大杂乱"的主要来源。
+ *
+ * 现在把"我在学哪几术"抽成一个设置，三处默认都用它，今日一组也只从它里面出。
+ * 其余术随时能手动切去看，只是不再默认混进来。
+ */
+const MAJOR_ID = "major";
+const DEFAULT_MAJOR = ["bazi", "liuren"];
+TRADITION_META.unshift({ id: MAJOR_ID, title: "我在学", short: "学" });
 const traditionById = new Map(TRADITION_META.map(item => [item.id, item]));
+const REAL_TRADITIONS = TRADITION_META.filter(t => t.id !== "all" && t.id !== MAJOR_ID);
+
+function majorList() {
+  const saved = storageGet("majorTraditions", null);
+  const valid = Array.isArray(saved)
+    ? saved.filter(id => REAL_TRADITIONS.some(t => t.id === id))
+    : [];
+  return valid.length ? valid : DEFAULT_MAJOR.slice();
+}
+function majorTitle() {
+  const ids = majorList();
+  return ids.map(id => traditionById.get(id)?.title || id).join(" + ");
+}
+/* 范围 → 具体术数 id 列表；null 表示不限 */
+function traditionIds(t) {
+  if (!t || t === "all") return null;
+  if (t === MAJOR_ID) return majorList();
+  return [t];
+}
+function inTradition(node, t) {
+  const ids = traditionIds(t);
+  if (!ids) return true;
+  return ids.some(id => node.tradition === id || node.sharedWith.includes(id));
+}
 const nodes = graph.systems.flatMap(sys => sys.nodes.map(n => ({
   ...n,
   systemId: sys.id,
@@ -685,9 +720,7 @@ function matchNode(node, terms) {
 function searchNodes(query, limit = 40, tradition = "all") {
   const terms = query.trim().split(/\s+/).filter(Boolean);
   if (!terms.length) return [];
-  const pool = tradition === "all"
-    ? nodes
-    : nodes.filter(node => node.tradition === tradition || node.sharedWith.includes(tradition));
+  const pool = nodes.filter(node => inTradition(node, tradition));
   return pool
     .map(n => matchNode(n, terms))
     .filter(Boolean)
@@ -1531,8 +1564,12 @@ function srsAll() { return storageGet("srs", {}); }
 function scopeNodes(scope) {
   if (scope === "chart-current") return chartStudyNodesByPart(chartStudyPart);
   if (scope.startsWith("tradition:")) {
-    const tradition = scope.split(":")[1];
-    return nodes.filter(node => node.tradition === tradition || node.sharedWith.includes(tradition));
+    return nodes.filter(node => inTradition(node, scope.split(":")[1]));
+  }
+  // 学习路线的一阶可能跨几个体系（如「关系与神煞」＝干支关系+常用神煞）
+  if (scope.startsWith("systems:")) {
+    const ids = scope.slice(8).split(",").filter(Boolean);
+    return nodes.filter(node => ids.includes(node.systemId));
   }
   return scope === "all" ? nodes : nodes.filter(n => n.systemId === scope);
 }
@@ -1763,6 +1800,7 @@ if (typeof document !== "undefined") {
     studyScope: document.querySelector("#studyScope"),
     chartStudyFilter: document.querySelector("#chartStudyFilter"),
     studyStats: document.querySelector("#studyStats"),
+    studyRoute: document.querySelector("#studyRoute"),
     studyCard: document.querySelector("#studyCard"),
     libraryTraditions: document.querySelector("#libraryTraditions"),
     systemTabs: document.querySelector("#systemTabs"),
@@ -1776,7 +1814,8 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["领导", "文书", "财富", "口舌", "婚姻", "疾病", "盗失", "道路", "房产", "隐秘", "合作"];
   const CHANGELOG = [
-    ["26.7.24", "🧭 第三阶段四术共库上线——接入大六壬24、奇门33、六爻13个核心节点，与八字共用根性、五维、双证和学习训练"],
+    ["26.8.9", "🎯 定「我在学」——查/学/库三处默认范围统一，今日一组只从主修的术里出题（原来在20个体系里轮，一年有126天推的是用不上的术）；学习页新增分阶路线；详情页135种栏位收成四组"],
+    ["26.7.24", "🧭 第三阶段四术共库上线——接入六壬神课24、奇门33、六爻13个核心节点，与八字共用根性、五维、双证和学习训练"],
     ["26.7.24", "📘 共通根性教程上线——系统讲解根性、五维、三筛、双证，配乾、冲、正印示例和每日练习模板"],
     ["26.7.23", "🧠 象义学习改为根性推导——详情显示一核五维与生成路径，新增推导练习、情境测验、搜索筛选、排盘证据链和象义树生成链"],
     ["26.7.11", "🗓️ 大运流年叠加上线——排盘页选岁运干支，自动扫引动：冲提纲、穿夫妻宫、补齐三刑、填实拱位、开财库、岁运并临，八步第8步直接报应期入口"],
@@ -1839,7 +1878,7 @@ if (typeof document !== "undefined") {
   if (!SEARCH_LENSES.some(x => x.id === searchLens)) searchLens = "all";
   let chartContext = storageGet("chartContext", "all");
   if (!SEARCH_CONTEXTS.some(x => x.id === chartContext)) chartContext = "all";
-  let studyScope = storageGet("studyScope", "all");
+  let studyScope = storageGet("studyScope", `tradition:${MAJOR_ID}`);
   if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
   chartStudyPart = storageGet("chartStudyPart", "all");
   if (!CHART_STUDY_PARTS.some(p => p.id === chartStudyPart)) chartStudyPart = "all";
@@ -1855,10 +1894,10 @@ if (typeof document !== "undefined") {
   let deriveNodeId = null;
   let deriveDraft = "";
   let deriveRevealed = false;
-  let activeTradition = storageGet("activeTradition", "all");
+  let activeTradition = storageGet("activeTradition", MAJOR_ID);
   if (!TRADITION_META.some(item => item.id === activeTradition)) activeTradition = "all";
-  let libraryTradition = storageGet("libraryTradition", "bazi");
-  if (!TRADITION_META.some(item => item.id === libraryTradition && item.id !== "all")) libraryTradition = "bazi";
+  let libraryTradition = storageGet("libraryTradition", MAJOR_ID);
+  if (!TRADITION_META.some(item => item.id === libraryTradition && item.id !== "all")) libraryTradition = MAJOR_ID;
   let activeSystemId = graph.systems[0]?.id;
   let detailStack = [];
   const viewScroll = {};
@@ -2018,13 +2057,11 @@ if (typeof document !== "undefined") {
     renderQuickRow(query);
     if (!query) {
       const activeTitle = traditionById.get(activeTradition)?.title || "四术共查";
-      const activeCount = activeTradition === "all"
-        ? nodes.length
-        : nodes.filter(node => node.tradition === activeTradition || node.sharedWith.includes(activeTradition)).length;
+      const activeCount = nodes.filter(node => inTradition(node, activeTradition)).length;
       el.searchBody.innerHTML = `
         <div class="start-card">
           <strong>${escapeHtml(activeTitle)} · ${activeCount} 个象义节点</strong>
-          <p>搜现实词，看八字、大六壬、奇门、六爻分别从哪里取象。</p>
+          <p>搜现实词，看八字、六壬神课、奇门、六爻分别从哪里取象。</p>
           <p><b>先看根性</b> → 推出具体象 → 用位置、状态与第二条证据验证。</p>
           <small>不确定搜什么？点上方“文书、财富、口舌”等快捷词。</small>
         </div>`;
@@ -2202,6 +2239,39 @@ if (typeof document !== "undefined") {
     renderGuide();
     showView("guide");
     history.pushState({ tab: activeTab, guide: true }, "");
+  }
+
+  /* ---- 「我在学哪几术」设置 ----
+   * 全站默认范围与今日一组都跟着它走。改完立刻重渲染三个页签。 */
+  function openMajorPicker() {
+    const cur = majorList();
+    const body = REAL_TRADITIONS.map(t => `
+      <label class="major-opt${cur.includes(t.id) ? " on" : ""}">
+        <input type="checkbox" data-major-opt="${escapeHtml(t.id)}" ${cur.includes(t.id) ? "checked" : ""} />
+        <b>${escapeHtml(t.title)}</b>
+        <span>${nodes.filter(n => inTradition(n, t.id)).length} 个象义节点</span>
+      </label>`).join("");
+    el.guideBody.innerHTML = `
+      <h2>我在学哪几术</h2>
+      <p class="major-lead">勾上的会成为「我在学」这个范围：查询、学习、图鉴三处默认都用它，
+      今日一组也只从这里出题。<b>没勾的随时还能手动切过去看</b>，只是不再默认混进来。</p>
+      <div class="major-list">${body}</div>
+      <p class="major-tip">现在是 <b>${escapeHtml(majorTitle())}</b>，共
+      ${nodes.filter(n => inTradition(n, MAJOR_ID)).length} 个节点（全部 ${nodes.length} 个）。</p>`;
+    showView("guide");
+    history.pushState({ tab: activeTab, guide: true }, "");
+  }
+  function toggleMajor(id, on) {
+    const set = new Set(majorList());
+    if (on) set.add(id); else set.delete(id);
+    // 一个都不留会让全站空掉，至少保住一个
+    const next = REAL_TRADITIONS.map(t => t.id).filter(x => set.has(x));
+    storageSet("majorTraditions", next.length ? next : [id]);
+    openMajorPicker();
+    renderTraditionRows();
+    renderSearch();
+    renderStudy(true);
+    renderLibrary();
   }
 
   /* ---- 排盘页 ---- */
@@ -2516,7 +2586,14 @@ if (typeof document !== "undefined") {
   /* ---- 学习页 ---- */
   function renderDailyStudy() {
     const day = Math.floor(Date.now() / DAY_MS);
-    const sys = graph.systems[day % graph.systems.length];
+    // ⚠️ 原来是 graph.systems[day % 20]——20 个体系按天轮，
+    //    其中 9 个属于用不上的术，等于近半数日子推的内容用户根本不学。
+    //    现在只在「我在学」的体系里轮。
+    const pool = graph.systems.filter(sys => majorList().includes(sys.tradition || "bazi"));
+    const ring = pool.length ? pool : graph.systems;
+    const sys = ring[day % ring.length];
+    // ⚠️ 范围仍用 tradition: 前缀——scopeNodes 只认 "all"/"tradition:x"/systemId，
+    //    传 "system:x" 会被当成 systemId 匹配不上，再被 renderStudyScope 回退掉。
     const dailyScope = `tradition:${sys.tradition || "bazi"}`;
     const date = new Date(), dateKey = `${date.getFullYear()}-${date.getMonth()+1}-${date.getDate()}`;
     const done = storageGet(`daily-${dateKey}`, {});
@@ -2572,7 +2649,12 @@ if (typeof document !== "undefined") {
         title: item.title
       }))
     ];
-    if (!scopes.some(s => s.id === studyScope)) {
+    // ⚠️ 阶段范围(systems:) 要放行，否则一点学习路线就被回退成整个术
+    if (studyScope.startsWith("systems:")) {
+      const ids = studyScope.slice(8).split(",");
+      const stage = STAGES.find(st => st.systems.join(",") === ids.join(","));
+      scopes.push({ id: studyScope, title: stage ? stage.title : "本阶" });
+    } else if (!scopes.some(s => s.id === studyScope)) {
       const oldSystem = graph.systems.find(system => system.id === studyScope);
       studyScope = oldSystem ? `tradition:${oldSystem.tradition || "bazi"}` : "all";
       storageSet("studyScope", studyScope);
@@ -2609,6 +2691,92 @@ if (typeof document !== "undefined") {
       <div class="stat-box s-ok"><b>${ok}</b><span>测过关</span></div>
       <div class="stat-box s-doing"><b>${doing}</b><span>待巩固</span></div>
       <div class="stat-box s-new"><b>${fresh}</b><span>未测</span></div>`;
+    // ⚠️ 路线要单独一个容器——.study-stats 是 flex，塞进去会变成第4项
+    //    把三个统计格挤成竖排窄条（踩过）。
+    if (el.studyRoute) el.studyRoute.innerHTML = stageRouteHtml();
+  }
+
+  /* ---------- 学习路线：把"未测 155"换成看得见的台阶 ----------
+   * 象义不是 155 个平级条目，是有先后的：五行是所有词根的源头，
+   * 天干地支是载体，十神是关系，关系/神煞是叠加，纳音宫位是补充，
+   * 组合取象是综合运用。没有这条顺序，面对一个大列表只会无从下手。
+   *
+   * ⚠️ 刻意不做锁——不挡着你先看后面的，只是明确"建议下一个学这个"。
+   *    与本站一贯取向一致：给方向，不给分数、不设关卡。
+   */
+  const STAGES = [
+    { t: "bazi", title: "底层根性", systems: ["five-elements"],
+      hint: "所有象义的词根都从这里长出来，先把六个字吃透" },
+    { t: "bazi", title: "干支本象", systems: ["stems", "branches"],
+      hint: "十天干十二地支是象的载体，认清各自的性情与形态" },
+    { t: "bazi", title: "十神关系", systems: ["ten-gods"],
+      hint: "同一个字对不同日主是不同的十神——象由关系决定" },
+    { t: "bazi", title: "关系与神煞", systems: ["relations", "shen-sha"],
+      hint: "冲合刑穿破让象发生变化，神煞是叠加上去的特定味道" },
+    { t: "bazi", title: "纳音与宫位", systems: ["nayin", "palace-luck"],
+      hint: "纳音给一柱定调，宫位岁运决定象落在谁身上、什么时候应" },
+    { t: "bazi", title: "组合取象", systems: ["combo-cards", "xiangfa-rules", "source-mapping"],
+      hint: "把前面几层叠起来读盘——这一阶才是真正的取象" },
+    { t: "liuren", title: "六壬根性", systems: ["liuren-generals", "liuren-spirits"],
+      hint: "十二天将与十二支神，与八字共用根性、各有本门语境" },
+    { t: "qimen", title: "奇门根性", systems: ["qimen-trigrams", "qimen-doors", "qimen-stars", "qimen-deities"],
+      hint: "八卦九宫定场，八门九星八神各司其职" },
+    { t: "liuyao", title: "六爻根性", systems: ["liuyao-kin", "liuyao-spirits", "liuyao-positions"],
+      hint: "六亲定事、六神定色、世应定人我" }
+  ];
+
+  /* 当前范围涉及哪几术 → 只显示这几术的阶段 */
+  function stagesInScope() {
+    if (studyScope === "chart-current") return [];
+    let ids;
+    if (studyScope.startsWith("tradition:")) ids = traditionIds(studyScope.split(":")[1]);
+    else if (studyScope === "all") ids = null;
+    else {
+      const sys = graph.systems.find(s => s.id === studyScope);
+      ids = sys ? [sys.tradition || "bazi"] : null;
+    }
+    if (!ids) ids = REAL_TRADITIONS.map(t => t.id);
+    return STAGES.filter(st => ids.includes(st.t));
+  }
+
+  function stageProgress(stage) {
+    const srs = srsAll();
+    const list = nodes.filter(n => stage.systems.includes(n.systemId));
+    const done = list.filter(n => (srs[n.id]?.lv || 0) >= 3).length;
+    const next = list.find(n => (srs[n.id]?.lv || 0) < 3);
+    return { total: list.length, done, next };
+  }
+
+  function stageRouteHtml() {
+    const list = stagesInScope();
+    if (!list.length) return "";
+    // ⚠️ 只让「第一个没走完的」那一阶突出。全都标成当前＝全都不突出，
+    //    视线没有落点，又回到"庞大杂乱"的感觉。
+    const first = list.find(st => { const p = stageProgress(st); return p.total && p.done < p.total; });
+    const rows = list.map(stage => {
+      const { total, done, next } = stageProgress(stage);
+      if (!total) return "";
+      const cur = stage === first;
+      const finished = done >= total;
+      const dots = total <= 12
+        ? `<span class="stage-dots">${"●".repeat(done)}${"○".repeat(total - done)}</span>`
+        : `<span class="stage-dots wide"><i style="width:${Math.round(done / total * 100)}%"></i></span>`;
+      return `
+        <button type="button" class="stage-row${cur ? " current" : finished ? " done" : " todo"}"
+                data-stage-systems="${escapeHtml(stage.systems.join(","))}">
+          <span class="stage-name">${escapeHtml(stage.title)}</span>
+          <span class="stage-count">${done}/${total}</span>
+          ${dots}
+          ${cur && next ? `<span class="stage-next">从这里开始 · ${escapeHtml(next.title)}</span>` : ""}
+          ${cur ? `<span class="stage-hint">${escapeHtml(stage.hint)}</span>` : ""}
+          ${finished ? `<span class="stage-hint done">这一阶已经走完</span>` : ""}
+        </button>`;
+    }).join("");
+    return `
+      <details class="stage-route" ${first ? "open" : ""}>
+        <summary>学习路线 · ${first ? escapeHtml(first.title) : "全部走完"}</summary>
+        <div class="stage-list">${rows}</div>
+      </details>`;
   }
 
   function chartStudyReason(nodeId) {
@@ -2756,6 +2924,43 @@ if (typeof document !== "undefined") {
   /* ---- 详情页 ---- */
   const PLAIN_KEYS = ["大白话", "为什么", "像什么"];
 
+  /* ==== 分支栏位归组 ====
+   * 全库有 135 种栏位名，「人物/事物/心理」这种通用维度和「甲子乙丑」「乾象」
+   * 「传统六破口径参考」混在一起平铺，一个节点能铺出十几块，是"杂乱"的来源之一。
+   * 归成四组：取象和判断默认展开（最常翻的），本门语境与口径参考默认收起。
+   * ⚠️ 不改 data.js——只是展示时分组，内容一个字不动。
+   */
+  const BRANCH_GROUPS = [
+    { id: "xiang", title: "取象", open: true },
+    { id: "panduan", title: "怎么判断", open: true },
+    { id: "context", title: "本门语境", open: false },
+    { id: "detail", title: "细目对照", open: false },
+    { id: "ref", title: "口径与参考", open: false }
+  ];
+  const G_XIANG = new Set(["人物", "事物", "物象", "心理", "身体", "职业", "场所", "文书",
+    "事项", "常见象", "常见取象", "类象", "人物事物", "身体心理", "方位", "颜色", "物品",
+    "故乡", "气质", "方向", "阶段", "取象", "带象", "学识", "关系", "表达", "财富",
+    "权责", "权力", "性情", "组合", "事件", "时空", "宫位"]);
+  const G_PANDUAN = new Set(["吉凶", "优点", "风险", "判断", "提醒", "使用提醒",
+    "不能这样断", "成立条件", "不成立条件", "分辨", "怎么用", "应期", "合中看克",
+    "合象三分", "宫位提示"]);
+
+  function branchGroupOf(key) {
+    if (G_XIANG.has(key)) return "xiang";
+    if (G_PANDUAN.has(key)) return "panduan";
+    // 本门语境：奇门/六爻等专属，以及八卦八象、阴阳象
+    if (/^奇门|^六爻|^[乾兑震巽离坎坤艮]象$|^[阴阳]象$|^八字落点$|^本体系口径$|^八步入命法$/.test(key)) return "context";
+    // 细目对照：纳音的甲子乙丑…、四柱、十神五组、干支藏干、生克配对
+    if (/^[甲乙丙丁戊己庚辛壬癸][子丑寅卯辰巳午未申酉戌亥]/.test(key)) return "detail";
+    if (/柱$/.test(key)) return "detail";
+    if (/^(天干|地支|藏干|财星|食伤|印星|官杀|比劫|四库|实支|虚支)$/.test(key)) return "detail";
+    if (/相[生克]$/.test(key)) return "detail";
+    if (/^(生合|克合|拱合|生穿|克穿|天干墓库|五行墓库)$/.test(key)) return "detail";
+    // 口径与参考
+    if (/口径|参考|资料|例子|案例|检索词|补充/.test(key)) return "ref";
+    return "xiang";   // 认不出的当取象，不吞内容
+  }
+
   function renderDetail(node) {
     const branches = Object.entries(node.branches || {});
     const roots = rootEssences(node);
@@ -2772,15 +2977,25 @@ if (typeof document !== "undefined") {
         return `<div class="plain-box"><h4>${escapeHtml(label)}</h4>${body}</div>`;
       }).join("");
 
-    const otherBlocks = branches
-      .filter(([k]) => !PLAIN_KEYS.includes(k))
-      .map(([k, values]) => {
-        const short = values.every(v => String(v).length <= 8);
-        const body = short
-          ? `<div class="chip-row">${values.map(v => `<span class="chip">${escapeHtml(v)}</span>`).join("")}</div>`
-          : `<ul>${values.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
-        return `<div class="branch-block"><h4>${escapeHtml(k)}</h4>${body}</div>`;
-      }).join("");
+    const blockHtml = ([k, values]) => {
+      const short = values.every(v => String(v).length <= 8);
+      const body = short
+        ? `<div class="chip-row">${values.map(v => `<span class="chip">${escapeHtml(v)}</span>`).join("")}</div>`
+        : `<ul>${values.map(v => `<li>${escapeHtml(v)}</li>`).join("")}</ul>`;
+      return `<div class="branch-block"><h4>${escapeHtml(k)}</h4>${body}</div>`;
+    };
+    // 按四组收起来，而不是十几块平铺
+    const rest = branches.filter(([k]) => !PLAIN_KEYS.includes(k));
+    const otherBlocks = BRANCH_GROUPS.map(group => {
+      const mine = rest.filter(([k]) => branchGroupOf(k) === group.id);
+      if (!mine.length) return "";
+      const n = mine.reduce((sum, [, v]) => sum + v.length, 0);
+      return `
+        <details class="branch-group" ${group.open ? "open" : ""}>
+          <summary>${escapeHtml(group.title)}<span>${mine.length} 栏 · ${n} 条</span></summary>
+          <div class="branch-group-body">${mine.map(blockHtml).join("")}</div>
+        </details>`;
+    }).join("");
 
     const relChips = (node.relations || []).map(r => {
       const target = nodeByTitle.get(r);
@@ -3532,7 +3747,7 @@ if (typeof document !== "undefined") {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `八字象义_命例本_${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `象义随身_命例本_${new Date().toISOString().slice(0, 10)}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -3602,6 +3817,9 @@ if (typeof document !== "undefined") {
   /* ---- 事件 ---- */
   document.body.addEventListener("click", event => {
     if (event.target.closest("[data-open-guide]")) { openGuide(); return; }
+    if (event.target.closest("[data-open-major]")) { openMajorPicker(); return; }
+    const majorOpt = event.target.closest("[data-major-opt]");
+    if (majorOpt) { toggleMajor(majorOpt.dataset.majorOpt, majorOpt.checked); return; }
 
     const guideAnchor = event.target.closest("[data-guide-anchor]");
     if (guideAnchor) {
@@ -3845,6 +4063,17 @@ if (typeof document !== "undefined") {
       studyMode = studyModeBtn.dataset.studyMode;
       storageSet("studyMode", studyMode);
       renderStudy(studyMode === "derive");
+      return;
+    }
+
+    // 学习路线：点一阶就把练习范围收到那一阶
+    const stageBtn = event.target.closest("[data-stage-systems]");
+    if (stageBtn) {
+      studyScope = `systems:${stageBtn.dataset.stageSystems}`;
+      storageSet("studyScope", studyScope);
+      chartStudyPart = "all";
+      storageSet("chartStudyPart", chartStudyPart);
+      renderStudy(true);
       return;
     }
 

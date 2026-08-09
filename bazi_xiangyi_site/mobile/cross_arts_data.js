@@ -1,7 +1,7 @@
 /* 第三阶段：四术共用象义底层模型
  * 数据来源：
  * - 八字：沿用 data.js 既有图谱
- * - 大六壬：liuren-game/index.html「象法速查库」
+ * - 六壬神课：liuren-game/index.html「象法速查库」
  * - 奇门：用户提供《奇门背记表.xlsx》
  * - 六爻：既有资料站 source_extracts/六爻取象1.txt
  */
@@ -51,7 +51,7 @@
 
   const system = (id, title, desc, tradition, nodes) => ({ id, title, desc, tradition, nodes });
   const source = {
-    liuren: "大六壬学习站 · 象法速查库（十二天将、十二支神）",
+    liuren: "六壬神课学习站 · 象法速查库（十二天将、十二支神）",
     qimen: "《奇门背记表.xlsx》（八卦九宫、八门、九星、八神）",
     liuyao: "六爻资料站 ·《六爻取象1》"
   };
@@ -59,7 +59,7 @@
   graph.traditions = [
     { id: "all", title: "四术共查", short: "共" },
     { id: "bazi", title: "八字", short: "八" },
-    { id: "liuren", title: "大六壬", short: "壬" },
+    { id: "liuren", title: "六壬神课", short: "壬" },
     { id: "qimen", title: "奇门", short: "奇" },
     { id: "liuyao", title: "六爻", short: "爻" }
   ];

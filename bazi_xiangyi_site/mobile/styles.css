@@ -2605,3 +2605,108 @@ mark {
   font-size: 12px;
   line-height: 1.65;
 }
+
+/* ============ 学习路线：把「未测 155」换成看得见的台阶 ============ */
+.stage-route {
+  margin: 0 0 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.stage-route > summary {
+  cursor: pointer;
+  padding: 11px 14px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gold);
+  list-style: none;
+}
+.stage-route > summary::-webkit-details-marker { display: none; }
+.stage-route > summary::after { content: " ›"; float: right; opacity: .6; }
+.stage-route[open] > summary::after { content: " ⌄"; }
+.stage-list { padding: 0 10px 10px; display: grid; gap: 8px; }
+
+.stage-row {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  grid-template-areas: "name count dots" "next next next" "hint hint hint";
+  gap: 4px 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-soft);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+.stage-row.current { border-color: var(--accent); background: var(--accent-soft); }
+/* 还没轮到的：安静待着，别抢当前那一阶的视线 */
+.stage-row.todo { opacity: .72; }
+.stage-row.done { opacity: .5; }
+.stage-name { grid-area: name; font-size: 14.5px; font-weight: 600; }
+.stage-count { grid-area: count; font-size: 12px; color: var(--gold); font-variant-numeric: tabular-nums; }
+.stage-dots { grid-area: dots; font-size: 10px; letter-spacing: 1px; color: var(--gold); text-align: right; }
+.stage-dots.wide {
+  display: block; height: 5px; border-radius: 3px;
+  background: var(--line); overflow: hidden; letter-spacing: 0;
+}
+.stage-dots.wide i { display: block; height: 100%; background: var(--gold); }
+.stage-next {
+  grid-area: next; font-size: 12.5px; color: var(--accent-ink); font-weight: 600;
+}
+.stage-hint { grid-area: hint; font-size: 12px; line-height: 1.5; color: var(--muted, #8b8377); }
+.stage-hint.done { font-style: italic; }
+
+/* ============ 我在学哪几术 ============ */
+.major-lead, .major-tip { font-size: 13.5px; line-height: 1.7; }
+.major-list { display: grid; gap: 10px; margin: 14px 0; }
+.major-opt {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "box name" "box sub";
+  gap: 2px 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card-soft);
+  cursor: pointer;
+}
+.major-opt.on { border-color: var(--accent); background: var(--accent-soft); }
+.major-opt input { grid-area: box; width: 20px; height: 20px; accent-color: var(--accent); }
+.major-opt b { grid-area: name; font-size: 15px; }
+.major-opt span { grid-area: sub; font-size: 12px; color: var(--gold); }
+
+/* ============ 详情页分支归组（135 种栏位收成四组） ============ */
+.branch-group {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--card);
+  margin-top: 10px;
+  overflow: hidden;
+}
+.branch-group > summary {
+  cursor: pointer;
+  padding: 10px 13px;
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.branch-group > summary::-webkit-details-marker { display: none; }
+.branch-group > summary span {
+  font-size: 11.5px;
+  font-weight: 400;
+  color: var(--gold);
+  margin-left: auto;
+}
+.branch-group > summary::after { content: "›"; opacity: .55; }
+.branch-group[open] > summary::after { content: "⌄"; }
+.branch-group-body { padding: 0 13px 12px; }
+.branch-group-body .branch-block:first-child { margin-top: 0; }
