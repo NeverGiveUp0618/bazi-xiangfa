@@ -2710,3 +2710,21 @@ mark {
 .branch-group[open] > summary::after { content: "⌄"; }
 .branch-group-body { padding: 0 13px 12px; }
 .branch-group-body .branch-block:first-child { margin-top: 0; }
+
+/* ⭐ 宽屏铺开（2026-08-11）：手机保持单列，桌面放宽并把长列表排成多列。
+   ⚠️ 这站的内容由 JS 渲染进 .view，容器是 .mobile-app(max-width:640px)。
+      与其余几站不同，它没有 .screen 那层，直接放宽 .mobile-app 即可。
+   ⚠️ 只给「列表型」容器分列（图鉴节点、搜索结果、闪卡），
+      搜索框/标签行/详情正文保持整宽——分列会把一句话切得七零八落。 */
+@media (min-width: 900px) {
+  .mobile-app { max-width: 1060px; }
+  .library-list,
+  #searchBody .result-list,
+  #libraryNodes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
+}
+@media (min-width: 1400px) {
+  .mobile-app { max-width: 1360px; }
+  .library-list,
+  #searchBody .result-list,
+  #libraryNodes { grid-template-columns: repeat(3, 1fr); }
+}
