@@ -941,31 +941,68 @@ const SYS_COLORS = {
   "liuyao-positions": "#b39ddb"
 };
 
-// 少量类别词别名，帮孤立节点接回网络
+/* relations 里写的词不一定就是库里的条目名：有的是简称（三合＝地支三合），
+ * 有的是统称（岁运＝大运+流年）。不给别名它们就被静默丢掉——
+ * 改前全库 68 种关联词写了却连不上，「共象」「三元类象」因此成了孤岛。 */
 const GRAPH_ALIAS = {
+  // 统称 / 类别：连上是为了不丢关系，但信息量低，按归类边降权
   "五行": ["木", "火", "土", "金", "水"],
-  "冲": ["六冲"], "破": ["六破"], "夫妻宫": ["日支"],
-  // 十神统称 → 具体词条，让「财富载体」这类按组说事的节点入网
   "财星": ["正财", "偏财"], "印星": ["正印", "偏印"], "官杀": ["正官", "七杀"],
-  "比劫": ["比肩", "劫财"], "食伤": ["食神", "伤官"]
+  "比劫": ["比肩", "劫财"], "食伤": ["食神", "伤官"],
+  "官星": ["正官", "七杀"], "文书": ["正印", "偏印"],
+  "财富": ["正财", "偏财"], "竞争": ["比肩", "劫财"],
+  "合": ["天干五合", "地支六合"], "岁运": ["大运", "流年"],
+  "宫位": ["年柱", "月柱", "日支", "时柱"], "贵人": ["天乙贵人", "贵人类"],
+  // 简称 / 子目 / 象义对位：都是实打实的关系，不降权
+  "冲": ["六冲"], "破": ["六破"], "夫妻宫": ["日支"],
+  "三合": ["地支三合"], "六合": ["地支六合"], "三会": ["地支三会"],
+  "刑": ["三刑"], "自刑": ["三刑"], "害": ["六害"],
+  "生穿": ["穿"], "克穿": ["穿"],
+  "入墓": ["墓库"], "开库": ["墓库"],
+  "月令": ["月柱"], "日柱": ["日主", "日支"], "太岁": ["流年"],
+  "藏干": ["三元类象"], "通根": ["干支互通禄位"],
+  "配偶": ["日支"], "子女": ["时柱"], "祖上": ["年柱"], "晚年": ["时柱"]
 };
+// 上面哪些属于"统称"，其展开出来的边按归类边算代价
+const CATEGORY_ALIAS = new Set([
+  "五行", "财星", "印星", "官杀", "比劫", "食伤", "官星", "文书",
+  "财富", "竞争", "合", "岁运", "宫位", "贵人"
+]);
 
-function buildGraphData() {
-  const gnodes = nodes.map((n, i) => ({ i, id: n.id, title: n.title, sysId: n.systemId, deg: 0 }));
+/* 边分两档权重。
+ * 归类边＝靠"属于哪个大类"连上的：任一端是五行/阴阳，或经统称别名展开（财星→正财偏财）。
+ * 全库 30 个纳音节点内部零连线、全部只挂在五行上，六壬天将奇门八门也各挂一条，
+ * 于是最短路径 64% 从五行穿过——取象路径给出的是"都属木"这种废话链。
+ * 给归类边更高的代价，让路径优先走冲合刑穿、同名跨术这类真关系边，走不通才回落到五行。 */
+const W_REL = 1;
+const W_CAT = 3;
+const CATEGORY_SYSTEMS = new Set(["five-elements"]);
+
+function buildGraphData(scope) {
+  const list = scope ? nodes.filter(n => inTradition(n, scope)) : nodes;
+  const gnodes = list.map((n, i) => ({ i, id: n.id, title: n.title, sysId: n.systemId, deg: 0 }));
   const idxByTitle = new Map(gnodes.map(g => [g.title, g.i]));
   const idxById = new Map(gnodes.map(g => [g.id, g.i]));
-  const edgeSet = new Set();
+  const edgeAt = new Map();
   const edges = [];
-  nodes.forEach((n, i) => {
+  list.forEach((n, i) => {
+    const fromCat = CATEGORY_SYSTEMS.has(n.systemId);
     (n.relations || []).forEach(r => {
-      const targets = idxByTitle.has(r) ? [r] : (GRAPH_ALIAS[r] || []);
+      const direct = idxByTitle.has(r);
+      const targets = direct ? [r] : (GRAPH_ALIAS[r] || []);
       targets.forEach(t => {
         const j = idxByTitle.get(t);
         if (j === undefined || j === i) return;
+        const w = (CATEGORY_ALIAS.has(r) || fromCat || CATEGORY_SYSTEMS.has(list[j].systemId)) ? W_CAT : W_REL;
         const key = Math.min(i, j) + "-" + Math.max(i, j);
-        if (edgeSet.has(key)) return;
-        edgeSet.add(key);
-        edges.push([i, j]);
+        const at = edgeAt.get(key);
+        if (at !== undefined) {
+          if (w < edges[at][2]) edges[at][2] = w;
+          return;
+        }
+        edgeAt.set(key, edges.length);
+        // 第 4 项记下这条边是不是别名展开来的，树里好把来龙去脉说清楚
+        edges.push([i, j, w, direct ? null : { from: i, word: r }]);
       });
     });
   });
@@ -993,6 +1030,33 @@ const SHENSHA_SPOTS = {
   驿马: { spots: "寅申巳亥", why: "驿马按三合局起，永远落在寅申巳亥四驿（长生冲位）" },
   华盖: { spots: "辰戌丑未", why: "华盖是三合局的墓神，只会是辰戌丑未四库" }
 };
+
+/* ---------- 跨术符号：标题带「·六壬 /·奇门 /·六爻」后缀 ---------- */
+const ART_SUFFIX = /·(六壬|奇门|六爻)$/;
+const ART_LABEL = { 六壬: "六壬", 奇门: "奇门", 六爻: "六爻" };
+function artOfNode(n) {
+  const m = ART_SUFFIX.exec(n?.title || "");
+  return m ? m[1] : "";
+}
+function bareName(n) {
+  return (n?.title || "").replace(ART_SUFFIX, "");
+}
+// 异体字：六壬写「螣蛇」、六爻奇门写「腾蛇」，是同一个
+function normalizeArtName(s) {
+  return String(s).replace(/螣/g, "腾").replace(/鈎/g, "勾");
+}
+// type 形如「十二天将 · 土」，拆出类别与五行
+function artKind(n) {
+  return String(n?.type || "").split("·")[0].trim();
+}
+function artElement(n) {
+  const m = /·\s*([木火土金水])\s*$/.exec(n?.type || "");
+  return m ? m[1] : "";
+}
+function sharedCore(a, b, limit = 3) {
+  const set = new Set((b?.core || []).map(String));
+  return (a?.core || []).map(String).filter(c => set.has(c)).slice(0, limit);
+}
 
 // 取节点代表的单字（甲木->甲、未土->未、五行节点->本字）
 function charOfNode(n) {
@@ -1071,12 +1135,24 @@ function pairNote(a, b) {
   return PAIR_NOTES[a.title + "|" + b.title] || PAIR_NOTES[b.title + "|" + a.title] || null;
 }
 
+const FALLBACK_WHY = "两个条目在资料里互相标注为关联词，取象时常放在一起看。";
+
 function explainPair(a, b) {
   // 手写精注 > 结构规则 > 原文摘句 > 兜底
   return pairNote(a, b)
     || explainDirected(a, b) || explainDirected(b, a)
     || explainByQuote(a, b) || explainByQuote(b, a)
-    || "两个条目在资料里互相标注为关联词，取象时常放在一起看。";
+    || FALLBACK_WHY;
+}
+
+/* 这条边是别名展开出来的（a 的关联词写的是「宫位」，落到 b＝年柱）：
+   兜底话在这种边上尤其没意义，直接把来龙去脉说出来。 */
+function explainEdge(a, b, via) {
+  const why = explainPair(a, b);
+  if (via && why === FALLBACK_WHY) {
+    return `「${a.title}」的关联词写的是「${via}」，库里对应到「${b.title}」这类条目。`;
+  }
+  return why;
 }
 
 function explainDirected(a, b) {
@@ -1092,6 +1168,26 @@ function explainDirected(a, b) {
       if (b.systemId === "five-elements" && a.title.endsWith(cb)) return `「${a.title}」的纳音五行就是${cb}。`;
     }
     return null;
+  }
+
+  // 跨术符号（贵人·六壬 / 值符·奇门 / 腾蛇·六爻）——这正是本站"四术共象"的落点，
+  // 原来这 90 条边全落到"互相标注为关联词"的兜底话上，等于什么也没说
+  const artA = artOfNode(a);
+  if (artA) {
+    const kindA = artKind(a), elA = artElement(a);
+    if (b.systemId === "five-elements" && elA && b.title === elA) {
+      return `「${bareName(a)}」在${ART_LABEL[artA]}的${kindA || "本类"}里属${elA}，取象的五行本气从这里来。`;
+    }
+    const artB = artOfNode(b);
+    const shared = sharedCore(a, b);
+    const tail = shared.length ? `两边共有的根性是${shared.join("、")}。` : "两术的资料把它们列为对应位，取象时可以互相印证。";
+    if (artB) {
+      const same = normalizeArtName(bareName(a)) === normalizeArtName(bareName(b));
+      return same
+        ? `「${bareName(a)}」在${ART_LABEL[artA]}是${kindA || "一类符号"}、在${ART_LABEL[artB]}是${artKind(b) || "一类符号"}，同一路象换了个盘面。${tail}`
+        : `${ART_LABEL[artA]}的${bareName(a)}与${ART_LABEL[artB]}的${bareName(b)}是对应位。${tail}`;
+    }
+    return `${ART_LABEL[artA]}的${bareName(a)}，对到八字这边就是「${b.title}」。${tail}`;
   }
 
   // 五行 <- 天干/地支
@@ -1814,6 +1910,7 @@ if (typeof document !== "undefined") {
 
   const QUICK_TERMS = ["领导", "文书", "财富", "口舌", "婚姻", "疾病", "盗失", "道路", "房产", "隐秘", "合作"];
   const CHANGELOG = [
+    ["26.8.14", "🕸️ 象义树大修——默认只铺「我在学」的术（201→155，图例从20个体系收到13个）；取象路径改走带权最短路，绕开「都属木」这类空话（经五行的路径从64%降到16%），全是同类的链会明说「这还不是取象链」；68个写了却连不上的关联词接回51个，跨术对位（六壬贵人↔奇门值符）终于有了真理由；布局存起来不再每次重算"],
     ["26.8.9", "🎯 定「我在学」——查/学/库三处默认范围统一，今日一组只从主修的术里出题（原来在20个体系里轮，一年有126天推的是用不上的术）；学习页新增分阶路线；详情页135种栏位收成四组"],
     ["26.7.24", "🧭 第三阶段四术共库上线——接入六壬神课24、奇门33、六爻13个核心节点，与八字共用根性、五维、双证和学习训练"],
     ["26.7.24", "📘 共通根性教程上线——系统讲解根性、五维、三筛、双证，配乾、冲、正印示例和每日练习模板"],
@@ -1999,6 +2096,20 @@ if (typeof document !== "undefined") {
     // QUICK_TERMS 有 11 项，靠后的（隐秘/合作等）选中后会落在可视区外、
     // 只在右边缘露出一角，看着像"显示不全"。渲染后归位。
     scrollActiveIntoView(el.quickRow);
+  }
+
+  /* 查询范围的唯一入口：范围条和象义树的范围按钮都走这里，
+     免得又出现"每切一个页签面对的内容集合就变一次"。 */
+  function setActiveTradition(id) {
+    if (!TRADITION_META.some(item => item.id === id)) return;
+    activeTradition = id;
+    storageSet("activeTradition", activeTradition);
+    const systems = activeTradition === "all"
+      ? graph.systems
+      : graph.systems.filter(system => inTradition({ tradition: system.tradition || "bazi", sharedWith: [] }, activeTradition));
+    if (!systems.some(system => system.id === activeSystemId)) activeSystemId = systems[0]?.id || graph.systems[0]?.id;
+    renderSearch();
+    renderLibrary();
   }
 
   function renderTraditionRows() {
@@ -3006,6 +3117,15 @@ if (typeof document !== "undefined") {
             <span>${escapeHtml(explainPair(node, target))}</span>
           </div>`;
       }
+      // 统称/简称（宫位、岁运、三合…）：库里没有同名条目，但对得上具体几条，别再说"暂无"
+      const aliased = (GRAPH_ALIAS[r] || []).map(t => nodeByTitle.get(t)).filter(Boolean);
+      if (aliased.length) {
+        return `
+          <div class="rel-link-row">
+            <button type="button" data-quick="${escapeHtml(r)}">${escapeHtml(r)}</button>
+            <span>库里对应：${aliased.map(t => `<button type="button" class="rel-alias" data-open-node="${escapeHtml(t.id)}">${escapeHtml(t.title)}</button>`).join("")}</span>
+          </div>`;
+      }
       return `
         <div class="rel-link-row">
           <button type="button" data-quick="${escapeHtml(r)}">${escapeHtml(r)}</button>
@@ -3069,7 +3189,8 @@ if (typeof document !== "undefined") {
   /* ---- 象义树 ---- */
   const tree = {
     inited: false, running: false, raf: 0, physics: false, dirty: true,
-    n: [], e: [], adj: [], idxById: null, anchors: [],
+    scope: "", n: [], e: [], adj: [], idxById: null, anchors: [],
+    labelDeg: 7, labelDegFocus: 5,
     cam: { x: 0, y: 0, s: 0.8 },
     alpha: 0, selected: -1, neighbors: new Set(), focusSys: "",
     searchSet: new Set(), searchQuery: "",
@@ -3082,47 +3203,114 @@ if (typeof document !== "undefined") {
   const treeWrap = document.querySelector("#treeWrap");
   const treeInfo = document.querySelector("#treeInfo");
   const treeLegend = document.querySelector("#treeLegend");
+  const treeScopeBtn = document.querySelector("#treeScope");
 
-  function treeInit() {
-    const { gnodes, edges, idxById } = buildGraphData();
+  // 布局缓存的指纹：节点/边数量变了、或 data.js 里的词条换了，缓存自动失效
+  function layoutStamp(gnodes, edges) {
+    let h = 0;
+    for (const g of gnodes) {
+      for (let k = 0; k < g.id.length; k++) h = (h * 31 + g.id.charCodeAt(k)) | 0;
+    }
+    // 前缀＝布局算法版本，调了力学参数就让旧缓存自然失效
+    return `v2-${gnodes.length}-${edges.length}-${(h >>> 0).toString(36)}`;
+  }
+
+  function treeInit(scope) {
+    const { gnodes, edges, idxById } = buildGraphData(scope);
+    tree.scope = scope;
     tree.idxById = idxById;
     tree.e = edges;
-    // 邻接表，供取象路径 BFS 用
+    // 邻接表带权重，供取象路径 Dijkstra 用
     tree.adj = gnodes.map(() => []);
-    edges.forEach(([a, b]) => { tree.adj[a].push(b); tree.adj[b].push(a); });
-    const sysIds = graph.systems.map(s => s.id);
-    // 竖椭圆排布锚点，贴合手机竖屏
-    const RX = 420, RY = 660;
-    tree.anchors = sysIds.map((id, k) => {
-      const a = (k / sysIds.length) * Math.PI * 2 - Math.PI / 2;
-      return { id, x: Math.cos(a) * RX, y: Math.sin(a) * RY };
+    tree.viaOf = new Map();
+    edges.forEach(([a, b, w, via]) => {
+      tree.adj[a].push([b, w]);
+      tree.adj[b].push([a, w]);
+      if (via) tree.viaOf.set(Math.min(a, b) + "-" + Math.max(a, b), via);
+    });
+    // 只给范围内真的有节点的体系留锚点位；角度按 sqrt(节点数) 加权——
+    // 20 个体系均分 360° 时，30 个纳音和 2 个六爻世应占一样宽，纳音永远糊成一坨
+    const present = graph.systems
+      .map(s => ({ id: s.id, title: s.title, count: gnodes.filter(g => g.sysId === s.id).length }))
+      .filter(s => s.count > 0);
+    const weights = present.map(s => Math.sqrt(s.count));
+    const wSum = weights.reduce((a, b) => a + b, 0) || 1;
+    const RX = 360, RY = 700;
+    let acc = 0;
+    tree.anchors = present.map((s, k) => {
+      const share = weights[k] / wSum;
+      const a = (acc + share / 2) * Math.PI * 2 - Math.PI / 2;
+      acc += share;
+      return { id: s.id, x: Math.cos(a) * RX, y: Math.sin(a) * RY, spread: 90 + Math.sqrt(s.count) * 26 };
     });
     const anchorOf = Object.fromEntries(tree.anchors.map(a => [a.id, a]));
     tree.n = gnodes.map(g => {
       const a = anchorOf[g.sysId];
       return {
         ...g,
-        x: a.x + (Math.random() - 0.5) * 200,
-        y: a.y + (Math.random() - 0.5) * 200,
+        x: a.x + (Math.random() - 0.5) * a.spread,
+        y: a.y + (Math.random() - 0.5) * a.spread,
         vx: 0, vy: 0,
         ax: a.x, ay: a.y,
+        q: 1 + Math.min(g.deg, 24) * 0.1,
         r: 4 + Math.min(g.deg, 12) * 0.65,
         color: SYS_COLORS[g.sysId] || "#ffffff"
       };
     });
-    tree.alpha = 1;
-    for (let i = 0; i < 240; i++) treeTick();
-    tree.alpha = 0.12;
-    treeLegend.innerHTML = graph.systems.map(s =>
+    // 缩到全图时恒显名字的门槛：按范围内度数取前 14 名，别写死 deg>=7
+    // （写死时全图只剩五行和十神露名，更坐实"五行是主角"的错觉）
+    const degSorted = gnodes.map(g => g.deg).sort((a, b) => b - a);
+    tree.labelDeg = degSorted.length > 14 ? Math.max(4, degSorted[13]) : 1;
+    tree.labelDegFocus = Math.max(3, Math.round(tree.labelDeg * 0.7));
+    // 首次布局要跑 240 次 O(N²) 迭代，手机上是同步阻塞的那一下卡顿。算完存起来，之后秒开。
+    const stamp = layoutStamp(gnodes, edges);
+    const cacheKey = `treeLayout__${scope || "all"}`;
+    const cached = storageGet(cacheKey, null);
+    if (cached && cached.stamp === stamp && cached.xy && cached.xy.length === gnodes.length * 2) {
+      tree.n.forEach((ni, k) => { ni.x = cached.xy[k * 2]; ni.y = cached.xy[k * 2 + 1]; });
+      tree.alpha = 0;
+      tree.physics = false;
+    } else {
+      tree.alpha = 1;
+      for (let i = 0; i < 240; i++) treeTick();
+      tree.alpha = 0.12;
+      const xy = [];
+      tree.n.forEach(ni => { xy.push(Math.round(ni.x), Math.round(ni.y)); });
+      storageSet(cacheKey, { stamp, xy });
+    }
+    treeLegend.innerHTML = present.map(s =>
       `<button type="button" data-tree-sys="${escapeHtml(s.id)}"><span class="dot" style="color:${SYS_COLORS[s.id]};background:${SYS_COLORS[s.id]}"></span>${escapeHtml(s.title)}</button>`
     ).join("");
+    renderTreeScope();
     renderTreeInfo();
     tree.inited = true;
   }
 
+  // 范围变了（我在学 ↔ 全部 ↔ 单术）就整张图重建
+  function treeRebuild(scope) {
+    clearPath();
+    clearTreeSearch();
+    tree.selected = -1;
+    tree.neighbors = new Set();
+    tree.focusSys = "";
+    treeInit(scope);
+    treeResize();
+    treeFitTo(tree.n);
+    tree.fitted = true;
+    if (tree.alpha > 0.02) tree.physics = true;
+    tree.dirty = true;
+  }
+
+  function renderTreeScope() {
+    if (!treeScopeBtn) return;
+    const title = traditionById.get(tree.scope)?.title || "全部";
+    treeScopeBtn.textContent = `${title} · ${tree.n.length}`;
+  }
+
   function treeTick() {
     const N = tree.n, E = tree.e, a = tree.alpha;
-    // 斥力（全对）
+    // 斥力（全对）。连得越多的词斥力越大，否则木火土金水这五个 hub
+    // 既同属一个体系锚点、又被四面八方拉向中心，最后叠成一坨、标签互相压
     for (let i = 0; i < N.length; i++) {
       const ni = N[i];
       for (let j = i + 1; j < N.length; j++) {
@@ -3131,7 +3319,8 @@ if (typeof document !== "undefined") {
         let d2 = dx * dx + dy * dy;
         if (d2 < 1) { dx = Math.random() - 0.5; dy = Math.random() - 0.5; d2 = 1; }
         if (d2 > 300000) continue;
-        const f = Math.min(1750 / d2, 4) * a;
+        const q = ni.q * nj.q;
+        const f = Math.min(1750 * q / d2, 4 * q) * a;
         const d = Math.sqrt(d2);
         const fx = (dx / d) * f, fy = (dy / d) * f;
         ni.vx += fx; ni.vy += fy;
@@ -3149,10 +3338,12 @@ if (typeof document !== "undefined") {
       ni.vx += fx; ni.vy += fy;
       nj.vx -= fx; nj.vy -= fy;
     }
-    // 体系锚点引力 + 全局向心
+    // 体系锚点引力 + 全局向心。枢纽词的锚点引力放松，让它落到自己那群邻居中间去，
+    // 而不是死死钉在体系锚点上
     for (const ni of N) {
-      ni.vx += (ni.ax - ni.x) * 0.014 * a + (0 - ni.x) * 0.0012 * a;
-      ni.vy += (ni.ay - ni.y) * 0.014 * a + (0 - ni.y) * 0.0012 * a;
+      const pull = 0.014 / (1 + ni.deg * 0.06);
+      ni.vx += (ni.ax - ni.x) * pull * a + (0 - ni.x) * 0.0012 * a;
+      ni.vy += (ni.ay - ni.y) * pull * a + (0 - ni.y) * 0.0012 * a;
       ni.vx *= 0.85; ni.vy *= 0.85;
       if (tree.dragNode !== ni.i) { ni.x += ni.vx; ni.y += ni.vy; }
     }
@@ -3180,39 +3371,58 @@ if (typeof document !== "undefined") {
     const hasPath = tree.pathNodes.length >= 2;
     const hasSearch = tree.searchSet.size > 0;
 
-    // 边
-    for (const [i, j] of tree.e) {
+    // 边：同色同宽的线段先攒起来，最后每种样式一次 stroke。
+    // 513 条边逐条 beginPath/stroke，其中九成是选中态下 alpha 0.03 的背景线，纯属浪费。
+    const batches = new Map();
+    const pushSeg = (color, alpha, width, dash, x1, y1, x2, y2) => {
+      const key = `${color}|${alpha}|${width}|${dash}`;
+      let b = batches.get(key);
+      if (!b) { b = { color, alpha, width, dash, pts: [] }; batches.set(key, b); }
+      b.pts.push(x1, y1, x2, y2);
+    };
+    for (const [i, j, w] of tree.e) {
       const ni = tree.n[i], nj = tree.n[j];
       const [x1, y1] = w2s(ni.x, ni.y);
       const [x2, y2] = w2s(nj.x, nj.y);
-      let alpha = 0.16, width = 1, color = ni.color;
+      // 两端同在屏外一侧就整条跳过
+      if ((x1 < 0 && x2 < 0) || (y1 < 0 && y2 < 0) || (x1 > tree.W && x2 > tree.W) || (y1 > tree.H && y2 > tree.H)) continue;
+      const cat = w === W_CAT;
+      let alpha = cat ? 0.10 : 0.18, width = 1, color = ni.color, on = false;
       if (hasPath) {
-        const on = tree.pathEdgeSet.has(Math.min(i, j) + "-" + Math.max(i, j));
+        on = tree.pathEdgeSet.has(Math.min(i, j) + "-" + Math.max(i, j));
         alpha = on ? 1 : 0.03;
         width = on ? 2.6 : 1;
         if (on) color = "#ffe08a";
       } else if (hasSearch) {
-        const on = tree.searchSet.has(i) || tree.searchSet.has(j);
+        on = tree.searchSet.has(i) || tree.searchSet.has(j);
         alpha = on ? 0.5 : 0.035;
         width = on ? 1.5 : 1;
         if (on) color = "#ffe08a";
       } else if (hasSel) {
-        const on = (i === tree.selected || j === tree.selected);
+        on = (i === tree.selected || j === tree.selected);
         alpha = on ? 0.9 : 0.04;
         width = on ? 1.8 : 1;
         if (on) color = tree.n[tree.selected].color;
       } else if (focus) {
-        const on = ni.sysId === focus || nj.sysId === focus;
-        alpha = on ? 0.32 : 0.04;
+        on = ni.sysId === focus || nj.sysId === focus;
+        alpha = on ? (cat ? 0.2 : 0.34) : 0.04;
       }
-      ctx.strokeStyle = color;
-      ctx.globalAlpha = alpha;
-      ctx.lineWidth = width;
+      // 高亮出来的归类边画成虚线：一眼看出这条只是"同属一类"，不是真关系
+      pushSeg(color, alpha.toFixed(3), width, on && cat ? 1 : 0, x1, y1, x2, y2);
+    }
+    for (const b of batches.values()) {
+      ctx.strokeStyle = b.color;
+      ctx.globalAlpha = Number(b.alpha);
+      ctx.lineWidth = b.width;
+      ctx.setLineDash(b.dash ? [3, 4] : []);
       ctx.beginPath();
-      ctx.moveTo(x1, y1);
-      ctx.lineTo(x2, y2);
+      for (let k = 0; k < b.pts.length; k += 4) {
+        ctx.moveTo(b.pts[k], b.pts[k + 1]);
+        ctx.lineTo(b.pts[k + 2], b.pts[k + 3]);
+      }
       ctx.stroke();
     }
+    ctx.setLineDash([]);
 
     // 节点（光晕 + 实心核）
     for (const ni of tree.n) {
@@ -3249,22 +3459,36 @@ if (typeof document !== "undefined") {
     ctx.globalAlpha = 1;
     ctx.font = "11px -apple-system, 'PingFang SC', sans-serif";
     ctx.textAlign = "center";
+    // 先挑出要写字的，重要的排前面：选中/路径 > 度数高。
+    // 后面的词若跟已经写下的字压在一起就让位——挤成一坨谁也读不出来
+    const wanted = [];
     for (const ni of tree.n) {
       let show;
       if (hasPath) show = tree.pathNodeSet.has(ni.i);
       else if (hasSearch) show = tree.searchSet.has(ni.i);
       else if (hasSel) show = ni.i === tree.selected || tree.neighbors.has(ni.i);
-      else if (focus) show = ni.sysId === focus ? (s > 0.4 || ni.deg >= 5) : false;
-      else show = s >= 0.62 || ni.deg >= 7;
+      else if (focus) show = ni.sysId === focus ? (s > 0.4 || ni.deg >= tree.labelDegFocus) : false;
+      else show = s >= 0.62 || ni.deg >= tree.labelDeg;
       if (!show) continue;
       const [sx, sy] = w2s(ni.x, ni.y);
       if (sx < -20 || sy < -20 || sx > tree.W + 20 || sy > tree.H + 20) continue;
-      const bold = ni.i === tree.selected || (hasPath && tree.pathNodeSet.has(ni.i));
+      const key = ni.i === tree.selected || (hasPath && tree.pathNodeSet.has(ni.i));
+      wanted.push({ ni, sx, sy, key });
+    }
+    wanted.sort((a, b) => (b.key ? 1 : 0) - (a.key ? 1 : 0) || b.ni.deg - a.ni.deg);
+    const taken = [];
+    for (const it of wanted) {
+      const bold = it.key;
+      const fs = bold ? 13 : 11;
+      const w = it.ni.title.length * fs + 4, h = fs + 3;
+      const x = it.sx - w / 2, y = it.sy + it.ni.r * s + 12 - fs;
+      if (!bold && taken.some(t => x < t.x + t.w && x + w > t.x && y < t.y + t.h && y + h > t.y)) continue;
+      taken.push({ x, y, w, h });
       ctx.font = (bold ? "600 13px" : "11px") + " -apple-system, 'PingFang SC', sans-serif";
       ctx.fillStyle = "rgba(0,0,0,0.65)";
-      ctx.fillText(ni.title, sx + 1, sy + ni.r * s + 13);
+      ctx.fillText(it.ni.title, it.sx + 1, it.sy + it.ni.r * s + 13);
       ctx.fillStyle = bold ? "#ffffff" : "rgba(255,255,255,0.85)";
-      ctx.fillText(ni.title, sx, sy + ni.r * s + 12);
+      ctx.fillText(it.ni.title, it.sx, it.sy + it.ni.r * s + 12);
     }
   }
 
@@ -3293,38 +3517,54 @@ if (typeof document !== "undefined") {
     // 用分位数裁剪，外围孤点不把视野拉偏
     const xs = list.map(n => n.x).sort((p, q) => p - q);
     const ys = list.map(n => n.y).sort((p, q) => p - q);
-    const lo = Math.floor(xs.length * 0.06), hi = Math.ceil(xs.length * 0.94) - 1;
+    const lo = Math.floor(xs.length * 0.03), hi = Math.ceil(xs.length * 0.97) - 1;
     const x1 = xs[lo], x2 = xs[hi], y1 = ys[lo], y2 = ys[hi];
     const bw = Math.max(x2 - x1, 60), bh = Math.max(y2 - y1, 60);
-    tree.cam.s = Math.min(Math.min(tree.W / bw, tree.H / bh) * 0.82, 2.2);
+    tree.cam.s = Math.min(Math.min(tree.W / bw, tree.H / bh) * 0.9, 2.2);
     tree.cam.x = (x1 + x2) / 2;
     tree.cam.y = (y1 + y2) / 2;
     tree.dirty = true;
   }
 
-  // BFS 找两节点间最短取象路径（返回节点下标数组，含首尾）
-  function bfsPath(a, b) {
+  /* 找两节点间的取象路径（返回节点下标数组，含首尾）。
+   * 不是最短跳数，是最小代价：归类边（→五行、→统称）代价 3，真关系边代价 1。
+   * 同样连得通的两条链，宁可多绕一跳走冲合刑穿，也不要一步跨过"都属木"。
+   * 节点两百上下，朴素 O(N²) Dijkstra 足够。 */
+  function findPath(a, b) {
     if (a === b) return [a];
-    const prev = new Int32Array(tree.n.length).fill(-1);
-    const seen = new Uint8Array(tree.n.length);
-    const queue = [a];
-    seen[a] = 1;
-    for (let head = 0; head < queue.length; head++) {
-      const cur = queue[head];
-      for (const nx of tree.adj[cur]) {
-        if (seen[nx]) continue;
-        seen[nx] = 1;
-        prev[nx] = cur;
-        if (nx === b) {
-          const path = [b];
-          let p = cur;
-          while (p !== -1) { path.push(p); p = prev[p]; }
-          return path.reverse();
-        }
-        queue.push(nx);
+    const N = tree.n.length;
+    const dist = new Float64Array(N).fill(Infinity);
+    const prev = new Int32Array(N).fill(-1);
+    const done = new Uint8Array(N);
+    dist[a] = 0;
+    for (;;) {
+      let cur = -1, best = Infinity;
+      for (let i = 0; i < N; i++) if (!done[i] && dist[i] < best) { best = dist[i]; cur = i; }
+      if (cur < 0) break;
+      if (cur === b) {
+        const path = [];
+        for (let p = b; p !== -1; p = prev[p]) path.push(p);
+        return path.reverse();
+      }
+      done[cur] = 1;
+      for (const [nx, w] of tree.adj[cur]) {
+        const nd = best + w;
+        if (nd < dist[nx]) { dist[nx] = nd; prev[nx] = cur; }
       }
     }
     return null;
+  }
+
+  // 整条链全是归类边＝这两个词只在"同属某五行"上碰头，别装成推导链
+  function pathIsCategoryOnly(nodesIdx) {
+    if (nodesIdx.length < 2) return false;
+    const wOf = new Map();
+    for (const [i, j, w] of tree.e) wOf.set(Math.min(i, j) + "-" + Math.max(i, j), w);
+    for (let k = 0; k + 1 < nodesIdx.length; k++) {
+      const a = nodesIdx[k], b = nodesIdx[k + 1];
+      if (wOf.get(Math.min(a, b) + "-" + Math.max(a, b)) !== W_CAT) return false;
+    }
+    return true;
   }
 
   function clearPath() {
@@ -3370,6 +3610,14 @@ if (typeof document !== "undefined") {
     tree.dirty = true;
   }
 
+  // 两个下标之间这条边为什么连着（别名边会带上"关联词写的是哪个统称"）
+  function whyEdge(i, j) {
+    const a = nodeById.get(tree.n[i].id), b = nodeById.get(tree.n[j].id);
+    const via = tree.viaOf?.get(Math.min(i, j) + "-" + Math.max(i, j));
+    if (!via) return explainPair(a, b);
+    return via.from === i ? explainEdge(a, b, via.word) : explainEdge(b, a, via.word);
+  }
+
   function renderTreeInfo() {
     // 状态零：搜索高亮
     if (tree.searchSet.size) {
@@ -3394,12 +3642,15 @@ if (typeof document !== "undefined") {
         const gnk = tree.n[idx];
         parts.push(`<button type="button" class="tc-chain-node" data-open-node="${escapeHtml(gnk.id)}" style="color:${gnk.color}">${escapeHtml(gnk.title)}</button>`);
         if (k + 1 < tree.pathNodes.length) {
-          const to = tree.n[tree.pathNodes[k + 1]];
-          const reason = explainPair(nodeById.get(gnk.id), nodeById.get(to.id));
+          const reason = whyEdge(idx, tree.pathNodes[k + 1]);
           parts.push(`<div class="tc-chain-why"><span class="tc-arrow">↓</span><span>${escapeHtml(reason)}</span></div>`);
         }
       });
       const a = tree.n[tree.pathNodes[0]], z = tree.n[tree.pathNodes[tree.pathNodes.length - 1]];
+      // 全程只有归类边，说明两者的唯一交点就是五行本身，明说，别让人以为是一条推导链
+      const thin = pathIsCategoryOnly(tree.pathNodes)
+        ? `<p class="tc-chain-note">这两个词之间目前只有"同属一类"这一层交点，还不是一条真正的取象链——具体断法要另找冲合刑穿、宫位或神煞的线索。</p>`
+        : "";
       treeInfo.innerHTML = `
         <div class="tree-card">
           <div class="tc-path-head">
@@ -3407,6 +3658,7 @@ if (typeof document !== "undefined") {
             <span>${escapeHtml(a.title)} → ${escapeHtml(z.title)} · ${tree.pathNodes.length - 1} 步</span>
             <button type="button" data-path-clear>✕</button>
           </div>
+          ${thin}
           <div class="tc-chain">${parts.join("")}</div>
         </div>`;
       return;
@@ -3433,7 +3685,7 @@ if (typeof document !== "undefined") {
     const generated = derivationExamples(node, { limit: 5 });
     const nbs = [...tree.neighbors].map(i => tree.n[i]).slice(0, 12);
     const nbRows = nbs.map(nb => {
-      const reason = explainPair(node, nodeById.get(nb.id));
+      const reason = whyEdge(tree.selected, nb.i);
       return `
         <div class="tc-nb-row">
           <button type="button" data-tree-select="${nb.i}" style="color:${nb.color};border-color:${nb.color}">${escapeHtml(nb.title)}</button>
@@ -3470,7 +3722,7 @@ if (typeof document !== "undefined") {
     tree.selected = i;
     tree.neighbors = new Set();
     if (i >= 0) {
-      for (const nx of tree.adj[i]) tree.neighbors.add(nx);
+      for (const [nx] of tree.adj[i]) tree.neighbors.add(nx);
       if (center) {
         tree.cam.x = tree.n[i].x;
         tree.cam.y = tree.n[i].y;
@@ -3489,7 +3741,7 @@ if (typeof document !== "undefined") {
       return;
     }
     if (tree.pathStart >= 0 && hit !== tree.pathStart) {
-      const path = bfsPath(tree.pathStart, hit);
+      const path = findPath(tree.pathStart, hit);
       if (path && path.length >= 2) { setPath(path); return; }
       // 不连通：保留起点，叉号/好 仍能回到起点单选态
       const a = tree.n[tree.pathStart], b = tree.n[hit];
@@ -3525,7 +3777,9 @@ if (typeof document !== "undefined") {
   }
 
   function treeStart() {
-    if (!tree.inited) treeInit();
+    // 树跟查/学/图鉴共用一个范围：默认「我在学」，不再把没在学的术铺满整张图
+    if (!tree.inited) treeInit(activeTradition);
+    else if (tree.scope !== activeTradition) treeRebuild(activeTradition);
     treeResize();
     if (!tree.fitted) { treeFitTo(tree.n); tree.fitted = true; }
     if (!tree.running) {
@@ -3652,6 +3906,12 @@ if (typeof document !== "undefined") {
     selectTreeNode(-1, false);
     treeLegend.querySelectorAll("button").forEach(b => b.classList.remove("active"));
     treeFitTo(tree.n);
+  });
+
+  // 范围在「我在学」和「全部」之间切；单术聚焦交给下面的图例
+  treeScopeBtn?.addEventListener("click", () => {
+    setActiveTradition(tree.scope === MAJOR_ID ? "all" : MAJOR_ID);
+    treeRebuild(activeTradition);
   });
 
   document.querySelector("#treeShuffle").addEventListener("click", () => {
@@ -3881,7 +4141,14 @@ if (typeof document !== "undefined") {
     if (treeNode) {
       showView("tree");
       treeStart();
-      const index = tree.idxById.get(treeNode.dataset.treeNode);
+      const nodeId = treeNode.dataset.treeNode;
+      let index = tree.idxById.get(nodeId);
+      // 词条不在当前范围里（在看奇门的词、范围却是「我在学」）：先把范围放开再定位
+      if (index === undefined && nodeById.has(nodeId)) {
+        setActiveTradition("all");
+        treeRebuild("all");
+        index = tree.idxById.get(nodeId);
+      }
       if (index !== undefined) selectTreeNode(index);
       return;
     }
@@ -3918,14 +4185,7 @@ if (typeof document !== "undefined") {
 
     const tradition = event.target.closest("[data-tradition]");
     if (tradition) {
-      activeTradition = tradition.dataset.tradition;
-      storageSet("activeTradition", activeTradition);
-      const systems = activeTradition === "all"
-        ? graph.systems
-        : graph.systems.filter(system => (system.tradition || "bazi") === activeTradition);
-      if (!systems.some(system => system.id === activeSystemId)) activeSystemId = systems[0]?.id || graph.systems[0]?.id;
-      renderSearch();
-      renderLibrary();
+      setActiveTradition(tradition.dataset.tradition);
       return;
     }
 

@@ -1682,6 +1682,24 @@ mark {
   backdrop-filter: blur(4px);
 }
 
+/* 范围按钮：当前这张图铺的是哪几术、多少个词 */
+.tree-tools .tree-scope-btn {
+  border-color: rgba(212, 175, 100, 0.5);
+  color: #ffe08a;
+  font-weight: 600;
+}
+
+/* 整条路径都是"同属一类"时的说明 */
+.tc-chain-note {
+  margin: 0 0 8px;
+  padding: 7px 9px;
+  border-radius: 9px;
+  background: rgba(255, 224, 138, 0.09);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
 .tree-info {
   position: absolute;
   left: 10px;
@@ -2025,6 +2043,14 @@ mark {
   line-height: 1.6;
   color: var(--muted);
   padding-top: 3px;
+}
+
+/* 统称词对应到的具体条目 */
+.rel-link-row .rel-alias {
+  min-width: 0;
+  margin: 0 4px 4px 0;
+  padding: 2px 10px;
+  font-size: 13px;
 }
 
 /* ---- 底部导航 ---- */

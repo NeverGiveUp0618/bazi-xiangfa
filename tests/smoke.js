@@ -28,6 +28,56 @@ setTimeout(()=>{const w=dom.window;
     }
     return bad.length?bad.slice(0,2).join(' | '):(made>=50?true:'只出了'+made+'题');
   });
+  /* ---- 象义树 ---- */
+  const doc=w.document;
+  const click=elm=>elm.dispatchEvent(new w.MouseEvent('click',{bubbles:true}));
+  t('进得了象义树（搜索→详情→关联网络）',()=>{
+    const input=doc.querySelector('#globalSearch');
+    input.value='甲木';
+    input.dispatchEvent(new w.Event('input',{bubbles:true}));
+    const card=doc.querySelector('#searchBody [data-open-node]');
+    if(!card)return '搜不到结果卡';
+    click(card);
+    const entry=doc.querySelector('.detail-tree-entry');
+    if(!entry)return '详情页没有「查看关联网络」入口';
+    click(entry);
+    return doc.querySelector('#view-tree').classList.contains('active')?true:'树没打开';
+  });
+  t('树默认只铺「我在学」范围，不是全部 20 体系',()=>{
+    const label=doc.querySelector('#treeScope').textContent;
+    const legend=doc.querySelectorAll('#treeLegend button').length;
+    console.log(`   范围按钮：${label}；图例 ${legend} 个体系`);
+    const count=Number(label.split('·')[1]);
+    return (label.includes('我在学')&&count>0&&count<201&&legend<20)?true:`按钮=${label} 图例=${legend}`;
+  });
+  t('范围按钮能切到全部再切回来',()=>{
+    const btn=doc.querySelector('#treeScope');
+    click(btn);
+    const all=btn.textContent, allLegend=doc.querySelectorAll('#treeLegend button').length;
+    click(btn);
+    const back=btn.textContent;
+    return (Number(all.split('·')[1])===201&&allLegend===20&&back.includes('我在学'))
+      ?true:`切全部=${all}(图例${allLegend}) 切回=${back}`;
+  });
+  t('布局已缓存，二次进树不再重跑力导向',()=>{
+    const keys=Object.keys(w.localStorage).filter(k=>k.includes('treeLayout__'));
+    return keys.length?true:'没写入 treeLayout 缓存';
+  });
+  t('每条关联边都说得出理由（零兜底）',()=>{
+    const r=w.eval(`(function(){
+      const {gnodes,edges}=buildGraphData(null);
+      const bad=[];
+      for(const [i,j,w,via] of edges){
+        const a=nodeById.get(gnodes[i].id), b=nodeById.get(gnodes[j].id);
+        const why=via?(via.from===i?explainEdge(a,b,via.word):explainEdge(b,a,via.word)):explainPair(a,b);
+        if(!why||why===FALLBACK_WHY)bad.push(gnodes[i].title+'—'+gnodes[j].title);
+      }
+      return {n:edges.length,bad};
+    })()`);
+    console.log(`   ${r.n} 条边`);
+    return r.bad.length?`${r.bad.length} 条没理由：`+r.bad.slice(0,3).join(' '):true;
+  });
+
   console.log('\n'+(errs.length?'❌ '+errs.length:'✅ 冒烟通过'));
   process.exit(errs.length?1:0);
 },2500);

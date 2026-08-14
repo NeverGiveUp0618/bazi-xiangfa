@@ -228,6 +228,86 @@ t('app.js 文案里不再有「大六壬」', ()=>{
   const n=(app.match(/大六壬/g)||[]).length;
   return n===0?true:`还剩 ${n} 处`});
 
+console.log('\n【象义树：图结构与取象路径】');
+// 把 app.js 的建图逻辑原样搬过来跑（片段 eval 时 const 不泄漏到外层，统一换成 var）
+const asVar=re=>app.match(re)[0].replace(/^const /,'var ');
+eval(asVar(/const GRAPH_ALIAS = \{[\s\S]*?\n\};/));
+eval(asVar(/const CATEGORY_ALIAS = new Set\(\[[\s\S]*?\]\);/));
+eval('var W_REL=1,W_CAT=3,CATEGORY_SYSTEMS=new Set(["five-elements"]);');
+const gNodes=G.systems.flatMap(s=>s.nodes.map(n=>({...n,systemId:s.id,tradition:s.tradition||'bazi',sharedWith:n.sharedWith||[]})));
+function inTradition(node,t){if(!t||t==='all')return true;
+  const ids=t==='major'?['bazi','liuren']:[t];
+  return ids.some(id=>node.tradition===id||node.sharedWith.includes(id));}
+const nodes_=gNodes; // buildGraphData 片段里引用的是 nodes
+eval(asVar(/function buildGraphData\(scope\) \{[\s\S]*?\n\}\n/).replace(/\bnodes\b/g,'nodes_'));
+
+function graphOf(scope){
+  const {gnodes,edges}=buildGraphData(scope);
+  const adj=gnodes.map(()=>[]);
+  edges.forEach(([a,b,w])=>{adj[a].push([b,w]);adj[b].push([a,w])});
+  return {gnodes,edges,adj};
+}
+function componentsOf(g){
+  const seen=new Array(g.gnodes.length).fill(false);const out=[];
+  for(let i=0;i<g.gnodes.length;i++){if(seen[i])continue;const q=[i];seen[i]=true;let n=0;
+    for(let h=0;h<q.length;h++){n++;for(const [x] of g.adj[q[h]])if(!seen[x]){seen[x]=true;q.push(x)}}
+    out.push(n)}
+  return out.sort((a,b)=>b-a);
+}
+
+t('树按范围建图：「我在学」比全库明显小',()=>{
+  const major=graphOf('major'), all=graphOf(null);
+  console.log(`   我在学 ${major.gnodes.length}节点/${major.edges.length}边 · 全部 ${all.gnodes.length}节点/${all.edges.length}边`);
+  return (major.gnodes.length<all.gnodes.length&&major.gnodes.length>100)?true:
+    `major=${major.gnodes.length} all=${all.gnodes.length}`});
+
+t('两种范围下都连成一张网，没有孤岛和孤立点',()=>{
+  const bad=[];
+  for(const scope of ['major',null]){
+    const g=graphOf(scope), comps=componentsOf(g);
+    const lonely=g.gnodes.filter(x=>x.deg===0).map(x=>x.title);
+    if(comps.length>1)bad.push(`${scope||'all'} 裂成 ${comps.length} 块(${comps.join('/')})`);
+    if(lonely.length)bad.push(`${scope||'all'} 孤立点 ${lonely.join('·')}`);
+  }
+  return bad.length?bad.join('；'):true});
+
+t('曾经写了却连不上的关联词已接回（宫位/岁运/三合/藏干等）',()=>{
+  const titles=new Set(gNodes.map(n=>n.title));
+  const must=['合','岁运','宫位','三合','六合','三会','刑','害','自刑','生穿','克穿',
+    '入墓','开库','月令','日柱','太岁','藏干','通根','配偶','子女','祖上','晚年','官星','贵人','文书','财富','竞争'];
+  const miss=must.filter(w=>!titles.has(w)&&!(GRAPH_ALIAS[w]||[]).length);
+  return miss.length?'仍无映射: '+miss.join(' '):true});
+
+t('归类边（→五行、统称展开）确实被标了高代价',()=>{
+  const {edges}=graphOf(null);
+  const cat=edges.filter(e=>e[2]===W_CAT).length;
+  const g0=graphOf(null);
+  const wuxing=edges.filter(([a,b,w])=>w!==W_CAT&&(g0.gnodes[a].sysId==='five-elements'||g0.gnodes[b].sysId==='five-elements')).length;
+  console.log(`   ${cat}/${edges.length} 条归类边`);
+  return (cat>100&&wuxing===0)?true:`归类边 ${cat} 条、漏标的五行边 ${wuxing} 条`});
+
+t('取象路径绕开五行：带权最短路远好于纯最短跳数',()=>{
+  const g=graphOf(null), N=g.gnodes.length;
+  const WX=new Set(g.gnodes.filter(x=>x.sysId==='five-elements').map(x=>x.i));
+  const dij=(a,b)=>{const dist=new Float64Array(N).fill(Infinity),prev=new Int32Array(N).fill(-1),done=new Uint8Array(N);dist[a]=0;
+    for(;;){let cur=-1,best=Infinity;for(let i=0;i<N;i++)if(!done[i]&&dist[i]<best){best=dist[i];cur=i}
+      if(cur<0)return null;if(cur===b){const p=[];for(let x=b;x!==-1;x=prev[x])p.push(x);return p.reverse()}
+      done[cur]=1;for(const [nx,w] of g.adj[cur])if(best+w<dist[nx]){dist[nx]=best+w;prev[nx]=cur}}};
+  const bfs=(a,b)=>{const prev=new Int32Array(N).fill(-1),seen=new Uint8Array(N),q=[a];seen[a]=1;
+    for(let h=0;h<q.length;h++)for(const [x] of g.adj[q[h]]){if(seen[x])continue;seen[x]=1;prev[x]=q[h];
+      if(x===b){const p=[b];let c=q[h];while(c!==-1){p.push(c);c=prev[c]}return p.reverse()}q.push(x)}return null};
+  let seed=42;const rnd=()=>(seed=(seed*48271)%2147483647)%N; // 固定种子，结果可复现
+  const rate=fn=>{let n=0,via=0;
+    for(let k=0;k<600;k++){const a=rnd(),b=rnd();if(a===b)continue;const p=fn(a,b);if(!p)continue;n++;
+      if(p.slice(1,-1).some(x=>WX.has(x)))via++}
+    return 100*via/n};
+  const rNew=rate(dij), rOld=rate(bfs);
+  console.log(`   经五行的路径占比：最短跳数 ${rOld.toFixed(0)}% → 带权 ${rNew.toFixed(0)}%`);
+  return (rNew<25&&rNew<rOld/2)?true:`带权 ${rNew.toFixed(0)}%、跳数 ${rOld.toFixed(0)}%`});
+
+t('app.js 已改用带权 findPath，不再是纯 BFS',()=>
+  (/function findPath\(a, b\)/.test(app)&&!/bfsPath\(/.test(app))?true:'仍在用 bfsPath');
+
 console.log('\n【死文件提示】');
 t('根级 index.html 只做跳转、不加载脚本',()=>{
   const h=fs.readFileSync(R+'index.html','utf8');
