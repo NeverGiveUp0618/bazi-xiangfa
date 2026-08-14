@@ -1745,8 +1745,31 @@ mark {
 }
 
 .tree-card {
-  max-height: 46vh;
+  max-height: 40vh;
   overflow-y: auto;
+}
+
+/* 收起把手：浮在卡片正上方居中。
+   贴右会撞 tree-tools 那一列（卡片收起后尤其明显），贴左会撞页面左边的悬浮按钮 */
+.tc-fold {
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(20, 17, 30, 0.78);
+  color: rgba(255, 255, 255, 0.8);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px;
+  backdrop-filter: blur(4px);
+}
+
+/* 收起后只留标题那一行，把图让出来 */
+.tree-info.folded .tree-card {
+  max-height: 46px;
+  overflow: hidden;
 }
 
 .tree-card .tc-nb-list {

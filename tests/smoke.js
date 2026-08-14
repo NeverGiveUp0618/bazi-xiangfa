@@ -50,6 +50,25 @@ setTimeout(()=>{const w=dom.window;
     const count=Number(label.split('·')[1]);
     return (label.includes('我在学')&&count>0&&count<201&&legend<20)?true:`按钮=${label} 图例=${legend}`;
   });
+  t('信息卡能收起，只留标题那一行',()=>{
+    const info=doc.querySelector('#treeInfo');
+    const card=doc.querySelector('#treeInfo .tree-card');
+    if(!card)return '当前不是卡片状态';
+    const fold=doc.querySelector('[data-tree-fold]');
+    if(!fold)return '没有收起把手';
+    click(fold);
+    const folded=info.classList.contains('folded');
+    click(doc.querySelector('[data-tree-fold]'));
+    const back=info.classList.contains('folded');
+    return (folded&&!back)?true:`收起=${folded} 再点=${back}`;
+  });
+  t('收起状态会记住',()=>{
+    const fold=doc.querySelector('[data-tree-fold]');
+    click(fold);
+    const saved=w.localStorage.getItem('bazi_xiangyi_mobile_v2__treeInfoFolded');
+    click(doc.querySelector('[data-tree-fold]'));
+    return saved==='true'?true:'未写入存储，实为 '+saved;
+  });
   t('范围按钮能切到全部再切回来',()=>{
     const btn=doc.querySelector('#treeScope');
     click(btn);

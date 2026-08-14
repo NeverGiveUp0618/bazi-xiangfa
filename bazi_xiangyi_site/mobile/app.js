@@ -3610,6 +3610,17 @@ if (typeof document !== "undefined") {
     tree.dirty = true;
   }
 
+  /* 信息卡内容长的时候会盖住大半张图（点开一个词就是根性＋生成树＋十二条邻居）。
+     给它一个收起把手，收起后只留标题那一行，图看得见；选择记住。 */
+  let treeInfoFolded = storageGet("treeInfoFolded", false);
+
+  function setTreeInfo(html, foldable = true) {
+    treeInfo.innerHTML = html + (foldable
+      ? `<button type="button" class="tc-fold" data-tree-fold>${treeInfoFolded ? "展开 ∧" : "收起 ∨"}</button>`
+      : "");
+    treeInfo.classList.toggle("folded", foldable && treeInfoFolded);
+  }
+
   // 两个下标之间这条边为什么连着（别名边会带上"关联词写的是哪个统称"）
   function whyEdge(i, j) {
     const a = nodeById.get(tree.n[i].id), b = nodeById.get(tree.n[j].id);
@@ -3622,7 +3633,7 @@ if (typeof document !== "undefined") {
     // 状态零：搜索高亮
     if (tree.searchSet.size) {
       const hits = [...tree.searchSet].map(i => tree.n[i]).slice(0, 18);
-      treeInfo.innerHTML = `
+      setTreeInfo(`
         <div class="tree-card">
           <div class="tc-path-head">
             <strong>搜索命中</strong>
@@ -3632,7 +3643,7 @@ if (typeof document !== "undefined") {
           <div class="tree-hit-list">
             ${hits.map(gn => `<button type="button" data-tree-select="${gn.i}" style="border-color:${gn.color};color:${gn.color}">${escapeHtml(gn.title)}</button>`).join("")}
           </div>
-        </div>`;
+        </div>`);
       return;
     }
     // 状态一：路径已生成，渲染为竖向链：词 →理由→ 词
@@ -3651,7 +3662,7 @@ if (typeof document !== "undefined") {
       const thin = pathIsCategoryOnly(tree.pathNodes)
         ? `<p class="tc-chain-note">这两个词之间目前只有"同属一类"这一层交点，还不是一条真正的取象链——具体断法要另找冲合刑穿、宫位或神煞的线索。</p>`
         : "";
-      treeInfo.innerHTML = `
+      setTreeInfo(`
         <div class="tree-card">
           <div class="tc-path-head">
             <strong>取象路径</strong>
@@ -3660,22 +3671,22 @@ if (typeof document !== "undefined") {
           </div>
           ${thin}
           <div class="tc-chain">${parts.join("")}</div>
-        </div>`;
+        </div>`);
       return;
     }
     // 状态二：已选起点，等终点
     if (tree.pathStart >= 0) {
       const gn = tree.n[tree.pathStart];
-      treeInfo.innerHTML = `
+      setTreeInfo(`
         <div class="tree-card tc-arm">
           <span class="tc-arm-line">起点 <b style="color:${gn.color}">${escapeHtml(gn.title)}</b> · 再点一个词，看它俩怎么串起来</span>
           <button type="button" data-path-clear>取消</button>
-        </div>`;
+        </div>`, false);
       return;
     }
     // 状态三：无选中
     if (tree.selected < 0) {
-      treeInfo.innerHTML = `<span class="hint">点一个词先看根性怎样长成现实象 · 再连跨词条取象路径 · 双指缩放</span>`;
+      setTreeInfo(`<span class="hint">点一个词先看根性怎样长成现实象 · 再连跨词条取象路径 · 双指缩放</span>`, false);
       return;
     }
     // 状态四：单点选中
@@ -3692,7 +3703,7 @@ if (typeof document !== "undefined") {
           <span>${escapeHtml(reason)}</span>
         </div>`;
     }).join("");
-    treeInfo.innerHTML = `
+    setTreeInfo(`
       <div class="tree-card">
         <div class="tc-title">
           <strong>${escapeHtml(gn.title)}</strong>
@@ -3713,7 +3724,7 @@ if (typeof document !== "undefined") {
           <button class="tc-path-btn" type="button" data-path-start="${gn.i}">从这里连一条取象路径 →</button>
           <button class="tc-open" type="button" data-open-node="${escapeHtml(gn.id)}">看完整象义 →</button>
         </div>
-      </div>`;
+      </div>`);
   }
 
   function selectTreeNode(i, center = true) {
@@ -3749,11 +3760,11 @@ if (typeof document !== "undefined") {
       tree.pathNodes = [];
       tree.pathNodeSet = new Set();
       tree.pathEdgeSet = new Set();
-      treeInfo.innerHTML = `
+      setTreeInfo(`
         <div class="tree-card tc-arm">
           <span class="tc-arm-line">「${escapeHtml(a.title)}」和「${escapeHtml(b.title)}」在图里暂时没有连通路径（这个词关联还少）。</span>
           <button type="button" data-path-clear>好</button>
-        </div>`;
+        </div>`, false);
       tree.dirty = true;
       return;
     }
@@ -4156,6 +4167,13 @@ if (typeof document !== "undefined") {
     if (event.target.closest("[data-tree-exit]")) {
       if (detailStack.length) showView("detail");
       else switchTab(["search", "study", "library"].includes(activeTab) ? activeTab : "search");
+      return;
+    }
+
+    if (event.target.closest("[data-tree-fold]")) {
+      treeInfoFolded = !treeInfoFolded;
+      storageSet("treeInfoFolded", treeInfoFolded);
+      renderTreeInfo();
       return;
     }
 
