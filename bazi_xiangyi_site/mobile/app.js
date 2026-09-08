@@ -4450,6 +4450,15 @@ if (typeof document !== "undefined") {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js").catch(() => { /* 离线能力失败不影响主功能 */ });
     });
+    /* 新 sw 接管后刷一次，否则本次访问仍由旧 sw 供旧页面。
+       ⚠️ 守卫必须放 sessionStorage：普通 JS 变量会被 reload 清零，那个「只刷一次」一次都不生效，会死循环。 */
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      try {
+        if (sessionStorage.getItem("xiangyi_sw_reloaded")) return;
+        sessionStorage.setItem("xiangyi_sw_reloaded", "1");
+      } catch (e) { return; }   // 隐私模式取不到 storage 就干脆不刷
+      location.reload();
+    });
   }
 
   /* ---- 启动 ---- */
