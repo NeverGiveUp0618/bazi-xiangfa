@@ -16,7 +16,8 @@ const norm=a=>[...new Set(a.map(x=>[...x].sort().join('')))].sort().join(' ');
 console.log('【data.js 结构】');
 t('运行时体系/节点齐全（data.js + cross_arts_data.js）',()=>{
   console.log(`   ${G.systems.length} 体系 / ${all.length} 节点`);
-  return (G.systems.length>=20&&all.length>=201)||`仅 ${G.systems.length}体系 ${all.length}节点`;});
+  // 2026-10-22 奇门（4 体系 33 节点）已删：20→16 体系、201→168 节点
+  return (G.systems.length>=16&&all.length>=168)||`仅 ${G.systems.length}体系 ${all.length}节点`;});
 t('节点 id 唯一（戊土 wu-gan 撞车已修）',()=>{const ids=all.map(n=>n.id);
   const dup=ids.filter((x,i)=>ids.indexOf(x)!==i);return dup.length?'重复: '+[...new Set(dup)]:true});
 t('戊土 id 为 wu-gan、午火 id 为 wu',()=>{
@@ -132,8 +133,13 @@ t('app.js 里有「我在学」范围的实现', ()=> majorSeg?true:'没找到 M
     store.majorTraditions=undefined;
     return n===131?true:`只留八字应为 131，实为 ${n}`});
   t('切到具体一术仍照常工作', ()=>{
-    const n=nodes.filter(x=>inTradition(x,'qimen')).length;
-    return n>=33?true:`奇门 ${n} 个`});
+    const n=nodes.filter(x=>inTradition(x,'liuyao')).length;
+    return n>=13?true:`六爻 ${n} 个`});
+  t('奇门已删干净（2026-10-22 用户不学奇门）', ()=>{
+    const left=nodes.filter(x=>x.tradition==='qimen'||/奇门/.test(x.title)).length;
+    const rel=nodes.filter(x=>(x.relations||[]).some(r=>/奇门/.test(String(r)))).length;
+    const tr=(G.traditions||[]).some(t=>t.id==='qimen');
+    return (!left&&!rel&&!tr)?true:`还剩节点${left} 关联${rel} 范围${tr}`});
   t('四术共查仍是全部', ()=>
     nodes.filter(x=>inTradition(x,'all')).length===nodes.length?true:'all 范围不完整');
 }

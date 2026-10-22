@@ -1976,6 +1976,8 @@ if (typeof document !== "undefined") {
   let chartContext = storageGet("chartContext", "all");
   if (!SEARCH_CONTEXTS.some(x => x.id === chartContext)) chartContext = "all";
   let studyScope = storageGet("studyScope", `tradition:${MAJOR_ID}`);
+  // 2026-10-22 奇门已删：以前存的「tradition:qimen」这类失效范围退回「我在学」
+  if (/^tradition:/.test(studyScope) && !TRADITION_META.some(t => `tradition:${t.id}` === studyScope)) studyScope = `tradition:${MAJOR_ID}`;
   if (studyScope === "chart-current" && !chartStudyDeck().ids.length) studyScope = "all";
   chartStudyPart = storageGet("chartStudyPart", "all");
   if (!CHART_STUDY_PARTS.some(p => p.id === chartStudyPart)) chartStudyPart = "all";
@@ -2167,12 +2169,12 @@ if (typeof document !== "undefined") {
     renderTraditionRows();
     renderQuickRow(query);
     if (!query) {
-      const activeTitle = traditionById.get(activeTradition)?.title || "四术共查";
+      const activeTitle = traditionById.get(activeTradition)?.title || "三术共查";
       const activeCount = nodes.filter(node => inTradition(node, activeTradition)).length;
       el.searchBody.innerHTML = `
         <div class="start-card">
           <strong>${escapeHtml(activeTitle)} · ${activeCount} 个象义节点</strong>
-          <p>搜现实词，看八字、六壬神课、奇门、六爻分别从哪里取象。</p>
+          <p>搜现实词，看八字、六壬神课、六爻分别从哪里取象。</p>
           <p><b>先看根性</b> → 推出具体象 → 用位置、状态与第二条证据验证。</p>
           <small>不确定搜什么？点上方“文书、财富、口舌”等快捷词。</small>
         </div>`;
@@ -2182,7 +2184,7 @@ if (typeof document !== "undefined") {
     let results = searchNodes(query, 40, activeTradition);
     if (!results.length) {
       const range = traditionById.get(activeTradition)?.title || "当前范围";
-      el.searchBody.innerHTML = searchFilterHtml() + `<div class="empty-card">${escapeHtml(range)}没有找到「${escapeHtml(query)}」。可切到“四术共查”，或换个说法试试，比如“文书”“领导”“口舌”。</div>`;
+      el.searchBody.innerHTML = searchFilterHtml() + `<div class="empty-card">${escapeHtml(range)}没有找到「${escapeHtml(query)}」。可切到“三术共查”，或换个说法试试，比如“文书”“领导”“口舌”。</div>`;
       return;
     }
     results = rankResultsByContext(results, searchContext, searchLens);
@@ -2299,7 +2301,6 @@ if (typeof document !== "undefined") {
         <div class="guide-source-list">
           <p><b>乾</b><span>居上、统领 → 领导</span></p>
           <p><b>八字官杀</b><span>规则、约束、管理 → 领导</span></p>
-          <p><b>奇门值符</b><span>核心、主事、统摄全局 → 领导</span></p>
           <p><b>六爻官鬼</b><span>职位、管理、权力压力 → 领导</span></p>
         </div>
         <div class="guide-warning">
@@ -2339,7 +2340,7 @@ if (typeof document !== "undefined") {
       </section>
       <details class="about-panel">
         <summary>关于与近期更新</summary>
-        <p>象义随身用于四术共通象义的查询、推导和复习；八字排盘已独立到专项工具，关联网络作为详情页的进阶工具保留。</p>
+        <p>象义随身用于三术（八字、六壬神课、六爻）共通象义的查询、推导和复习；八字排盘已独立到专项工具，关联网络作为详情页的进阶工具保留。</p>
         <div class="dev-log-list">
           ${CHANGELOG.slice(0, 6).map(([d, t]) => `<div class="dev-log-row"><span class="dev-log-date">${escapeHtml(d)}</span><span class="dev-log-text">${escapeHtml(t)}</span></div>`).join("")}
         </div>
@@ -2830,8 +2831,6 @@ if (typeof document !== "undefined") {
       hint: "把前面几层叠起来读盘——这一阶才是真正的取象" },
     { t: "liuren", title: "六壬根性", systems: ["liuren-generals", "liuren-spirits"],
       hint: "十二天将与十二支神，与八字共用根性、各有本门语境" },
-    { t: "qimen", title: "奇门根性", systems: ["qimen-trigrams", "qimen-doors", "qimen-stars", "qimen-deities"],
-      hint: "八卦九宫定场，八门九星八神各司其职" },
     { t: "liuyao", title: "六爻根性", systems: ["liuyao-kin", "liuyao-spirits", "liuyao-positions"],
       hint: "六亲定事、六神定色、世应定人我" }
   ];
