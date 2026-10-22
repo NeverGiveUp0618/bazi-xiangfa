@@ -64,10 +64,31 @@ def build(md_path):
         html.escape(title), CSS, html.escape(sub[0].replace('断事图 · ', '')),
         html.escape(sub[1] if len(sub) > 1 else ''), toc, body)
     os.makedirs(OUT, exist_ok=True)
-    name = {'官职': 'guanzhi'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
-    out = os.path.join(OUT, name + '.html')
-    open(out, 'w', encoding='utf-8').write(page)
-    print('✓', os.path.relpath(out, ROOT), '%.1f KB' % (len(page.encode()) / 1024))
+    name = {'官职': 'gz'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
+    # ⚠️ 微信 X5 按路径缓存、刷新也不重新取（2026-10-22 用户改配色后「刷新了没变」）：
+    #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
+    #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
+    import hashlib, json
+    h = hashlib.md5(page.encode()).hexdigest()[:8]
+    for old in glob.glob(os.path.join(OUT, name + '.*.html')):
+        os.remove(old)
+    open(os.path.join(OUT, '%s.%s.html' % (name, h)), 'w', encoding='utf-8').write(page)
+    lp = os.path.join(OUT, 'latest.json')
+    latest = json.load(open(lp)) if os.path.exists(lp) else {}
+    latest[name] = '%s.%s.html' % (name, h)
+    json.dump(latest, open(lp, 'w'), ensure_ascii=False, indent=1)
+    loader = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
+              '<meta name="viewport" content="width=device-width,initial-scale=1">'
+              '<meta http-equiv="Cache-Control" content="no-cache"><title>%s</title></head>'
+              '<body style="background:#faf8f3;color:#948c80;font:15px sans-serif;text-align:center;padding-top:40vh">载入中…'
+              '<script>fetch("latest.json",{cache:"no-store"}).then(function(r){return r.json()})'
+              '.then(function(m){location.replace(m["%s"]+location.hash)})'
+              '.catch(function(){location.replace("%s"+location.hash)});</script></body></html>') % (
+        html.escape(title), name, latest[name])
+    open(os.path.join(OUT, name + '.html'), 'w', encoding='utf-8').write(loader)
+    if name == 'gz':   # 旧网址（第一版发出去的链接）也做成跳转页
+        open(os.path.join(OUT, 'guanzhi.html'), 'w', encoding='utf-8').write(loader)
+    print('✓ duanshi/%s.html → %s（%.1f KB）' % (name, latest[name], len(page.encode()) / 1024))
 
 for p in sorted(glob.glob(os.path.join(HERE, '*.md'))):
     build(p)
