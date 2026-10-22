@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bazi-xiangyi-mobile-20261022-hunyin';
+const CACHE_NAME = 'bazi-xiangyi-mobile-20261022-duanshi9';
 const ASSETS = [
   "./",
   "./index.html",
