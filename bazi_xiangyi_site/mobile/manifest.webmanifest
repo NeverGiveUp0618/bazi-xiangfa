@@ -1,7 +1,7 @@
 {
   "name": "象义随身",
   "short_name": "象义",
-  "description": "八字、六壬神课、六爻共用象义查询、推导训练与体系图鉴",
+  "description": "八字、六壬神课共用象义查询、推导训练与体系图鉴",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

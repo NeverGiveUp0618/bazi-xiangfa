@@ -75,7 +75,7 @@ setTimeout(()=>{const w=dom.window;
     const all=btn.textContent, allLegend=doc.querySelectorAll('#treeLegend button').length;
     click(btn);
     const back=btn.textContent;
-    return (Number(all.split('·')[1])===168&&allLegend===16&&back.includes('我在学'))  // 2026-10-22 奇门删后 201→168、20→16
+    return (Number(all.split('·')[1])===155&&allLegend===13&&back.includes('我在学'))  // 2026-10-22 奇门、六爻删后 201→155、20→13
       ?true:`切全部=${all}(图例${allLegend}) 切回=${back}`;
   });
   t('布局已缓存，二次进树不再重跑力导向',()=>{

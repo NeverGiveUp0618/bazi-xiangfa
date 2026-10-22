@@ -17,7 +17,8 @@ console.log('【data.js 结构】');
 t('运行时体系/节点齐全（data.js + cross_arts_data.js）',()=>{
   console.log(`   ${G.systems.length} 体系 / ${all.length} 节点`);
   // 2026-10-22 奇门（4 体系 33 节点）已删：20→16 体系、201→168 节点
-  return (G.systems.length>=16&&all.length>=168)||`仅 ${G.systems.length}体系 ${all.length}节点`;});
+  // 2026-10-22 又删六爻（3 体系 13 节点）：16→13 体系、168→155 节点
+  return (G.systems.length>=13&&all.length>=155)||`仅 ${G.systems.length}体系 ${all.length}节点`;});
 t('节点 id 唯一（戊土 wu-gan 撞车已修）',()=>{const ids=all.map(n=>n.id);
   const dup=ids.filter((x,i)=>ids.indexOf(x)!==i);return dup.length?'重复: '+[...new Set(dup)]:true});
 t('戊土 id 为 wu-gan、午火 id 为 wu',()=>{
@@ -133,12 +134,12 @@ t('app.js 里有「我在学」范围的实现', ()=> majorSeg?true:'没找到 M
     store.majorTraditions=undefined;
     return n===131?true:`只留八字应为 131，实为 ${n}`});
   t('切到具体一术仍照常工作', ()=>{
-    const n=nodes.filter(x=>inTradition(x,'liuyao')).length;
-    return n>=13?true:`六爻 ${n} 个`});
-  t('奇门已删干净（2026-10-22 用户不学奇门）', ()=>{
-    const left=nodes.filter(x=>x.tradition==='qimen'||/奇门/.test(x.title)).length;
-    const rel=nodes.filter(x=>(x.relations||[]).some(r=>/奇门/.test(String(r)))).length;
-    const tr=(G.traditions||[]).some(t=>t.id==='qimen');
+    const n=nodes.filter(x=>inTradition(x,'liuren')).length;
+    return n>=24?true:`六壬 ${n} 个`});
+  t('奇门、六爻已删干净（2026-10-22 用户不学这两术）', ()=>{
+    const left=nodes.filter(x=>['qimen','liuyao'].includes(x.tradition)||/·(奇门|六爻)$/.test(x.title)).length;
+    const rel=nodes.filter(x=>(x.relations||[]).some(r=>/奇门|六爻/.test(String(r)))).length;
+    const tr=(G.traditions||[]).some(t=>['qimen','liuyao'].includes(t.id));
     return (!left&&!rel&&!tr)?true:`还剩节点${left} 关联${rel} 范围${tr}`});
   t('四术共查仍是全部', ()=>
     nodes.filter(x=>inTradition(x,'all')).length===nodes.length?true:'all 范围不完整');
@@ -170,7 +171,8 @@ t('（对照）改之前 365 天里有多少天推非主修', ()=>{
   for(let d=0;d<365;d++){const sys=G.systems[d%G.systems.length];
     if(!['bazi','liuren'].includes(sys.tradition||'bazi'))bad++}
   console.log('   旧逻辑：365 天里 '+bad+' 天推的是奇门/六爻（'+Math.round(bad/365*100)+'%）');
-  return bad>0?true:'对照组应当有非主修的日子'});
+  // 2026-10-22 奇门、六爻删除后全库都是主修，对照组本来就是 0
+  return true});
 
 console.log('\n【学习路线：把「未测155」换成台阶】');
 t('STAGES 覆盖全部 20 个体系，一个不漏', ()=>{
@@ -261,10 +263,11 @@ function componentsOf(g){
   return out.sort((a,b)=>b-a);
 }
 
-t('树按范围建图：「我在学」比全库明显小',()=>{
+t('树按范围建图：「我在学」不超过全库，且规模正常',()=>{
+  // 2026-10-22 奇门、六爻删除后只剩八字＋六壬，正好就是默认「我在学」，两者相等是对的
   const major=graphOf('major'), all=graphOf(null);
   console.log(`   我在学 ${major.gnodes.length}节点/${major.edges.length}边 · 全部 ${all.gnodes.length}节点/${all.edges.length}边`);
-  return (major.gnodes.length<all.gnodes.length&&major.gnodes.length>100)?true:
+  return (major.gnodes.length<=all.gnodes.length&&major.gnodes.length>100)?true:
     `major=${major.gnodes.length} all=${all.gnodes.length}`});
 
 t('两种范围下都连成一张网，没有孤岛和孤立点',()=>{
