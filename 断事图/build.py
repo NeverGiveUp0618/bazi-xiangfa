@@ -11,6 +11,8 @@ ROOT = os.path.dirname(HERE)
 OUT = os.path.join(ROOT, 'bazi_xiangyi_site', 'duanshi')
 sys.path.insert(0, os.path.join(os.path.dirname(ROOT), 'bazi-course'))
 import mdlite  # noqa: E402
+import subprocess  # noqa: E402
+subprocess.run([sys.executable, os.path.join(HERE, '_mk_wenzhen.py')], check=True)  # 问诊单由各篇汇总，先重做
 
 CSS = """
 /* 阅读材料配色（2026-10-22 用户：原来的朱砂配色「作为阅读材料看着太累」）
@@ -64,7 +66,7 @@ def build(md_path):
         html.escape(title), CSS, html.escape(sub[0].replace('断事图 · ', '')),
         html.escape(sub[1] if len(sub) > 1 else ''), toc, body)
     os.makedirs(OUT, exist_ok=True)
-    name = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
+    name = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
     # ⚠️ 微信 X5 按路径缓存、刷新也不重新取（2026-10-22 用户改配色后「刷新了没变」）：
     #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
     #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
@@ -90,7 +92,7 @@ def build(md_path):
         open(os.path.join(OUT, 'guanzhi.html'), 'w', encoding='utf-8').write(loader)
     print('✓ duanshi/%s.html → %s（%.1f KB）' % (name, latest[name], len(page.encode()) / 1024))
 
-ORDER = ['性格', '官职', '职业', '财运', '公司经营', '感情', '婚姻', '子女', '疾病', '意外', '寿元', '官司', '房产', '学业', '出行', '父母', '兄弟朋友', '小人是非', '失物']   # 目录页顺序
+ORDER = ['来意', '问诊单', '性格', '官职', '职业', '财运', '公司经营', '感情', '婚姻', '子女', '疾病', '意外', '寿元', '官司', '房产', '学业', '出行', '父母', '兄弟朋友', '小人是非', '失物', '人生年龄', '层次']   # 目录页顺序
 pages = []
 for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
                 key=lambda x: ORDER.index(os.path.splitext(os.path.basename(x))[0]) if os.path.splitext(os.path.basename(x))[0] in ORDER else 99):
@@ -100,7 +102,7 @@ for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
     pages.append((os.path.splitext(os.path.basename(p))[0], t))
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
-names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr'}
+names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc'}
 items = ''.join('<a class="it" href="%s.html"><b>%s</b><span>%s</span></a>' % (
     names.get(k, 'page'), html.escape(t.split('：')[0]), html.escape(t.split('：')[1] if '：' in t else '')) for k, t in pages)
 idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
