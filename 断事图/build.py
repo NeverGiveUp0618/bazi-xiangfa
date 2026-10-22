@@ -64,7 +64,7 @@ def build(md_path):
         html.escape(title), CSS, html.escape(sub[0].replace('断事图 · ', '')),
         html.escape(sub[1] if len(sub) > 1 else ''), toc, body)
     os.makedirs(OUT, exist_ok=True)
-    name = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
+    name = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
     # ⚠️ 微信 X5 按路径缓存、刷新也不重新取（2026-10-22 用户改配色后「刷新了没变」）：
     #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
     #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
@@ -90,7 +90,7 @@ def build(md_path):
         open(os.path.join(OUT, 'guanzhi.html'), 'w', encoding='utf-8').write(loader)
     print('✓ duanshi/%s.html → %s（%.1f KB）' % (name, latest[name], len(page.encode()) / 1024))
 
-ORDER = ['官职', '公司经营', '婚姻', '子女', '疾病', '官司', '房产', '学业', '出行']   # 目录页顺序
+ORDER = ['性格', '官职', '职业', '公司经营', '婚姻', '子女', '疾病', '官司', '房产', '学业', '出行', '父母', '兄弟朋友', '失物']   # 目录页顺序
 pages = []
 for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
                 key=lambda x: ORDER.index(os.path.splitext(os.path.basename(x))[0]) if os.path.splitext(os.path.basename(x))[0] in ORDER else 99):
@@ -100,7 +100,7 @@ for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
     pages.append((os.path.splitext(os.path.basename(p))[0], t))
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
-names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn'}
+names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw'}
 items = ''.join('<a class="it" href="%s.html"><b>%s</b><span>%s</span></a>' % (
     names.get(k, 'page'), html.escape(t.split('：')[0]), html.escape(t.split('：')[1] if '：' in t else '')) for k, t in pages)
 idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
