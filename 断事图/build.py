@@ -64,7 +64,7 @@ def build(md_path):
         html.escape(title), CSS, html.escape(sub[0].replace('断事图 · ', '')),
         html.escape(sub[1] if len(sub) > 1 else ''), toc, body)
     os.makedirs(OUT, exist_ok=True)
-    name = {'官职': 'gz'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
+    name = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs'}.get(os.path.splitext(os.path.basename(md_path))[0], 'page')
     # ⚠️ 微信 X5 按路径缓存、刷新也不重新取（2026-10-22 用户改配色后「刷新了没变」）：
     #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
     #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
@@ -90,5 +90,25 @@ def build(md_path):
         open(os.path.join(OUT, 'guanzhi.html'), 'w', encoding='utf-8').write(loader)
     print('✓ duanshi/%s.html → %s（%.1f KB）' % (name, latest[name], len(page.encode()) / 1024))
 
-for p in sorted(glob.glob(os.path.join(HERE, '*.md'))):
+ORDER = ['官职', '疾病', '公司经营']   # 目录页顺序
+pages = []
+for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
+                key=lambda x: ORDER.index(os.path.splitext(os.path.basename(x))[0]) if os.path.splitext(os.path.basename(x))[0] in ORDER else 99):
     build(p)
+    md = open(p, encoding='utf-8').read()
+    t = re.search(r'^# (.+)$', md, re.M).group(1).replace('断事图 · ', '')
+    pages.append((os.path.splitext(os.path.basename(p))[0], t))
+
+# 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
+names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs'}
+items = ''.join('<a class="it" href="%s.html"><b>%s</b><span>%s</span></a>' % (
+    names.get(k, 'page'), html.escape(t.split('：')[0]), html.escape(t.split('：')[1] if '：' in t else '')) for k, t in pages)
+idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
+       '<title>断事图 · 象义随身</title><style>%s'
+       '.it{display:block;padding:16px 18px;margin:10px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink)}'
+       '.it b{display:block;font-size:19px;font-family:"Noto Serif SC",Songti SC,serif}.it span{color:var(--ink2);font-size:15px}</style></head><body>'
+       '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div>'
+       '<main><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
+       '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p></div>%s</main></body></html>') % (CSS, items)
+open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8').write(idx)
+print('✓ duanshi/index.html（%d 篇）' % len(pages))

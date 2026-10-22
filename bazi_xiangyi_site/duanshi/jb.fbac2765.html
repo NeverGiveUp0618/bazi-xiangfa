@@ -1,0 +1,136 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>断事图 · 疾病：这个人哪里有病、急还是慢、救不救得回 · 象义随身</title><style>
+/* 阅读材料配色（2026-10-22 用户：原来的朱砂配色「作为阅读材料看着太累」）
+   原则：底色柔和不刺眼、正文深灰不纯黑、粗体不变色、朱砂只留给小标记。 */
+:root{--bg:#faf8f3;--card:#ffffff;--ink:#33302b;--ink2:#5c574f;--muted:#948c80;--line:#ebe5da;
+--acc:#a8573f;--soft:#f3efe7;--th:#f5f1ea}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;
+--acc:#c98a6f;--soft:#2a2825;--th:#2a2825}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:.01em}
+main{max-width:720px;margin:0 auto;padding:0 18px 80px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center}
+.top a{color:var(--muted);text-decoration:none;font-size:14px}.top b{flex:1;text-align:center;font-size:15px;font-weight:500;color:var(--ink2)}
+.hero{margin:28px 0 10px;padding:0 0 18px;border-bottom:1px solid var(--line)}
+.hero small{letter-spacing:.24em;color:var(--acc);font-size:12px}
+.hero h1{margin:6px 0 4px;font-family:"Noto Serif SC",Songti SC,serif;font-size:28px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.hero p{margin:0;color:var(--ink2);font-size:15px}
+.toc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 6px}
+.toc a{font-size:14px;color:var(--ink2);text-decoration:none;border-bottom:1px dotted var(--muted)}
+h2{font-family:"Noto Serif SC",Songti SC,serif;font-size:22px;font-weight:600;margin:48px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--ink)}
+h3{font-size:18px;font-weight:600;margin:30px 0 8px;color:var(--ink)}
+h3::before{content:"";display:inline-block;width:4px;height:15px;border-radius:2px;background:var(--acc);margin-right:8px;vertical-align:-1px;opacity:.7}
+p,li{font-size:17px;color:var(--ink)}
+strong{color:inherit;font-weight:600}
+blockquote{margin:14px 0;padding:12px 16px;background:var(--soft);border-radius:8px;color:var(--ink2);border:0}
+blockquote p,blockquote li{margin:4px 0;font-size:16px;color:var(--ink2)}
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:15px;line-height:1.7}
+th{background:var(--th);color:var(--ink2);text-align:left;font-weight:600;white-space:nowrap}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+tr:last-child td{border-bottom:0}
+td:first-child{white-space:nowrap}
+hr{border:0;border-top:1px solid var(--line);margin:36px 0}
+ul{padding-left:1.2em}
+</style></head><body><div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div><main><div class="hero"><small>断事图</small><h1>疾病</h1><p>这个人哪里有病、急还是慢、救不救得回</p></div><div class="toc"><a href="#一-常识-人身上的病">一、常识</a><a href="#二-八字怎么对上-出自资料-逐条带出处">二、八字怎么对上（出自资料，逐条带出处）</a><a href="#三-六壬怎么看-出自-大六壬通解">三、六壬怎么看（出自《大六壬通解》）</a><a href="#四-案例-按部位排">四、案例</a><a href="#五-断之前先问清">五、断之前先问清</a><a href="#六-读完这一篇-你能断什么">六、读完这一篇，你能断什么</a></div>
+<blockquote><p><strong>为什么从常识讲起</strong>：老师说过，<strong>算不了认知以外的命</strong>。断病，先得知道人身上有哪些系统、哪些病是慢慢熬的、哪些是突然发作的、生了病一般怎么走——否则盘上看出<q class="yw">卯被穿</q>，你只能说<q class="yw">肝不好</q>，说不出是急性发作还是要开刀，也说不出该劝人查什么。六壬《通解》讲占病时也专门说：断病源<q class="yw"><strong>还要结合中西医常识</strong></q>。</p>
+<p><strong>这一篇分五部分</strong>：<br><strong>一、常识</strong>：人体系统、中医脏腑五行、病的性质、生病以后一般怎么走（这部分是常识，不是命理规则）<br><strong>二、八字怎么对上</strong>：哪个字受伤 → 身体哪里 → 急还是慢 → 会不会开刀 → 何时发 → 寿元（全部出自资料，逐条带出处）<br><strong>三、六壬怎么看</strong>：占病的主线（出自《大六壬通解》）<br><strong>四、案例</strong>：题库里的命例按身体部位排好<br><strong>五、断之前先问清</strong></p>
+<p>⚠️ <strong>读法</strong>：第一部分是我按公开的医学常识写的；第二、三部分只用老师资料，<strong>资料没讲到的格子写明<q class="yw">资料未讲</q></strong>，不自己编规则。并排放的<q class="yw">对应</q>是我把常识和资料原话摆到一起方便对照——<strong>原话为准</strong>。</p>
+<p>⚠️⚠️ <strong>断病只是提示，不是诊断</strong>。断出问题，劝人去医院查；不要替人下病名，更不要劝人停药。老师也说过：<q class="yw"><strong>60 岁前不主动告知寿数</strong></q><span class="src">小任讲义 p44</span>。</p></blockquote>
+<hr>
+<h2 id="一-常识-人身上的病">一、常识：人身上的病</h2>
+<h3 id="1-1-两套看人体的方法">1.1 两套看人体的方法</h3>
+<p>现代医学按<strong>系统</strong>分，中医按<strong>脏腑</strong>分。命理资料里两套说法都在用（<q class="yw">肝</q><q class="yw">肺</q>是中医的叫法，<q class="yw">心脑血管</q><q class="yw">肿瘤</q><q class="yw">卵巢手术</q>是西医的叫法），所以两套都要懂。</p>
+<p><strong>西医：九大系统</strong></p>
+<div class="tw"><table><thead><tr><th>系统</th><th>包括</th><th>常见病</th></tr></thead><tbody><tr><td class="nw"><strong>循环</strong></td><td>心脏、血管、血液</td><td>高血压、冠心病、心梗、心律失常</td></tr><tr><td class="nw"><strong>神经</strong></td><td>大脑、脊髓、神经</td><td>中风（脑梗、脑出血）、癫痫、头痛、神经衰弱</td></tr><tr><td class="nw"><strong>呼吸</strong></td><td>鼻、咽喉、气管、肺</td><td>哮喘、慢性支气管炎、肺炎、肺癌</td></tr><tr><td class="nw"><strong>消化</strong></td><td>口、食道、胃、肠、肝、胆、胰</td><td>胃炎、溃疡、便秘、肝炎、肝硬化、胆结石</td></tr><tr><td class="nw"><strong>泌尿</strong></td><td>肾、输尿管、膀胱</td><td>肾炎、肾结石、尿毒症（肾衰竭）</td></tr><tr><td class="nw"><strong>生殖</strong></td><td>子宫、卵巢、前列腺等</td><td>子宫肌瘤、卵巢囊肿、不孕不育</td></tr><tr><td class="nw"><strong>内分泌</strong></td><td>甲状腺、胰岛等</td><td class="nw">糖尿病、甲亢</td></tr><tr><td class="nw"><strong>运动</strong></td><td>骨骼、关节、肌肉</td><td>风湿、关节炎、腰椎间盘突出、骨折</td></tr><tr><td class="nw"><strong>感官与皮肤</strong></td><td class="nw">眼、耳、皮肤</td><td>近视、失明、耳聋、湿疹</td></tr></tbody></table></div>
+<p>另有两类不按系统分、却最要紧的：<strong>肿瘤</strong>（良性、恶性，恶性即癌）和<strong>精神心理</strong>（抑郁、焦虑、精神分裂、智力障碍）。</p>
+<p><strong>中医：五脏六腑与五行</strong></p>
+<div class="tw"><table><thead><tr><th>五行</th><th>脏</th><th>腑（表里）</th><th>开窍</th><th>主</th><th>情志</th></tr></thead><tbody><tr><td class="nw">木</td><td class="nw"><strong>肝</strong></td><td class="nw">胆</td><td class="nw">目</td><td class="nw">筋</td><td class="nw">怒</td></tr><tr><td class="nw">火</td><td class="nw"><strong>心</strong></td><td class="nw">小肠</td><td class="nw">舌</td><td class="nw">血脉、神志</td><td class="nw">喜</td></tr><tr><td class="nw">土</td><td class="nw"><strong>脾</strong></td><td class="nw">胃</td><td class="nw">口</td><td class="nw">肌肉、四肢</td><td class="nw">思</td></tr><tr><td class="nw">金</td><td class="nw"><strong>肺</strong></td><td class="nw">大肠</td><td class="nw">鼻</td><td class="nw">皮毛、呼吸</td><td class="nw">悲</td></tr><tr><td class="nw">水</td><td class="nw"><strong>肾</strong></td><td class="nw">膀胱</td><td class="nw">耳</td><td class="nw">骨、髓、生殖</td><td class="nw">恐</td></tr></tbody></table></div>
+<p>⭐ <strong>中医有一句<q class="yw">见肝之病，知肝传脾</q></strong>（出自《金匮要略》）：五行木克土，肝有病会连累脾胃——<strong>病根在一处，症状在另一处</strong>。命理资料里正好有一模一样的判法（见二·5<q class="yw">表现在哪≠病根在哪</q>）。</p>
+<h3 id="1-2-病的性质-急-慢-先天-外伤">1.2 病的性质：急、慢、先天、外伤</h3>
+<div class="tw"><table><thead><tr><th>性质</th><th>特点</th><th>例子</th></tr></thead><tbody><tr><td class="nw"><strong>急性</strong></td><td>来得快、症状重、常要急诊或手术</td><td>心梗、脑出血、急性阑尾炎、急性肝炎</td></tr><tr><td class="nw"><strong>慢性</strong></td><td>慢慢起来、反复、难断根、要长期吃药管理</td><td>高血压、糖尿病、慢性胃炎、风湿</td></tr><tr><td class="nw"><strong>慢性急性发作</strong></td><td>平时慢性，某一阵突然加重</td><td>哮喘发作、冠心病发成心梗</td></tr><tr><td class="nw"><strong>先天</strong></td><td class="nw">生下来就有</td><td>先天性心脏病、小儿麻痹后遗症、先天残疾</td></tr><tr><td class="nw"><strong>外伤、意外</strong></td><td class="nw">外力造成</td><td>车祸、摔伤、刀伤、溺水、中毒</td></tr><tr><td class="nw"><strong>肿瘤</strong></td><td>良性一般切了就好；恶性会转移</td><td>肌瘤、囊肿；肺癌、肝癌、血癌</td></tr><tr><td class="nw"><strong>精神心理</strong></td><td>情绪、思维、行为异常</td><td>抑郁、神经衰弱、精神病、智力低下</td></tr></tbody></table></div>
+<p>⭐ <strong>跟断命有关的一点</strong>：资料里<strong>专门分急性和慢性</strong>（晦、冲为慢性，穿为急性），还分<q class="yw"><strong>有冲有穿易有车祸</strong></q>的外伤，和<q class="yw"><strong>生来带残伤</strong></q>的先天——这几类在盘上的样子不一样。</p>
+<h3 id="1-3-生了病一般怎么走">1.3 生了病一般怎么走</h3>
+<ol><li><strong>有症状</strong> → 2. <strong>就诊、检查</strong>（抽血、拍片、B 超、CT、核磁、胃镜、活检）→ 3. <strong>诊断</strong>（定是什么病）→ 4. <strong>治疗</strong>：</li><li><strong>药物</strong>（口服、输液打针）</li><li><strong>手术</strong>（切除、修补、移植、剖腹产）</li><li><strong>放疗化疗</strong>（多用于恶性肿瘤）</li><li><strong>康复、长期管理</strong>（慢性病）</li><li><strong>结局</strong>：痊愈、带病生存、复发、留后遗症（如中风后偏瘫）、去世。</li></ol>
+<p>⭐ <strong>跟断命有关的一点</strong>：资料里的断语经常落在这条路上的某一步——<q class="yw"><strong>打针</strong></q><q class="yw"><strong>两次手术</strong></q><q class="yw"><strong>手术能救过来</strong></q><q class="yw"><strong>留下后遗症</strong></q><q class="yw"><strong>看病住院先破财</strong></q>。断病不只是断哪里病，还要断<strong>走到哪一步</strong>。</p>
+<h3 id="1-4-常见的-要命-原因">1.4 常见的<q class="yw">要命</q>原因</h3>
+<p>中国人死因排前面的大致是：<strong>心脑血管病</strong>（心梗、中风）、<strong>恶性肿瘤</strong>、<strong>呼吸系统病</strong>、<strong>意外伤害</strong>（车祸、跌落、溺水）。所以资料里断寿元、断急病的命例，多半落在心脏、脑、肺、肝、车祸这几处。</p>
+<h3 id="1-5-生育相关">1.5 生育相关</h3>
+<p>不孕不育、流产、宫外孕、子宫肌瘤、卵巢囊肿、剖腹产——在命理里，这一类常常和<strong>子女、婚姻</strong>连着断（食伤、子女宫、夫星），资料里也是放在一起讲的。</p>
+<hr>
+<h2 id="二-八字怎么对上-出自资料-逐条带出处">二、八字怎么对上（出自资料，逐条带出处）</h2>
+<h3 id="2-1-顺序-先找受伤的字-再翻部位">2.1 顺序：先找受伤的字，再翻部位</h3>
+<blockquote><p><q class="yw"><strong>并非八字一排出来就要准确按照干支宫位所对应的人体来读，那方面最容易发生误判。</strong></q><span class="src">疾病篇；教材第 15 章 3.1</span></p></blockquote>
+<pre><code>第1步  哪个字被冲、穿、克、合、入墓了？（先找伤）
+第2步  这个字对应身体哪里？（三套坐标叠加）
+第3步  急性还是慢性？会不会动手术？
+第4步  哪一步运、哪一年发？</code></pre>
+<p>⚠️ <strong>门槛</strong>：<q class="yw"><strong>至少两种以上的信息可以确定一项事情</strong>，把确定的事情用适当合理的语言表述出来，称为铁口直断。</q><span class="src">v课第 753 讲</span>——一条信息只叫<q class="yw">倾向</q>。示范是<a class="qref" data-q="436">题436</a>：寅是木（比卯粗＝腿）、在年柱（下盘）、是比劫（手足）、是甲之禄（身体），<strong>四点合一</strong>才敢说<q class="yw">腿脚</q>。</p>
+<h3 id="2-2-身体哪里-三套坐标">2.2 身体哪里：三套坐标</h3>
+<div class="tw"><table><thead><tr><th>坐标</th><th>内容</th><th>出处</th></tr></thead><tbody><tr><td><strong>五行 → 脏腑病性</strong></td><td>木＝肝胆神经肢体；火＝心血眼；土＝脾胃；金＝肺骨；水＝肾泌尿</td><td>教材第 15 章 3.2</td></tr><tr><td><strong>宫位 → 部位</strong></td><td>年＝腿脚四肢；月＝躯干脊背；日＝五脏六腑心脑；时＝头面五官生殖排泄</td><td>教材第 15 章 3.2</td></tr><tr><td><strong>宫位（小任课件）</strong></td><td><q class="yw">年：四肢　月：腹腔　日：胸腔　月日：五脏六腑　时：头、排泄</q></td><td>小任讲义 p65</td></tr><tr><td class="nw"><strong>干支类象</strong></td><td>见第 2 章十干、第 10 章十二支</td><td class="nw">教材</td></tr><tr><td class="nw"><strong>左右</strong></td><td><q class="yw"><strong>年月为左，日时为右</strong></q>；穿会穿反穿偏，要靠暗合把落点搬过去</td><td>v课第 758 讲 ·<a class="qref" data-q="438">题438</a></td></tr><tr><td class="nw"><strong>用什么字看</strong></td><td><q class="yw"><strong>印结合宫位看身体部位</strong></q>；<q class="yw"><strong>长生之字和禄神，可以结合五行和宫位看身体部位</strong></q></td><td>v课第 753 讲</td></tr><tr><td class="nw"><strong>禄＝身体</strong></td><td>日主坐禄被制 → 伤身</td><td class="nw"><a class="qref" data-q="48">题48</a></td></tr></tbody></table></div>
+<p><strong>把常识和资料并排</strong>：</p>
+<div class="tw"><table><thead><tr><th>常识（中医五脏）</th><th>资料里的对应</th><th>案例</th></tr></thead><tbody><tr><td><strong>肝</strong>（木）、神经、筋</td><td>木＝肝胆神经肢体；甲表木、木表神经</td><td><a class="qref" data-q="298">题298</a>甲申年肝癌手术；<a class="qref" data-q="329">题329</a>亡于肝病；<a class="qref" data-q="357">题357</a>急性肝炎去世；<a class="qref" data-q="599">题599</a>神经不好</td></tr><tr><td><strong>心</strong>（火）、血、眼、神志</td><td>火＝心血眼；午禄主心血；双丁＝双眼</td><td><a class="qref" data-q="292">题292</a>22 岁突发心血病；<a class="qref" data-q="708">题708</a>心脏病发作；<a class="qref" data-q="165">题165</a><a class="qref" data-q="609">题609</a>眼盲</td></tr><tr><td class="nw"><strong>脾胃</strong>（土）</td><td class="nw">土＝脾胃</td><td><a class="qref" data-q="716">题716</a>病在肝、表现在脾胃</td></tr><tr><td><strong>肺</strong>（金）、骨、声</td><td>金＝肺骨；酉表肺</td><td><a class="qref" data-q="169">题169</a>断肺癌；<a class="qref" data-q="330">题330</a>死于肺病；<a class="qref" data-q="719">题719</a>哮喘；<a class="qref" data-q="327">题327</a>车祸伤脊骨</td></tr><tr><td><strong>肾</strong>（水）、泌尿、生殖</td><td class="nw">水＝肾泌尿</td><td><a class="qref" data-q="596">题596</a>尿毒症；<a class="qref" data-q="709">题709</a>肾与血液病、子宫有问题</td></tr><tr><td class="nw">腿脚四肢</td><td class="nw">年柱</td><td><a class="qref" data-q="26">题26</a><a class="qref" data-q="72">题72</a><a class="qref" data-q="436">题436</a><a class="qref" data-q="552">题552</a><a class="qref" data-q="627">题627</a></td></tr><tr><td class="nw">头、头面五官</td><td class="nw">时柱；寅表头</td><td><a class="qref" data-q="560">题560</a>头面受伤；<a class="qref" data-q="661">题661</a>头脑神志不清</td></tr><tr><td>生殖、子宫卵巢</td><td class="nw">时柱；食伤</td><td><a class="qref" data-q="177">题177</a><a class="qref" data-q="204">题204</a><a class="qref" data-q="721">题721</a></td></tr></tbody></table></div>
+<h3 id="2-3-急性还是慢性">2.3 急性还是慢性</h3>
+<blockquote><p><q class="yw"><strong>活木，喜午火，一旦被辰晦、子冲，就用慢性病。</strong>（不是穿所以为慢性病，有了穿就是急性病发作）</q><span class="src">大任 · 2012 面授 p75；括号为整理者旁注</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>作用</th><th>病性</th><th>出处</th></tr></thead><tbody><tr><td><strong>晦、冲、合、入墓</strong></td><td class="nw"><strong>慢性</strong>，难治</td><td>面授 p75；<a class="qref" data-q="718">题718</a><q class="yw">阴制了阳是晦，不是一下子</q></td></tr><tr><td class="nw"><strong>穿、冲、破</strong></td><td><strong>急性发作、手术</strong></td><td>面授 p75；<a class="qref" data-q="721">题721</a>卯午破＝两次手术</td></tr></tbody></table></div>
+<p><strong>对照常识 1.2</strong>：慢性病＝晦、合、入墓（被罩住、被锁住，慢慢耗）；急性发作＝穿、破（突然被扎破）。</p>
+<h3 id="2-4-症状怎么说">2.4 症状怎么说</h3>
+<blockquote><p><q class="yw"><strong>不能说疼——冲是疼，这是合，就是腰酸。</strong></q><span class="src">v课第 754 讲</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>作用</th><th>用词</th></tr></thead><tbody><tr><td class="nw"><strong>冲</strong></td><td class="nw">疼</td></tr><tr><td class="nw"><strong>合</strong></td><td class="nw">酸</td></tr><tr><td class="nw"><strong>穿</strong></td><td>伤害性（刀、手术一类象）</td></tr></tbody></table></div>
+<p>⚠️ <strong>湿、寒、燥这类定语来自全局气候，不来自单个字</strong>：<a class="qref" data-q="436">题436</a>的<q class="yw">湿</q>是从<q class="yw">活木生在寒冬腊月没有火</q>来的。</p>
+<h3 id="2-5-面授断病七条-2012-面授-p74-80">2.5 面授断病七条（2012 面授 p74–80）</h3>
+<div class="tw"><table><thead><tr><th>条</th><th>内容</th><th>案例</th></tr></thead><tbody><tr><td>① <strong>先看阴阳失衡在哪头</strong></td><td><strong>阴制阳</strong>（水土制火木）⇒ 心脑血供不足、心脏堵塞；<strong>阳制阴</strong>（火土制水金）⇒ 肾、血液、生殖</td><td><a class="qref" data-q="708">题708</a><a class="qref" data-q="710">题710</a>；<a class="qref" data-q="709">题709</a></td></tr><tr><td>② <strong>急慢看作用方式</strong></td><td class="nw">见上 2.3</td><td><a class="qref" data-q="718">题718</a><a class="qref" data-q="721">题721</a></td></tr><tr><td>③ <strong>没有冲穿也能断，靠象</strong></td><td><q class="yw">虽没有冲穿等作用方式，很难看出，但有象</q></td><td><a class="qref" data-q="718">题718</a>湿气重四肢肿痛</td></tr><tr><td>④ <strong>入墓也是受制</strong></td><td><q class="yw">入墓就是封闭限制其生产，是受制</q>；活木入墓＝把树封进地窖</td><td><a class="qref" data-q="720">题720</a>；<a class="qref" data-q="724">题724</a>腿瘫</td></tr><tr><td>⑤ ⭐ <strong>表现在哪≠病根在哪</strong></td><td><q class="yw">表现在脾胃上，<strong>源在肝</strong>；西医治胃好不了，中医治肝很快好起来</q></td><td class="nw"><a class="qref" data-q="716">题716</a></td></tr><tr><td>⑥ <strong>替身能代器官 ⇒ 手术救得回来</strong></td><td><q class="yw">戊申可以代心脏，人可以手术救过来</q></td><td class="nw"><a class="qref" data-q="715">题715</a></td></tr><tr><td>⑦ <strong>看身体一定要参考空亡</strong></td><td><q class="yw">看身体、六亲一定要参考空亡</q></td><td><a class="qref" data-q="711">题711</a>从高处摔下；<a class="qref" data-q="712">题712</a><a class="qref" data-q="714">题714</a></td></tr></tbody></table></div>
+<p>⭐ <strong>第⑤条对照常识 1.1</strong>：就是中医<q class="yw">见肝之病，知肝传脾</q>——木克土，肝的病反映在脾胃上。</p>
+<h3 id="2-6-手术-打针-住院">2.6 手术、打针、住院</h3>
+<div class="tw"><table><thead><tr><th>现实</th><th>盘上的象</th><th>出处</th></tr></thead><tbody><tr><td class="nw"><strong>手术</strong></td><td>子卯破＝手术；穿＝伤害性、刀；<strong>一个卯一次</strong>（卯午破 ⇒ 卵巢两次以上手术）</td><td><a class="qref" data-q="668">题668</a><a class="qref" data-q="721">题721</a></td></tr><tr><td class="nw"><strong>打针</strong></td><td>卯酉冲＝打针；辛酉＝针尖</td><td class="nw"><a class="qref" data-q="668">题668</a></td></tr><tr><td class="nw"><strong>看病破财</strong></td><td>卯午破在前、卯戌合在后 ⇒ <strong>先破财（看病住院）再求财</strong>；为丈夫病而破财</td><td><a class="qref" data-q="670">题670</a><a class="qref" data-q="672">题672</a></td></tr><tr><td class="nw"><strong>能救回来</strong></td><td>替身代器官（戊申代心脏）</td><td class="nw"><a class="qref" data-q="715">题715</a></td></tr><tr><td class="nw"><strong>后遗症</strong></td><td>寅亥合灭丙火 ⇒ 脑出血淤血严重，留下后遗症</td><td class="nw"><a class="qref" data-q="731">题731</a></td></tr></tbody></table></div>
+<h3 id="2-7-车祸-外伤">2.7 车祸、外伤</h3>
+<blockquote><p><q class="yw">命中<strong>寅申巳亥</strong>可看车，<strong>辰丑子</strong>也看车，<strong>有冲有穿易有车祸</strong>，综合宫位看，<strong>年、时主外</strong>，<strong>十神印为车</strong>，对应到身体具体部位来看，<strong>大运流年为引发</strong>。</q><span class="src">2012 面授 p81</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>现实</th><th>盘上看什么</th><th>出处</th></tr></thead><tbody><tr><td class="nw">有没有车祸</td><td>车象（寅申巳亥、辰丑子、申酉、印、驿马）＋冲穿</td><td class="nw">面授 p81</td></tr><tr><td class="nw">伤在哪</td><td>对应身体部位（辰酉申都为车、金表骨 ⇒ 伤脊骨）</td><td class="nw"><a class="qref" data-q="327">题327</a></td></tr><tr><td>⭐ 出不出人命</td><td><q class="yw"><strong>阳代表生命，阴也代表生命，阴阳缺一不可</strong></q>——阴阳被破坏 ⇒ 抢救不过来</td><td>面授 p85 ·<a class="qref" data-q="726">题726</a><a class="qref" data-q="727">题727</a><a class="qref" data-q="730">题730</a></td></tr><tr><td>同样车象也可能靠车吃饭</td><td>辰＝修车场所＋食伤 ⇒ 修车生意旺</td><td class="nw"><a class="qref" data-q="728">题728</a></td></tr><tr><td class="nw">化解</td><td><q class="yw"><strong>把车卖掉，可以化解的</strong></q>——处理掉出事的那个字</td><td class="nw"><a class="qref" data-q="729">题729</a></td></tr><tr><td>出生地参与断语</td><td><q class="yw"><strong>大山里应蛇咬，城市里应车祸</strong></q></td><td>v课第 758 讲</td></tr></tbody></table></div>
+<h3 id="2-8-先天-残疾">2.8 先天、残疾</h3>
+<div class="tw"><table><thead><tr><th>现实</th><th>盘上看什么</th><th>案例</th></tr></thead><tbody><tr><td class="nw">生来带残伤</td><td><strong>互患空亡</strong>：地支空亡天干合</td><td class="nw"><a class="qref" data-q="438">题438</a></td></tr><tr><td class="nw">先天一条腿瘸</td><td>群阴制阳、子在年上指腿脚</td><td class="nw"><a class="qref" data-q="627">题627</a></td></tr><tr><td>先天性小儿麻痹</td><td class="nw">—</td><td class="nw"><a class="qref" data-q="785">题785</a></td></tr><tr><td class="nw">双腿残</td><td>申、酉都当壬的根看，都被火燥克伤（教材第 15 章 3.4 命例）</td><td>初级班 p20；另见<a class="qref" data-q="26">题26</a><a class="qref" data-q="72">题72</a></td></tr><tr><td class="nw">智力低下</td><td class="nw">体坏体</td><td class="nw"><a class="qref" data-q="786">题786</a></td></tr></tbody></table></div>
+<h3 id="2-9-什么时候发">2.9 什么时候发</h3>
+<div class="tw"><table><thead><tr><th>规则</th><th>出处 / 案例</th></tr></thead><tbody><tr><td><strong>受伤之字出现之时即应期</strong></td><td>教材第 12 章；<a class="qref" data-q="127">题127</a>木入未库、己丑年开刀</td></tr><tr><td>大运流年是引动</td><td>面授 p81；<a class="qref" data-q="298">题298</a>甲申年肝癌手术；<a class="qref" data-q="596">题596</a>甲申年亥月病故</td></tr><tr><td class="nw">防哪几个月</td><td><a class="qref" data-q="169">题169</a>断肺癌，并说<q class="yw">防午未月</q></td></tr><tr><td>慢性病逢运加重、急性病逢冲穿发作</td><td>由 2.3 推演（⚠️ 资料未单列）</td></tr></tbody></table></div>
+<h3 id="2-10-寿元-只作了解-慎断">2.10 寿元（只作了解，慎断）</h3>
+<blockquote><p><q class="yw">看寿命要定寿元星，<strong>寿元星分两类①生禄为体②禄生为用</strong>……多数情况是有多个寿元星，那就都要看，<strong>都出问题才会死掉</strong>。</q><span class="src">v课第 798 讲</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>要点</th><th>出处</th></tr></thead><tbody><tr><td>寿元星＝生我的（印）＋我生的（食伤）＋调候之字＋日主的根</td><td>v课 798 讲；教材第 15 章 4.3·B</td></tr><tr><td><strong>全坏才敢断，单点别断</strong></td><td>同上；小任讲义 p44</td></tr><tr><td>枭印夺食一般是病死；阳刃出凶都是横死</td><td>教材第 15 章 4.3·B</td></tr><tr><td><q class="yw"><strong>禄怕空亡禄怕伤，禄空禄伤命不长</strong></q></td><td>寿元门歌诀 · v课 789–792 讲</td></tr><tr><td>⭐ 惜福延寿：<q class="yw">省吃俭用可以延寿</q></td><td>v课 802 讲 ·<a class="qref" data-q="497">题497</a></td></tr><tr><td><strong>60 岁前不主动告知寿数</strong></td><td>小任讲义 p44</td></tr></tbody></table></div>
+<p>⚠️ <strong>资料未讲</strong>（下次可以问）：</p>
+<ul><li>慢性病<strong>哪一年加重</strong>有没有专门的判法？（2.9 最后一行是我推的）</li><li><strong>精神心理病</strong>（抑郁、焦虑）资料里有<q class="yw">神经不好</q><q class="yw">思维乱了</q>，但没有和<q class="yw">神经系统的病</q>分开讲——怎么区分？</li><li><strong>内分泌</strong>（糖尿病、甲状腺）资料里没有专门的象。</li><li>西医的<q class="yw">肿瘤</q>在盘上和<q class="yw">普通病</q>怎么分？案例里有肺癌、肝癌、血癌，但没给出通用判据。</li></ul>
+<hr>
+<h2 id="三-六壬怎么看-出自-大六壬通解">三、六壬怎么看（出自《大六壬通解》）</h2>
+<blockquote><p>六壬占病是<strong>问这一场病</strong>：凶不凶、救不救得回、病在哪、什么时候好。</p></blockquote>
+<h3 id="3-1-主线-白虎与鬼">3.1 主线：白虎与鬼</h3>
+<blockquote><p><q class="yw"><strong>病症之源寻虎鬼，沉屙之际看生龙。须防虎鬼驾马恶，死墓绝空最为凶。</strong></q><span class="src">通解上 p224｜PDF p239</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>见到</th><th>断</th></tr></thead><tbody><tr><td><strong>虎鬼</strong>（白虎乘日鬼）</td><td>凶；临干支、三传、年命更凶（<q class="yw">虎临干鬼凶速速</q>）</td></tr><tr><td class="nw">虎鬼<strong>空亡</strong></td><td class="nw"><strong>不治自愈</strong></td></tr><tr><td>虎鬼<strong>乘驿马</strong>克日干</td><td>大凶，来势迅速凶猛</td></tr><tr><td><strong>青龙乘生气生日干</strong></td><td class="nw"><strong>危而复生</strong></td></tr></tbody></table></div>
+<p>⚠️ 原书特意说<q class="yw">白虎乘金主肝病</q>这类<strong>并非定律</strong>，断病源<strong>要结合课体、五行格局，还要结合中西医常识</strong>——这正是本篇第一部分的用处。</p>
+<h3 id="3-2-解药-子孙与贵医">3.2 解药：子孙与贵医</h3>
+<blockquote><p><q class="yw"><strong>子孙克官鬼</strong>，因此子孙象征<strong>痊愈、药物</strong>……<strong>医神加年命，生其年命，必愈</strong>。</q><span class="src">通解上 p224–225｜PDF p239–240</span></p></blockquote>
+<p><strong>对照常识 1.3</strong>：子孙＝药、治疗；天医地医＝医生——这一场病有没有好医生、好药。</p>
+<h3 id="3-3-病在哪-人身类神">3.3 病在哪：人身类神</h3>
+<blockquote><p><q class="yw">甲胆乙肝丙小肠，丁心戊胃己脾乡。庚是大肠辛主肺，壬癸膀胱癸肾藏。子肾膀胱耳腰液，丑脾腹兮与两足。寅胆风门筋脉发，卯肝血筋手背目。辰皮肤肩暨背项，巳焦小肠面齿股。午心目神气与舌，未胃腹口唇齿户。申为大肠筋骨间，酉肺口鼻声血路。戌乃命门膝胁胸，亥膀头髓二便呼。</q><span class="src">通解中 p482｜PDF p118</span></p></blockquote>
+<p><strong>用法</strong>：拿病神（多是白虎所临之神、或克日之鬼）查这张表，<strong>干和支两边都指向同一处才准</strong>。⚠️ 别拿这张表去<q class="yw">算</q>没问过的病。</p>
+<h3 id="3-4-几条要紧的配合">3.4 几条要紧的配合</h3>
+<div class="tw"><table><thead><tr><th>规则</th><th>出处</th></tr></thead><tbody><tr><td><strong>久病占空必主死；暴病逢空反吉</strong></td><td>通解上 p69（第 7 课）</td></tr><tr><td><strong>老怕帝旺，少怕衰</strong></td><td>通解上 p77（第 10 课）</td></tr><tr><td><strong>自生入墓</strong>（寅加戌、巳加丑、申加辰、亥加未）占病必死</td><td>通解上 p67（第 11 课）</td></tr><tr><td>八专<strong>独足格</strong>占病主死</td><td>通解上 p40（第 6 课）</td></tr></tbody></table></div>
+<p><strong>对照常识 1.2</strong>：<q class="yw">久病逢空死、暴病逢空吉</q>——慢性病到了<q class="yw">空</q>是油尽灯枯，急病遇<q class="yw">空</q>是来得快去得快，正好对上急慢之分。</p>
+<hr>
+<h2 id="四-案例-按部位排">四、案例：按部位排</h2>
+<blockquote><p>题号对应命理精讲<q class="yw">命例题库</q>。</p></blockquote>
+<h3 id="肝-胆-神经">肝、胆、神经</h3>
+<ul><li><a class="qref" data-q="298">题298</a>寅申冲＋寅入未库：甲申年肝癌手术</li><li><a class="qref" data-q="299">题299</a>申亥穿伤亥中甲木：早断早调理，肝病未成癌</li><li><a class="qref" data-q="329">题329</a>乙坐卯又被辰穿：庚辰年亡于肝病</li><li><a class="qref" data-q="357">题357</a>活木的根被辰酉合坏：乙酉年急性肝炎去世</li><li><a class="qref" data-q="716">题716</a>亥寅合灭丙火：病在肝，西医治胃好不了</li><li><a class="qref" data-q="599">题599</a>乙为死木怕火：神经不好、思维坏了</li></ul>
+<h3 id="心-血-眼-脑">心、血、眼、脑</h3>
+<ul><li><a class="qref" data-q="292">题292</a>午禄主心血，被卯穿破：22 岁突发心血病</li><li><a class="qref" data-q="708">题708</a>阴阳失衡、戌中有辛表心脏：戊午运心脏病发作</li><li><a class="qref" data-q="712">题712</a>午火被晦：先天性心脏病（选的时辰）</li><li><a class="qref" data-q="715">题715</a>反局心脏有病，戊申代心脏、手术救得回</li><li><a class="qref" data-q="731">题731</a>寅亥合灭丙火：脑出血，留下后遗症</li><li><a class="qref" data-q="165">题165</a><a class="qref" data-q="609">题609</a>两个丁都被伤：眼盲</li><li><a class="qref" data-q="717">题717</a>水火两半合局对峙、空亡多：血癌</li></ul>
+<h3 id="肺-呼吸-骨">肺、呼吸、骨</h3>
+<ul><li><a class="qref" data-q="169">题169</a>断肺癌，并说<q class="yw">防午未月</q></li><li><a class="qref" data-q="330">题330</a>双丁夺丑中之辛：丁亥年死于肺病</li><li><a class="qref" data-q="489">题489</a>四大空亡：丙寅运肺癌</li><li><a class="qref" data-q="719">题719</a>辰酉合克乙之根、酉表肺：哮喘</li></ul>
+<h3 id="肾-泌尿-生殖">肾、泌尿、生殖</h3>
+<ul><li><a class="qref" data-q="596">题596</a>寅禄被申冲坏、子未穿坏根：尿毒症</li><li><a class="qref" data-q="709">题709</a>阳制阴：肾与血液病、子宫有问题怀孕难</li><li><a class="qref" data-q="177">题177</a>两次卵巢手术，都在乙丑运</li><li><a class="qref" data-q="204">题204</a>食伤入库不开：丁亥年子宫肌瘤挨刀</li><li><a class="qref" data-q="721">题721</a>卯午破：卵巢两次以上手术</li></ul>
+<h3 id="腿脚-四肢-腰">腿脚、四肢、腰</h3>
+<ul><li><a class="qref" data-q="436">题436</a>四点都指向腿脚：风湿关节疼（<strong>铁口直断示范</strong>）</li><li><a class="qref" data-q="26">题26</a>双腿残疾（含拐杖之象）</li><li><a class="qref" data-q="724">题724</a>活木入墓：腿瘫</li><li><a class="qref" data-q="375">题375</a><a class="qref" data-q="784">题784</a>寅亥合：腰病、风湿</li></ul>
+<h3 id="车祸-外伤">车祸、外伤</h3>
+<ul><li><a class="qref" data-q="315">题315</a>甲坐申＝自己坐在车上：翻车死里逃生</li><li><a class="qref" data-q="320">题320</a>冲又穿＝多车相撞</li><li><a class="qref" data-q="327">题327</a>辰酉申都为车、金表骨：车祸伤脊骨</li><li><a class="qref" data-q="711">题711</a>寅卯空亡：从高处摔下来，两次重伤手术</li><li><a class="qref" data-q="726">题726</a><a class="qref" data-q="727">题727</a><a class="qref" data-q="730">题730</a>阴阳被破坏：抢救不过来</li><li><a class="qref" data-q="728">题728</a><a class="qref" data-q="729">题729</a>同样车象：修车发财／出租车老板破财</li></ul>
+<h3 id="先天-精神">先天、精神</h3>
+<ul><li><a class="qref" data-q="438">题438</a>互患空亡：生来带残伤</li><li><a class="qref" data-q="627">题627</a>群阴制阳：先天一条腿瘸</li><li><a class="qref" data-q="785">题785</a>先天性小儿麻痹</li><li><a class="qref" data-q="786">题786</a>智力低下：体坏体</li><li><a class="qref" data-q="809">题809</a>羊癫疯，有高人解救</li></ul>
+<hr>
+<h2 id="五-断之前先问清">五、断之前先问清</h2>
+<div class="tw"><table><thead><tr><th>先问</th><th>为什么</th><th>不问会错在哪</th></tr></thead><tbody><tr><td><strong>问的是谁</strong>：本人还是家人？</td><td>太极点不同，看的字不同（断命台<q class="yw">摆正立场</q>）</td><td>把父亲的病断到本人身上</td></tr><tr><td><strong>现在有没有病、什么病、医院怎么说</strong>？</td><td>已经确诊的，断的是<strong>走向</strong>（会不会好、要不要手术、哪年要小心）</td><td>人家已经确诊肝癌，你还在说<q class="yw">肝不太好</q></td></tr><tr><td><strong>急还是慢</strong>：突然发作还是多年老病？</td><td>2.3：急慢看作用方式，问清了好对盘</td><td>把慢性病断成<q class="yw">这两年会突然出事</q>吓人</td></tr><tr><td class="nw"><strong>年龄</strong></td><td><q class="yw">老怕帝旺，少怕衰</q>；60 岁前不谈寿数</td><td>对年轻人谈寿元</td></tr><tr><td><strong>在哪里生活</strong>：城市还是山区？开不开车？</td><td><q class="yw">大山里应蛇咬，城市里应车祸</q></td><td>车象断成车祸，人家根本不开车也不坐车</td></tr><tr><td class="nw"><strong>做什么工作</strong></td><td>同样的象，可能是职业不是病（修车、医生、护士）</td><td><a class="qref" data-q="668">题668</a>子卯破＝手术，人家就是外科医生</td></tr></tbody></table></div>
+<hr>
+<h2 id="六-读完这一篇-你能断什么">六、读完这一篇，你能断什么</h2>
+<ol><li>先找<strong>哪个字受伤</strong>，再翻<strong>部位</strong>（五行＋宫位＋干支，至少两条对上才说）。</li><li>分出<strong>急性还是慢性</strong>，会不会<strong>开刀、打针、住院破财</strong>。</li><li>看出<strong>病根和症状不在一处</strong>（肝传脾）。</li><li>看<strong>车祸、外伤</strong>，出不出人命看阴阳在不在。</li><li>看<strong>先天、残疾</strong>（互患空亡）。</li><li>六壬看<strong>这一场病</strong>：凶不凶（虎鬼）、有没有药（子孙、医神）、病在哪（人身类神）、久病暴病逢空怎么分。</li></ol>
+<p><strong>还断不了的</strong>（资料未讲）：慢性病哪年加重；精神心理病和神经系统病怎么分；内分泌病的象；肿瘤和普通病的通用判据。</p></main></body></html>

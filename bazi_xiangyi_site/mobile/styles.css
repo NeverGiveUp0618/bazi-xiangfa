@@ -2765,3 +2765,10 @@ mark {
 @media (min-width: 900px) {
   .mobile-app { max-width: none; }
 }
+
+/* 断事图入口（2026-10-22） */
+.duanshi-entry{display:flex;align-items:center;gap:10px;margin:4px 0 12px;padding:12px 14px;border-radius:var(--radius);
+  background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);text-decoration:none;color:var(--ink)}
+.duanshi-entry b{font-size:16px;color:var(--accent-ink);letter-spacing:.06em}
+.duanshi-entry span{flex:1;font-size:13px;color:var(--muted)}
+.duanshi-entry i{font-style:normal;font-size:20px;color:var(--muted)}
