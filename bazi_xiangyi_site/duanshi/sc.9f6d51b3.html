@@ -1,0 +1,98 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>断事图 · 时辰：报来的时间准不准、不准怎么定——排盘之前的那一关 · 象义随身</title><style>
+/* 阅读材料配色（2026-10-22 用户：原来的朱砂配色「作为阅读材料看着太累」）
+   原则：底色柔和不刺眼、正文深灰不纯黑、粗体不变色、朱砂只留给小标记。 */
+:root{--bg:#faf8f3;--card:#ffffff;--ink:#33302b;--ink2:#5c574f;--muted:#948c80;--line:#ebe5da;
+--acc:#a8573f;--soft:#f3efe7;--th:#f5f1ea}
+@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;
+--acc:#c98a6f;--soft:#2a2825;--th:#2a2825}}
+*{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:.01em}
+main{max-width:720px;margin:0 auto;padding:0 18px 80px}
+.top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center}
+.top a{color:var(--muted);text-decoration:none;font-size:14px}.top b{flex:1;text-align:center;font-size:15px;font-weight:500;color:var(--ink2)}
+.hero{margin:28px 0 10px;padding:0 0 18px;border-bottom:1px solid var(--line)}
+.hero small{letter-spacing:.24em;color:var(--acc);font-size:12px}
+.hero h1{margin:6px 0 4px;font-family:"Noto Serif SC",Songti SC,serif;font-size:28px;font-weight:600;letter-spacing:.06em;color:var(--ink)}
+.hero p{margin:0;color:var(--ink2);font-size:15px}
+.toc{display:flex;flex-wrap:wrap;gap:4px 14px;margin:14px 0 6px}
+.toc a{font-size:14px;color:var(--ink2);text-decoration:none;border-bottom:1px dotted var(--muted)}
+h2{font-family:"Noto Serif SC",Songti SC,serif;font-size:22px;font-weight:600;margin:48px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--line);color:var(--ink)}
+h3{font-size:18px;font-weight:600;margin:30px 0 8px;color:var(--ink)}
+h3::before{content:"";display:inline-block;width:4px;height:15px;border-radius:2px;background:var(--acc);margin-right:8px;vertical-align:-1px;opacity:.7}
+p,li{font-size:17px;color:var(--ink)}
+strong{color:inherit;font-weight:600}
+blockquote{margin:14px 0;padding:12px 16px;background:var(--soft);border-radius:8px;color:var(--ink2);border:0}
+blockquote p,blockquote li{margin:4px 0;font-size:16px;color:var(--ink2)}
+.tw{overflow-x:auto;margin:12px 0;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+table{border-collapse:collapse;width:100%;font-size:15px;line-height:1.7}
+th{background:var(--th);color:var(--ink2);text-align:left;font-weight:600;white-space:nowrap}
+th,td{padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--ink)}
+tr:last-child td{border-bottom:0}
+td:first-child{white-space:nowrap}
+hr{border:0;border-top:1px solid var(--line);margin:36px 0}
+ul{padding-left:1.2em}
+</style></head><body><div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div><main><div class="hero"><small>断事图</small><h1>时辰</h1><p>报来的时间准不准、不准怎么定——排盘之前的那一关</p></div><div class="toc"><a href="#一-常识-出生时间是怎么来的">一、常识</a><a href="#二-排盘的规矩-出自资料">二、排盘的规矩（出自资料）</a><a href="#三-时辰不准怎么定-出自资料">三、时辰不准怎么定（出自资料）</a><a href="#四-剖腹产-选时辰">四、剖腹产、选时辰</a><a href="#五-问诊清单">五、问诊清单</a><a href="#六-读完这一篇-你能做什么">六、读完这一篇，你能做什么</a></div>
+<blockquote><p><strong>为什么要这一篇</strong>：断事图前面所有篇，都建立在<strong>盘排对了</strong>这个前提上。可现实里，客人报来的时间常常不准：<strong>父母记的是农历、记的是<q class="yw">大概晚上</q></strong>；<strong>用的是北京时间</strong>；<strong>正好卡在交节、子时</strong>；<strong>是剖腹产选的时辰</strong>。小任把它列为排盘避坑清单第 1 条：<q class="yw"><strong>未勾选真太阳时：导致时柱错误，十神全盘皆偏</strong></q><span class="src">初中级课时笔记6 p6</span>。时柱一错，子女、晚年、相貌全错；日柱一错，<q class="yw">我</q>就错了。</p>
+<p><strong>这一篇分五部分</strong>：<br><strong>一、常识</strong>：出生时间是怎么来的、常见的错法（这部分是常识，不是命理规则）<br><strong>二、排盘的规矩</strong>：真太阳时 → 早晚子时 → 交节 → 断事时的年份（出自资料，逐条带出处）<br><strong>三、时辰不准怎么定</strong>：列候选、拿事实反推、几个现成的判别点（出自资料）<br><strong>四、剖腹产、选时辰</strong><br><strong>五、问诊清单</strong></p>
+<p>⚠️ <strong>读法</strong>：第一部分是常识；第二到四部分只用老师资料，逐条带出处；<strong>资料里有三处口径不一，照录不替老师定</strong>。<br>📎 详细原文见命理精讲笔记<span class="src">八字07-排八字用北京时还是地方时</span>，这一篇是它的断事图版。</p></blockquote>
+<hr>
+<h2 id="一-常识-出生时间是怎么来的">一、常识：出生时间是怎么来的</h2>
+<h3 id="1-1-时间的来源">1.1 时间的来源</h3>
+<div class="tw"><table><thead><tr><th>来源</th><th>可靠程度</th></tr></thead><tbody><tr><td class="nw"><strong>出生医学证明</strong></td><td>一般精确到分钟，较可靠</td></tr><tr><td class="nw"><strong>医院病历</strong></td><td class="nw">可靠</td></tr><tr><td class="nw"><strong>父母记忆</strong></td><td>常只记得<q class="yw">早上</q><q class="yw">半夜</q><q class="yw">天快亮</q></td></tr><tr><td class="nw"><strong>老人口述</strong></td><td>多是农历、按<q class="yw">鸡叫</q><q class="yw">吃早饭</q>这类说法</td></tr><tr><td class="nw"><strong>身份证</strong></td><td>只有日期，没有时辰，且常有登记错的</td></tr></tbody></table></div>
+<h3 id="1-2-常见的错法">1.2 常见的错法</h3>
+<div class="tw"><table><thead><tr><th>错在哪</th><th>样子</th></tr></thead><tbody><tr><td class="nw"><strong>农历公历混</strong></td><td>报了农历当公历排</td></tr><tr><td><strong>北京时间没换算</strong></td><td>西部出生的人最容易差一个时辰</td></tr><tr><td class="nw"><strong>夏令时</strong></td><td>中国 1986–1991 年夏季实行过夏令时（钟表拨快 1 小时）——<strong>这几年夏天出生的要减 1 小时</strong></td></tr><tr><td><strong><q class="yw">晚上</q><q class="yw">凌晨</q>说不清</strong></td><td><q class="yw">18 号晚上</q>可能指 18 号凌晨</td></tr><tr><td class="nw"><strong>记错日子</strong></td><td>身份证生日、上户口的生日与实际不一</td></tr><tr><td class="nw"><strong>出生地记错</strong></td><td>出生在外地医院</td></tr></tbody></table></div>
+<p>⚠️ <strong>夏令时这一条是常识，资料里没讲</strong>（大任资料检索<q class="yw">夏令时</q>0 处命中<span class="src">笔记07</span>）。</p>
+<h3 id="1-3-古人怎么说时辰">1.3 古人怎么说时辰</h3>
+<blockquote><p><q class="yw"><strong>半夜子时 → 鸡鸣丑时 → 天蒙蒙亮寅时 → 日出卯时 → 早餐辰时 → 日高巳时 → 正晌午时 → 日斜未时 → 后晌申时 → 日落酉时 → 掌灯戌时 → 入睡亥时</strong></q><span class="src">小任 · 初中级课时笔记21 p2</span></p></blockquote>
+<p>⭐ 老人说<q class="yw">鸡叫的时候生的</q>，就按这个对。这口诀本身就是<strong>当地太阳</strong>说了算——跟北京时间无关。</p>
+<hr>
+<h2 id="二-排盘的规矩-出自资料">二、排盘的规矩（出自资料）</h2>
+<h3 id="2-1-真太阳时">2.1 ⭐ 真太阳时</h3>
+<blockquote><p><q class="yw"><strong>排八字应以当地时间为准</strong>，即出生时的地域时间。<strong>真太阳时与北京时间有所不同，应以真太阳时为准</strong>。</q><span class="src">小任 · 26排八字大运 p1</span><br><q class="yw"><strong>北京时间仅为行政政策，八字接的是当地天地之气。</strong></q><span class="src">小任 · 初中级课时笔记16 p5</span></p></blockquote>
+<div class="tw"><table><thead><tr><th>项</th><th>内容</th></tr></thead><tbody><tr><td class="nw">基准经线</td><td><strong>东经 120°</strong>（北京时间的实际基准）</td></tr><tr><td class="nw">换算</td><td><strong>每 1 经度 ＝ 4 分钟；偏西减、偏东加</strong></td></tr><tr><td class="nw">量级</td><td>中国东西跨约 60° → 最大差约 4 小时；<strong>新疆与中原差 2–3 小时</strong></td></tr><tr><td class="nw">工具</td><td><q class="yw">必须<strong>手动输入出生地、勾选真太阳时</strong>，核对排盘结果</q></td></tr></tbody></table></div>
+<p><span class="src">小任 · 初中级课时笔记 5、6、21</span></p>
+<p>⭐ <strong>例</strong>：<q class="yw">乌鲁木齐北京时间 12:00 实为巳时；1990-01-01 01:05（北京时间）实为 1989-12-31 22:52，<strong>差一天、两个八字</strong></q><span class="src">小任 · 初中级第2课</span></p>
+<h3 id="2-2-早晚子时-换算完必须重判">2.2 ⭐ 早晚子时（换算完必须重判）</h3>
+<blockquote><p><q class="yw"><strong>真太阳时换算后必须重新判定</strong></q><span class="src">小任 · 初中级课时笔记6 p6</span>——一换算就可能跨过 23:00。</p></blockquote>
+<div class="tw"><table><thead><tr><th>时段</th><th>小任课堂原话的排法</th><th>时干</th></tr></thead><tbody><tr><td><strong>23:00–24:00</strong>（前子时、夜子时）</td><td class="nw"><strong>日柱换为次日</strong></td><td>按当日日干五鼠遁，<strong>再顺推一位</strong></td></tr><tr><td><strong>00:00–01:00</strong>（后子时、早子时）</td><td class="nw">次日</td><td>按次日日干正常起</td></tr></tbody></table></div>
+<div class="tw"><table><thead><tr><th>日干</th><th>后子时</th><th>前子时</th></tr></thead><tbody><tr><td class="nw">甲・己</td><td class="nw">甲子</td><td class="nw">丙子</td></tr><tr><td class="nw">乙・庚</td><td class="nw">丙子</td><td class="nw">戊子</td></tr><tr><td class="nw">丙・辛</td><td class="nw">戊子</td><td class="nw">庚子</td></tr><tr><td class="nw">丁・壬</td><td class="nw">庚子</td><td class="nw">壬子</td></tr><tr><td class="nw">戊・癸</td><td class="nw">壬子</td><td class="nw">甲子</td></tr></tbody></table></div>
+<p><span class="src">小任 · 高级课时10</span></p>
+<p>⚠️ <strong>三说并存</strong>（照录，不替老师定）：</p>
+<div class="tw"><table><thead><tr><th>口径</th><th>23–24 点的日柱</th></tr></thead><tbody><tr><td>小任笔记5、整合精修</td><td class="nw">前一日</td></tr><tr><td>小任笔记6、⭐ 高级课时10 老师原话</td><td class="nw"><strong>换次日</strong></td></tr><tr><td>⭐ 大任 2012 面授 p11</td><td><strong>仍算当天</strong>，但<strong>按次日日干起时柱</strong></td></tr></tbody></table></div>
+<p>⭐ <strong>实战上两盘都排，拿反馈反推</strong>（<a class="qref" data-q="547">题547</a>、<a class="qref" data-q="495">题495</a>的做法）。</p>
+<h3 id="2-3-交节卡点">2.3 交节卡点</h3>
+<blockquote><p><q class="yw"><strong>交节当日出生者</strong>，需结合出生地<strong>南北</strong>（<strong>北方偏晚、南方偏早</strong>）或<strong>列双八字校对</strong>。务必通过<strong>已发生大事反推验证</strong>月柱。</q><span class="src">小任 · 初中级课时笔记21 p2</span><br><q class="yw">遇到这种换气时节，又是在换气时辰的，<strong>最好排两个八字看哪一个符合实际</strong></q><span class="src">v课 800 讲<a class="qref" data-q="495">题495</a></span></p></blockquote>
+<p>⭐ 真太阳时修<strong>经度</strong>（东西），交节卡点修<strong>纬度</strong>（南北）——两件事，别混。<br>例：惊蛰前后月柱在戊寅与己卯之间，<q class="yw"><strong>北方交节偏晚，不能盲信软件</strong></q><span class="src">公开课课时笔记3 p6</span>。</p>
+<h3 id="2-4-断事时客人报的年份">2.4 断事时客人报的年份</h3>
+<blockquote><p>母说：是<strong>去年腊月二十</strong>办的婚事……我说：<strong>哪其实已是今年（丁亥）了，因已过了立春前，我们看命是按交节看的</strong><span class="src">大任 · 04断命例题解 p46</span></p></blockquote>
+<p>客人报的任何时间（结婚、出事、买房），<strong>落在腊月或正月</strong>的，必查当年立春时刻。见<q class="yw">流年</q>篇 1.2。</p>
+<h3 id="2-5-起运-交运">2.5 起运、交运</h3>
+<div class="tw"><table><thead><tr><th>规则</th><th>出处</th></tr></thead><tbody><tr><td>起运天数<strong>含出生当日</strong>（<q class="yw"><strong>生人当天就算一天，一舍二进</strong></q>）</td><td>大任 · 2012面授 p11</td></tr><tr><td>交大运时间以<strong>年柱纳音</strong>定（木大寒当日寅时、火清明前三天午时……）</td><td class="nw">同上</td></tr><tr><td>换运精确到月：<q class="yw">土命芒种后九天未时交运</q></td><td>v课 804 讲<a class="qref" data-q="498">题498</a></td></tr></tbody></table></div>
+<hr>
+<h2 id="三-时辰不准怎么定-出自资料">三、时辰不准怎么定（出自资料）</h2>
+<h3 id="3-1-总方法">3.1 总方法</h3>
+<blockquote><p><q class="yw"><strong>定时辰是综合功力的体现</strong>。通过对比疑似时辰在<strong>婚姻、财运、六亲、伤病灾</strong>等方面的<strong>断语差异</strong>，以『<strong>符合历史事实</strong>』者为真时辰。</q><br><q class="yw"><strong>实操步骤</strong>：列出可能时辰 → 分别推演关键人生节点 → 对照命主反馈 → 锁定唯一时辰。</q><span class="src">小任 · 初中级课时笔记21 p2</span><br><q class="yw"><strong>定时辰没有单独的绝招</strong>，若说有秘诀就是『<strong>因地制宜</strong>』：拿前三柱的特征分别配上可能的时辰，推各自会发生什么事，再用实情反推</q><span class="src">小任 · 公开课第1课</span></p></blockquote>
+<h3 id="3-2-现成的判别点">3.2 现成的判别点</h3>
+<div class="tw"><table><thead><tr><th>用什么判</th><th>例子</th><th>出处</th></tr></thead><tbody><tr><td>⭐ <strong>兄弟姐妹的血缘</strong></td><td>寅卯之间定时：卯时则卯辰相穿 ⇒ <strong>同父异母的弟弟</strong>；反馈属实，定卯时</td><td>小任 · 公开课第1课</td></tr><tr><td class="nw">⭐ <strong>相貌</strong></td><td><q class="yw"><strong>如果是早子时人不漂亮，夜子时人漂亮，可以对号入座</strong></q></td><td class="nw">面授<a class="qref" data-q="619">题619</a></td></tr><tr><td><strong>皮肤、性格、经历</strong></td><td><q class="yw">先点两件事定时辰：<strong>庚子时则皮肤白、俊、爱运动、桃花旺但不换婚</strong>；36 岁前公家单位、36 岁后离乡做实体合伙</q>⇒ 反馈 37 岁去佛山合伙开厂，定庚子时</td><td>小任 · 初中级第21课</td></tr><tr><td class="nw"><strong>一件大事</strong></td><td><q class="yw">辛卯年喝一瓶啤酒睡一晚死掉</q>⇒ 判定立秋后那盘</td><td class="nw"><a class="qref" data-q="495">题495</a></td></tr><tr><td>离婚、流产、得子</td><td>两盘并排拿事实套</td><td class="nw"><a class="qref" data-q="547">题547</a></td></tr></tbody></table></div>
+<p>⭐ <strong>读法</strong>：挑<strong>两盘差别最大</strong>的那一处去问——相貌、兄弟姐妹、哪一年出过大事。问一两件就能定。</p>
+<h3 id="3-3-问诊技巧">3.3 问诊技巧</h3>
+<blockquote><p><q class="yw">他只要一说是 23 点多或 0 点多……<strong>我们要加上一句：『天亮是啥时候？』</strong></q><span class="src">小任 · 高级课时10</span></p></blockquote>
+<hr>
+<h2 id="四-剖腹产-选时辰">四、剖腹产、选时辰</h2>
+<div class="tw"><table><thead><tr><th>规则 / 案例</th><th>出处</th></tr></thead><tbody><tr><td>⚠️ 台湾大师 3 万元选的时辰，说<q class="yw">富贵双显</q>——实际<strong>午火被晦，心脏病，先天性的</strong>；<q class="yw">⭐ <strong>看身体、六亲一定要参考空亡</strong></q></td><td class="nw">面授<a class="qref" data-q="712">题712</a></td></tr><tr><td>剖腹产选的时辰：<strong>庚金喜午临空亡，双卯破午，灭了阳</strong> ⇒ 心肺病，到目前仍然不行</td><td class="nw">面授<a class="qref" data-q="714">题714</a></td></tr><tr><td>⭐⭐ <q class="yw"><strong>选时辰要必须兼看六亲，钱可赚钱，但要负责，不然就要遭报应的</strong></q></td><td>大任 · 面授 p76</td></tr><tr><td>寿元篇：<q class="yw">拿到八字<strong>第一件事先判寿元</strong></q></td><td>小任讲义 p44</td></tr></tbody></table></div>
+<p>⭐ <strong>对照常识</strong>：剖腹产选时辰现在很常见。资料的两例都是<strong>只看富贵、没看身体和六亲</strong>出的事——选时辰要先过<strong>寿元、身体、六亲</strong>这几关。</p>
+<p>⚠️ <strong>资料未讲</strong>：剖腹产的人八字算不算数（有人说人为选的不准）——资料里的两例<strong>照样按选出来的时辰断，而且断中了</strong>。</p>
+<hr>
+<h2 id="五-问诊清单">五、问诊清单</h2>
+<pre><code>① 出生地（省市，最好到县）——「在什么地方出生都要写」
+② 公历还是农历？精确到几点几分？来源（出生证明、父母记忆）？
+③ 1986–1991 年夏天出生的 → 问有没有按夏令时记（常识）
+④ 23 点多或 0 点多 → 问「天亮是啥时候？」
+⑤ 换算真太阳时 → 重判是否跨 23:00
+⑥ 生日靠近交节 → 查精确交节时刻，必要时列双八字
+⑦ 时辰记不清 → 列候选时辰，挑差别最大处问一两件事反推
+⑧ 是不是剖腹产选的时辰</code></pre>
+<hr>
+<h2 id="六-读完这一篇-你能做什么">六、读完这一篇，你能做什么</h2>
+<ol><li>排盘先过<strong>真太阳时</strong>（东经 120°，每度 4 分钟，西减东加）。</li><li>换算后<strong>重判 23:00</strong>；早晚子时三说并存，<strong>两盘都排拿反馈反推</strong>。</li><li>交节卡点<strong>南北修正、列双八字</strong>；客人报的腊月正月<strong>按立春换年</strong>。</li><li>时辰不准：<strong>列候选、推差异、问事实</strong>——兄弟血缘、相貌、大事。</li><li>选时辰要<strong>兼看六亲、身体、空亡</strong>。</li></ol>
+<p><strong>资料未讲</strong>：夏令时；剖腹产时辰算不算数（资料是照样断）。</p></main></body></html>
