@@ -124,9 +124,12 @@
   // 2026-11-03 用户要求六壬象义以《图解六壬大全》为准：人物/事物/身体等类神条目改用大全原文（liuren_daquan_data.js，
   // 由 ../../_gen_daquan.py 从 .docx 抽取）；「大白话」「使用提醒」两条保留；核心一句也取大全原文（支神＝「所主…」，天将＝官称＋位次五行吉凶）。
   const dq = window.LIUREN_DAQUAN || {};
+  const must = window.LIUREN_MUST || {};
   const applyDq = n => {
-    const d = dq[String(n.title).replace("·六壬", "")];
+    const nm = String(n.title).replace("·六壬", "");
+    const d = dq[nm];
     if (!d) return n;
+    if (must[nm]) n = { ...n, must: must[nm] };
     const keep = {};
     ["大白话", "使用提醒"].forEach(k => { if (n.branches && n.branches[k]) keep[k] = n.branches[k]; });
     return { ...n, core: (d.core && d.core.length) ? d.core : n.core, branches: { ...d.branches, ...keep }, source: d.source };

@@ -3,7 +3,7 @@ const M='/Users/xiaojin/Documents/文稿同步文件夹/03_学习 (Learning)/Sea
 const errs=[];const vc=new VirtualConsole();
 vc.on('jsdomError',e=>{if(!/scrollTo|Not implemented|canvas|getContext/.test(e.message))errs.push(e.message)});
 let html=fs.readFileSync(M+'index.html','utf8');
-['data.js','liuren_daquan_data.js','cross_arts_data.js','app.js'].forEach(f=>{
+['data.js','liuren_daquan_data.js','liuren_must_data.js','cross_arts_data.js','app.js'].forEach(f=>{
   if(fs.existsSync(M+f)){const body=fs.readFileSync(M+f,'utf8');
     html=html.replace(`<script src="${f}"></script>`, () => '<script>'+body+'<'+'/script>');}
 });

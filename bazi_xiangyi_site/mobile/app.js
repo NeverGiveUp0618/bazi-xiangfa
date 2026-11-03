@@ -3084,6 +3084,10 @@ if (typeof document !== "undefined") {
         return `<div class="plain-box"><h4>${escapeHtml(label)}</h4>${body}</div>`;
       }).join("");
 
+    const mustHtml = node.must && node.must.items && node.must.items.length
+      ? `<div class="must-box"><h4>★ 老师强调·必记 <small>${escapeHtml(node.must.src || "")}</small></h4>${node.must.items.map(t => `<p><mark class="must">${escapeHtml(t)}</mark></p>`).join("")}</div>`
+      : "";
+
     const blockHtml = ([k, values]) => {
       const short = values.every(v => String(v).length <= 8);
       const body = short
@@ -3172,6 +3176,7 @@ if (typeof document !== "undefined") {
           <div class="root-model-head"><span>来源</span><strong>本条象义从哪里整理</strong></div>
           <p>${escapeHtml(node.source)}</p>
         </section>` : ""}
+      ${mustHtml}
       ${plainBlocks}
       ${node.rules?.length ? `<div class="branch-block condition-block"><h4>三筛 · 什么时候才能这样取</h4><ul>${node.rules.map(r => `<li>${escapeHtml(r)}</li>`).join("")}</ul></div>` : ""}
       <button type="button" class="detail-tree-entry" data-tree-node="${escapeHtml(node.id)}">查看关联网络 <span>进阶</span> →</button>

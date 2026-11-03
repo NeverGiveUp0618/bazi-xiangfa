@@ -8,6 +8,7 @@ global.window={};
 eval(fs.readFileSync(M+'data.js','utf8'));
 // cross_arts_data.js 会向 BAZI_GRAPH 追加体系，出题引擎对全部节点生效，必须一并纳入
 if(fs.existsSync(M+'liuren_daquan_data.js'))eval(fs.readFileSync(M+'liuren_daquan_data.js','utf8'));
+if(fs.existsSync(M+'liuren_must_data.js'))eval(fs.readFileSync(M+'liuren_must_data.js','utf8'));
 if(fs.existsSync(M+'cross_arts_data.js'))eval(fs.readFileSync(M+'cross_arts_data.js','utf8'));
 const app=fs.readFileSync(M+'app.js','utf8'), bg=fs.readFileSync(B,'utf8');
 const css=fs.readFileSync(M+'styles.css','utf8').replace(/\s/g,'');

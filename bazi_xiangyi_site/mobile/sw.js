@@ -1,4 +1,4 @@
-const CACHE_NAME = 'bazi-xiangyi-mobile-20261103-daquan3';
+const CACHE_NAME = 'bazi-xiangyi-mobile-20261103-must';
 const ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const ASSETS = [
   "./data.js",
   "./cross_arts_data.js",
   "./liuren_daquan_data.js",
+  "./liuren_must_data.js",
   "./app.js",
   "./manifest.webmanifest",
   "../preview.png"
