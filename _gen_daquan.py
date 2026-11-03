@@ -141,13 +141,30 @@ def general(i):
         br[k] = keep
     return {k: v for k, v in br.items() if v}
 
+def sp_core(i):
+    seg = L[sp_start[i]:sp_end[i]]
+    k = next(j for j, t in enumerate(seg) if re.search(r'之类神', t) and len(t) < 30)
+    line = next((t for t in seg[:k] if t.startswith('所主')), '')
+    return [re.sub(r'[（(]\d+[）)]', '', p).strip() for p in re.split(r'[。]', line) if p.strip()][:5]
+
+def jj_core(i):
+    seg = L[jj_start[i]:jj_end[i]]
+    head = seg[0].split('：')[-1] if False else seg[1].split('：', 1)[-1]
+    txt = ''.join(t for t in seg[:40] if not t.startswith('|'))
+    m = re.search(r'([^。，；]*(?:，[^。；]*?)*?[吉凶]将也)', txt)
+    s2 = ''
+    for t in re.split(r'(?<=[。])', txt):
+        if re.search(r'[吉凶]将也', t) and '白话' not in t:
+            s2 = re.sub(r'^.*?(位居|天乙贵人)', r'\1', t).rstrip('。'); break
+    return [x for x in [head.strip(), s2] if x]
+
 out = {}
 for i, n in enumerate(SP_NAMES):
     br, hint = spirit(i)
-    out[n] = {'branches': br, 'source': '《图解六壬大全》第1部 · 十二神释 · %s（%s）· 类神原文' % (n, SP_ZHI[i])}
+    out[n] = {'core': sp_core(i), 'branches': br, 'source': '《图解六壬大全》第1部 · 十二神释 · %s（%s）· 类神原文' % (n, SP_ZHI[i])}
 for i, n in enumerate(JJ_NAMES):
     br = general(i)
-    out[n] = {'branches': br, 'source': '《图解六壬大全》第1部 · 十二将释 · %s论 · 类神原文' % n}
+    out[n] = {'core': jj_core(i), 'branches': br, 'source': '《图解六壬大全》第1部 · 十二将释 · %s论 · 类神原文' % n}
 js = '/* 由 _gen_daquan.py 从《图解六壬大全》第1部（OCR校对版 .docx）抽取，勿手改。 */\nwindow.LIUREN_DAQUAN = %s;\n' % json.dumps(out, ensure_ascii=False, indent=1)
 open(OUT, 'w', encoding='utf-8').write(js)
 for k, v in out.items():
