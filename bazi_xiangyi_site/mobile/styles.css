@@ -2791,3 +2791,10 @@ mark {
 .must-box h4 small{margin-left:6px;font-size:11px;font-weight:400;color:var(--muted)}
 .must-box p{margin:5px 0;line-height:1.9}
 mark.must{background:#ffe600;color:#1d1700;font-weight:800;padding:2px 7px;border-radius:5px;box-decoration-break:clone;-webkit-box-decoration-break:clone}
+
+/* 入门四步：四个按钮固定一行，不换行 */
+.ds-steps{flex-wrap:nowrap}
+.ds-steps .ds-lb{flex:0 0 100%;position:absolute;display:none}
+.ds-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+.ds-steps .ds-lb{display:block;position:static;grid-column:1/-1}
+.ds-steps a{justify-content:center;padding:5px 6px;white-space:nowrap}
