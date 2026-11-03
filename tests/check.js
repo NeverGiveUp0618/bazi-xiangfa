@@ -16,8 +16,8 @@ const norm=a=>[...new Set(a.map(x=>[...x].sort().join('')))].sort().join(' ');
 
 console.log('【宽屏布局】');
 t('超过原 640px 容器就立即取消限宽，套壳与平板不再留白',()=>
-  /@media\(min-width:641px\)\{\.mobile-app\{max-width:none;\}\}/.test(css)
-    ?true:'仍未按 641px 阈值放开 .mobile-app');
+  /@media\(min-width:641px\)\{\.mobile-app,.bottom-nav\{max-width:none;\}\}/.test(css)
+    ?true:'正文或底部导航仍未按 641px 阈值同步放开');
 
 console.log('【data.js 结构】');
 t('运行时体系/节点齐全（data.js + cross_arts_data.js）',()=>{

@@ -2765,7 +2765,8 @@ mark {
    ⚠️ 2026-11-03 阈值 900→641：套壳、平板竖屏或电脑侧栏会压窄 iframe，
    原先落在 641–899px 时仍被锁成 640px；超过原容器宽度就应立即放开。 */
 @media (min-width: 641px) {
-  .mobile-app { max-width: none; }
+  .mobile-app,
+  .bottom-nav { max-width: none; }
 }
 
 /* 断事图入口（2026-10-22） */
