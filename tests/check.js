@@ -9,9 +9,15 @@ eval(fs.readFileSync(M+'data.js','utf8'));
 // cross_arts_data.js 会向 BAZI_GRAPH 追加体系，出题引擎对全部节点生效，必须一并纳入
 if(fs.existsSync(M+'cross_arts_data.js'))eval(fs.readFileSync(M+'cross_arts_data.js','utf8'));
 const app=fs.readFileSync(M+'app.js','utf8'), bg=fs.readFileSync(B,'utf8');
+const css=fs.readFileSync(M+'styles.css','utf8').replace(/\s/g,'');
 const G=window.BAZI_GRAPH, all=G.systems.flatMap(s=>s.nodes.map(n=>({...n,sys:s.title})));
 const grab=(s,re)=>{const m=s.match(re);return m?(m[1].match(/[一-龥]{2}/g)||[]):[]};
 const norm=a=>[...new Set(a.map(x=>[...x].sort().join('')))].sort().join(' ');
+
+console.log('【宽屏布局】');
+t('超过原 640px 容器就立即取消限宽，套壳与平板不再留白',()=>
+  /@media\(min-width:641px\)\{\.mobile-app\{max-width:none;\}\}/.test(css)
+    ?true:'仍未按 641px 阈值放开 .mobile-app');
 
 console.log('【data.js 结构】');
 t('运行时体系/节点齐全（data.js + cross_arts_data.js）',()=>{

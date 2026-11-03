@@ -2760,9 +2760,11 @@ mark {
 .branch-group-body { padding: 0 13px 12px; }
 .branch-group-body .branch-block:first-child { margin-top: 0; }
 
-/* ⭐ 宽屏拉开（2026-08-11 修正）：布局不变，只放开容器宽度。
-   ⚠️ 初版把图鉴列表重排成多列，用户反馈「整体布局都变了」，已撤销。 */
-@media (min-width: 900px) {
+/* ⭐ 宽屏拉开：布局不变，只放开容器宽度。
+   ⚠️ 初版把图鉴列表重排成多列，用户反馈「整体布局都变了」，已撤销。
+   ⚠️ 2026-11-03 阈值 900→641：套壳、平板竖屏或电脑侧栏会压窄 iframe，
+   原先落在 641–899px 时仍被锁成 640px；超过原容器宽度就应立即放开。 */
+@media (min-width: 641px) {
   .mobile-app { max-width: none; }
 }
 
