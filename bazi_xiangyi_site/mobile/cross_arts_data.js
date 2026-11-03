@@ -121,9 +121,20 @@
     [row[0], row[1], `六壬${row[0]}`]
   ));
 
+  // 2026-11-03 用户要求六壬象义以《图解六壬大全》为准：人物/事物/身体等类神条目改用大全原文（liuren_daquan_data.js，
+  // 由 ../../_gen_daquan.py 从 .docx 抽取）；「大白话」「使用提醒」两条保留；核心一句仍是概括，非原文。
+  const dq = window.LIUREN_DAQUAN || {};
+  const applyDq = n => {
+    const d = dq[String(n.title).replace("·六壬", "")];
+    if (!d) return n;
+    const keep = {};
+    ["大白话", "使用提醒"].forEach(k => { if (n.branches && n.branches[k]) keep[k] = n.branches[k]; });
+    return { ...n, branches: { ...d.branches, ...keep }, source: d.source };
+  };
+
   graph.systems.push(
-    system("liuren-generals", "六壬·十二天将", "天将是社会属性和状态标签，与支神实体拼接取象。", "liuren", liurenGenerals),
-    system("liuren-spirits", "六壬·十二支神", "支神是地支在六壬中的实体名词、方位和事类。", "liuren", liurenSpirits)
+    system("liuren-generals", "六壬·十二天将", "天将是社会属性和状态标签，与支神实体拼接取象。类神条目录自《图解六壬大全》第1部·十二将释。", "liuren", liurenGenerals.map(applyDq)),
+    system("liuren-spirits", "六壬·十二支神", "支神是地支在六壬中的实体名词、方位和事类。类神条目录自《图解六壬大全》第1部·十二神释。", "liuren", liurenSpirits.map(applyDq))
   );
 
   // 2026-10-22 用户不学奇门、六爻了：两术节点已删，别处指向「·奇门」「·六爻」的关联一并滤掉，免得成死链

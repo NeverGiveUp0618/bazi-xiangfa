@@ -103,14 +103,95 @@ for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
 names = {'官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc', '合作': 'hz', '考公': 'kg', '示范': 'sf', '流年': 'ln', '进退': 'jt', '相貌': 'xm', '玄学': 'xs', '合婚': 'hh', '时辰': 'sc', '化解': 'hj'}
-items = ''.join('<a class="it" href="%s.html"><b>%s</b><span>%s</span></a>' % (
-    names.get(k, 'page'), html.escape(t.split('：')[0]), html.escape(t.split('：')[1] if '：' in t else '')) for k, t in pages)
+GROUPS = [
+    ('start', '入门四步', '先走这四步，再翻具体的事', '#a8573f', ['来意', '时辰', '问诊单', '示范']),
+    ('ren', '看人', '这个人是什么样的人、在哪一档', '#5f7ba6', ['性格', '相貌', '层次', '人生年龄']),
+    ('work', '事业财运', '官、职、财、学、合作', '#b07a1a', ['官职', '考公', '职业', '进退', '财运', '公司经营', '合作', '学业']),
+    ('love', '感情家庭', '感情、婚姻、子女、六亲', '#b85c7a', ['感情', '婚姻', '合婚', '子女', '父母', '兄弟朋友']),
+    ('fate', '运势健康', '流年、疾病、意外、寿元，以及断出凶之后', '#4f8a6d', ['流年', '疾病', '意外', '寿元', '化解']),
+    ('misc', '事件杂项', '官司、房产、出行、失物、是非、玄学', '#7a6aa8', ['官司', '房产', '出行', '失物', '小人是非', '玄学']),
+]
+tmap = dict(pages)
+used = set()
+
+def tile(k, color, step=None):
+    t = tmap.get(k, k)
+    a, b = (t.split('：', 1) + [''])[:2]
+    used.add(k)
+    badge = ('<i class="ng" style="--c:%s">%d</i>' % (color, step)) if step else ('<i class="ng" style="--c:%s">%s</i>' % (color, html.escape(k[0])))
+    return ('<a class="tl" href="%s.html" data-k="%s" data-q="%s" style="--c:%s">%s<div><b>%s</b><span>%s</span></div></a>'
+            % (names.get(k, 'page'), html.escape(k), html.escape(k + a + b), color, badge, html.escape(a), html.escape(b)))
+
+secs = ''
+for gid, gname, gdesc, color, keys in GROUPS:
+    keys = [k for k in keys if k in tmap]
+    if gid == 'start':
+        body = ''.join(tile(k, color, n + 1) for n, k in enumerate(keys))
+        secs += '<section class="gp flow" data-g="%s"><h2>%s<small>%s</small></h2><div class="grid">%s</div></section>' % (gid, gname, gdesc, body)
+    else:
+        secs += ('<section class="gp" data-g="%s" style="--c:%s"><h2>%s<em>%d</em><small>%s</small></h2><div class="grid">%s</div></section>'
+                 % (gid, color, gname, len(keys), gdesc, ''.join(tile(k, color) for k in keys)))
+left = [k for k, _ in pages if k not in used]
+if left:   # 新写了篇目但还没分组：先放进「更多」，别丢
+    secs += '<section class="gp" data-g="more" style="--c:#8d867b"><h2>更多<em>%d</em></h2><div class="grid">%s</div></section>' % (len(left), ''.join(tile(k, '#8d867b') for k in left))
+
+IDX_CSS = """
+main.ix{max-width:980px}
+.ix .hero{border:0;padding-bottom:6px}
+.ix .hero p{max-width:34em}
+.stat{display:flex;gap:18px;margin:14px 0 4px;color:var(--ink2);font-size:13px}
+.stat b{font-size:22px;font-family:"Noto Serif SC",Songti SC,serif;color:var(--acc);margin-right:4px}
+.resume{display:none;margin:12px 0 0;padding:12px 16px;border-radius:12px;background:var(--soft);text-decoration:none;color:var(--ink);font-size:14.5px;border:1px solid var(--line)}
+.resume.on{display:flex;justify-content:space-between;align-items:center}
+.resume b{color:var(--acc)}
+.sch{position:relative;margin:18px 0 6px}
+.sch input{width:100%;height:44px;border:1px solid var(--line);border-radius:22px;background:var(--card);color:var(--ink);padding:0 18px;font-size:15px;outline:0}
+.sch input:focus{border-color:var(--acc)}
+.gp{margin:26px 0 0}
+.gp h2{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:0;border:0;font-size:19px}
+.gp h2::before{content:"";align-self:center;width:5px;height:18px;border-radius:3px;background:var(--c,var(--acc))}
+.gp h2 em{font-style:normal;font-size:12px;color:var(--muted);font-family:-apple-system,sans-serif}
+.gp h2 small{flex-basis:100%;margin-left:13px;font-size:13px;font-weight:400;color:var(--muted);font-family:-apple-system,sans-serif}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.tl{display:flex;gap:11px;align-items:flex-start;padding:13px 13px;border-radius:14px;background:var(--card);border:1px solid var(--line);text-decoration:none;color:var(--ink);
+border-left:4px solid var(--c);box-shadow:0 1px 3px rgba(80,50,20,.05);transition:transform .12s,box-shadow .12s}
+.tl:active{transform:scale(.985)}
+.tl .ng{flex:none;width:34px;height:34px;border-radius:11px;display:grid;place-items:center;font-style:normal;font-size:16px;font-weight:700;font-family:"Noto Serif SC",Songti SC,serif;color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent)}
+.tl div{min-width:0}
+.tl b{display:block;font-size:16px;line-height:1.35;font-family:"Noto Serif SC",Songti SC,serif}
+.tl span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-top:3px;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.flow .grid{counter-reset:s}
+.flow .tl{border-left:1px solid var(--line);border-top:4px solid var(--c);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 7%,var(--card)),var(--card))}
+.flow .tl .ng{background:var(--c);color:#fff;border-radius:50%;width:30px;height:30px;font-size:15px}
+.none{display:none;text-align:center;color:var(--muted);padding:30px 0}
+@media (min-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.flow .grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tl:hover{box-shadow:0 4px 14px rgba(80,50,20,.1);transform:translateY(-1px)}}
+@media (min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+"""
+IDX_JS = """
+(function(){
+  var KEY='ds-last';
+  var tiles=[].slice.call(document.querySelectorAll('.tl'));
+  tiles.forEach(function(t){t.addEventListener('click',function(){try{localStorage.setItem(KEY,t.dataset.k)}catch(e){}})});
+  try{var k=localStorage.getItem(KEY),t=tiles.filter(function(x){return x.dataset.k===k})[0],r=document.getElementById('resume');
+    if(t&&r){r.href=t.getAttribute('href');r.querySelector('b').textContent=t.querySelector('b').textContent;r.classList.add('on')}}catch(e){}
+  var q=document.getElementById('q');
+  q.addEventListener('input',function(){
+    var w=q.value.trim().split(/\\s+/).filter(Boolean),any=false;
+    tiles.forEach(function(t){var ok=w.every(function(x){return t.dataset.q.indexOf(x)>=0});t.style.display=ok?'':'none';if(ok)any=true});
+    [].forEach.call(document.querySelectorAll('.gp'),function(g){g.style.display=[].some.call(g.querySelectorAll('.tl'),function(t){return t.style.display!=='none'})?'':'none'});
+    document.getElementById('none').style.display=any?'none':'block';
+  });
+})();
+"""
 idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-       '<title>断事图 · 象义随身</title><style>%s'
-       '.it{display:block;padding:16px 18px;margin:10px 0;background:var(--card);border:1px solid var(--line);border-radius:10px;text-decoration:none;color:var(--ink)}'
-       '.it b{display:block;font-size:19px;font-family:"Noto Serif SC",Songti SC,serif}.it span{color:var(--ink2);font-size:15px}</style></head><body>'
+       '<title>断事图 · 象义随身</title><style>%s%s</style></head><body>'
        '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div>'
-       '<main><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
-       '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p></div>%s</main></body></html>') % (CSS, items)
+       '<main class="ix"><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
+       '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p>'
+       '<div class="stat"><span><b>%d</b>篇</span><span><b>%d</b>类事</span></div>'
+       '<a class="resume" id="resume" href="#"><span>继续上次：<b></b></span><span>›</span></a></div>'
+       '<div class="sch"><input id="q" type="search" placeholder="搜一件事，如：婚姻 跳槽 失物" autocomplete="off"></div>'
+       '%s<p class="none" id="none">没有找到。换个词试试。</p></main><script>%s</script></body></html>') % (
+    CSS, IDX_CSS, len(pages), len(GROUPS) - 1, secs, IDX_JS)
 open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8').write(idx)
 print('✓ duanshi/index.html（%d 篇）' % len(pages))

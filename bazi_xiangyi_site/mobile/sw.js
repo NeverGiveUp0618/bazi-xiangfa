@@ -1,10 +1,11 @@
-const CACHE_NAME = 'bazi-xiangyi-mobile-20261103-wide-nav';
+const CACHE_NAME = 'bazi-xiangyi-mobile-20261103-daquan';
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./data.js",
   "./cross_arts_data.js",
+  "./liuren_daquan_data.js",
   "./app.js",
   "./manifest.webmanifest",
   "../preview.png"
