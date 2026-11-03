@@ -24,6 +24,7 @@ CSS = """
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:.01em}
 main{max-width:720px;margin:0 auto;padding:0 18px 80px}
+@media (min-width:1000px){main:not(.ix){max-width:980px}}
 .top{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center}
 .top a{color:var(--muted);text-decoration:none;font-size:14px}.top b{flex:1;text-align:center;font-size:15px;font-weight:500;color:var(--ink2)}
 .hero{margin:28px 0 10px;padding:0 0 18px;border-bottom:1px solid var(--line)}
