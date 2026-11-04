@@ -20,7 +20,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: #181512;
     --card: #221e1a;
     --card-soft: #2a251f;
@@ -39,6 +39,26 @@
     --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
   }
 }
+:root[data-theme="dark"] {
+  --bg: #181512;
+  --card: #221e1a;
+  --card-soft: #2a251f;
+  --ink: #ece5d8;
+  --muted: #9c9184;
+  --line: #3a332b;
+  --accent: #d4694f;
+  --accent-ink: #e08a73;
+  --accent-soft: #3a2620;
+  --gold: #c9a44e;
+  --gold-soft: #332c1c;
+  --green: #7fb896;
+  --green-soft: #22312a;
+  --purple: #a291c9;
+  --purple-soft: #2c2738;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 
 * { box-sizing: border-box; }
 
@@ -555,12 +575,17 @@ mark {
 .wx-水 { color: #2c5f8a; }
 
 @media (prefers-color-scheme: dark) {
-  .wx-木 { color: #8ecf9c; }
-  .wx-火 { color: #e88a72; }
-  .wx-土 { color: #d0aa66; }
-  .wx-金 { color: #e0c060; }
-  .wx-水 { color: #85b8e0; }
+  :root:not([data-theme="light"]) .wx-木 { color: #8ecf9c; }
+  :root:not([data-theme="light"]) .wx-火 { color: #e88a72; }
+  :root:not([data-theme="light"]) .wx-土 { color: #d0aa66; }
+  :root:not([data-theme="light"]) .wx-金 { color: #e0c060; }
+  :root:not([data-theme="light"]) .wx-水 { color: #85b8e0; }
 }
+:root[data-theme="dark"] .wx-木 { color: #8ecf9c; }
+:root[data-theme="dark"] .wx-火 { color: #e88a72; }
+:root[data-theme="dark"] .wx-土 { color: #d0aa66; }
+:root[data-theme="dark"] .wx-金 { color: #e0c060; }
+:root[data-theme="dark"] .wx-水 { color: #85b8e0; }
 
 .char-picker {
   display: grid;
@@ -2798,3 +2823,17 @@ mark.must{background:#ffe600;color:#1d1700;font-weight:800;padding:2px 7px;borde
 .ds-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
 .ds-steps .ds-lb{display:block;position:static;grid-column:1/-1}
 .ds-steps a{justify-content:center;padding:5px 6px;white-space:nowrap}
+
+/* 主题切换（2026-11-04）：不再只跟随微信，可手动黑/白 */
+.theme-btn {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  padding: 3px 10px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.theme-btn:active { background: var(--card-soft); }

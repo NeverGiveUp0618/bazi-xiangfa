@@ -19,8 +19,11 @@ CSS = """
    原则：底色柔和不刺眼、正文深灰不纯黑、粗体不变色、朱砂只留给小标记。 */
 :root{--bg:#faf8f3;--card:#ffffff;--ink:#33302b;--ink2:#5c574f;--muted:#948c80;--line:#ebe5da;
 --acc:#a8573f;--soft:#f3efe7;--th:#f5f1ea}
-@media (prefers-color-scheme:dark){:root{--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;
 --acc:#c98a6f;--soft:#2a2825;--th:#2a2825}}
+:root[data-theme="dark"]{--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;
+--acc:#c98a6f;--soft:#2a2825;--th:#2a2825}
+.theme-btn{width:60px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--muted);font-size:12px;padding:3px 0;cursor:pointer;font-family:inherit}
 *{box-sizing:border-box}html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:17px/1.95 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;letter-spacing:.01em}
 main{max-width:720px;margin:0 auto;padding:0 18px 80px}
@@ -61,10 +64,10 @@ def build(md_path):
     toc = ''.join('<a href="#%s">%s</a>' % (i, re.sub(r'<[^>]+>', '', t).split('：')[0]) for i, t in heads)
     page = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1">'
-            '<title>%s · 象义随身</title><style>%s</style></head><body>'
-            '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div>'
+            '<title>%s · 象义随身</title><script>(function(){try{var t=localStorage.getItem("xy_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script><style>%s</style></head><body>'
+            '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><button type="button" class="theme-btn" id="themeBtn">☾ 黑</button></div>'
             '<main><div class="hero"><small>断事图</small><h1>%s</h1><p>%s</p></div>'
-            '<div class="toc">%s</div>%s</main></body></html>') % (
+            '<div class="toc">%s</div>%s</main><script>(function(){var b=document.getElementById("themeBtn");if(!b)return;var r=document.documentElement;function e(){var t=r.getAttribute("data-theme");if(t)return t;return(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light"}function p(){b.textContent=e()==="dark"?"☀ 白":"☾ 黑"}b.addEventListener("click",function(){var n=e()==="dark"?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem("xy_theme",n)}catch(x){}p()});p()})();</script></body></html>') % (
         html.escape(title), CSS, html.escape(sub[0].replace('断事图 · ', '')),
         html.escape(sub[1] if len(sub) > 1 else ''), toc, body)
     os.makedirs(OUT, exist_ok=True)
@@ -186,14 +189,14 @@ IDX_JS = """
 })();
 """
 idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'
-       '<title>断事图 · 象义随身</title><style>%s%s</style></head><body>'
-       '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><span style="width:60px"></span></div>'
+       '<title>断事图 · 象义随身</title><script>(function(){try{var t=localStorage.getItem("xy_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script><style>%s%s</style></head><body>'
+       '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><button type="button" class="theme-btn" id="themeBtn">☾ 黑</button></div>'
        '<main class="ix"><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
        '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p>'
        '<div class="stat"><span><b>%d</b>篇</span><span><b>%d</b>类事</span></div>'
        '<a class="resume" id="resume" href="#"><span>继续上次：<b></b></span><span>›</span></a></div>'
        '<div class="sch"><input id="q" type="search" placeholder="搜一件事，如：婚姻 跳槽 失物" autocomplete="off"></div>'
-       '%s<p class="none" id="none">没有找到。换个词试试。</p></main><script>%s</script></body></html>') % (
+       '%s<p class="none" id="none">没有找到。换个词试试。</p></main><script>(function(){var b=document.getElementById("themeBtn");if(!b)return;var r=document.documentElement;function e(){var t=r.getAttribute("data-theme");if(t)return t;return(window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches)?"dark":"light"}function p(){b.textContent=e()==="dark"?"☀ 白":"☾ 黑"}b.addEventListener("click",function(){var n=e()==="dark"?"light":"dark";r.setAttribute("data-theme",n);try{localStorage.setItem("xy_theme",n)}catch(x){}p()});p()})();</script><script>%s</script></body></html>') % (
     CSS, IDX_CSS, len(pages), len(GROUPS) - 1, secs, IDX_JS)
 open(os.path.join(OUT, 'index.html'), 'w', encoding='utf-8').write(idx)
 print('✓ duanshi/index.html（%d 篇）' % len(pages))
