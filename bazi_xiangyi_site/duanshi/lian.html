@@ -1,0 +1,109 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>断事图 · 练习</title>
+<script async src="https://nevergiveup0618.github.io/all-project/guard.js?reload=1"></script>
+<script>(function(){try{var t=localStorage.getItem("xy_theme");if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);}catch(e){}})();</script>
+<style>
+:root{--bg:#faf8f3;--card:#fff;--ink:#33302b;--ink2:#5c574f;--muted:#948c80;--line:#ebe5da;--acc:#a8573f;--soft:#f3efe7;--ok:#3f7a56;--okb:#e6f1ea;--bad:#a9442f;--badb:#f6e4df}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;--acc:#c98a6f;--soft:#2a2825;--ok:#7fb592;--okb:#22302a;--bad:#d18a7c;--badb:#3a2824}}
+:root[data-theme="dark"]{--bg:#1c1b19;--card:#242320;--ink:#dcd6cc;--ink2:#b5aea3;--muted:#8d867b;--line:#36332e;--acc:#c98a6f;--soft:#2a2825;--ok:#7fb592;--okb:#22302a;--bad:#d18a7c;--badb:#3a2824}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
+.app{max-width:620px;margin:0 auto;padding:0 16px 60px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;align-items:center;gap:10px;padding:12px 0 10px;border-bottom:1px solid var(--line)}
+header b{flex:1;font:600 17px "Noto Serif SC",Songti SC,serif;letter-spacing:.06em}header a{color:var(--muted);font-size:14px;text-decoration:none}
+.view{display:none;padding-top:14px}.view.on{display:block}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.stats div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 4px;text-align:center}
+.stats b{display:block;font:600 20px Georgia,serif;color:var(--acc)}.stats span{font-size:11px;color:var(--muted)}
+h2{font:600 15px "Noto Serif SC",Songti SC,serif;letter-spacing:.08em;color:var(--acc);margin:22px 0 8px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.mode{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px;text-align:left;font:inherit;cursor:pointer}
+.mode b{display:block;font-size:15px}.mode span{font-size:12px;color:var(--muted)}.mode.main{border-color:var(--acc);background:var(--soft)}.mode:disabled{opacity:.45}
+.chs{display:flex;flex-direction:column;gap:6px}.ch{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;color:var(--ink);font:inherit;text-align:left}
+.ch .t{flex:1}.ch .bar{height:3px;border-radius:2px;background:var(--line);margin-top:5px;overflow:hidden}.ch .bar i{display:block;height:100%;background:var(--acc)}.ch .n{font-size:12px;color:var(--muted)}
+.ch .a{font-size:11px;display:block;color:var(--muted)}.ch .a.lo{color:var(--bad)}
+.note{font-size:13px;color:var(--muted);margin:14px 0 0}
+.qtop{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:6px}.prog{height:3px;background:var(--line);border-radius:2px;overflow:hidden;margin-bottom:14px}.prog i{display:block;height:100%;background:var(--acc)}
+.qt{font:600 18px/1.65 "Noto Serif SC",Songti SC,serif;margin:0 0 14px}
+.opts{display:flex;flex-direction:column;gap:8px}.opt{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:11px 13px;text-align:left;font:inherit;cursor:pointer;display:flex;gap:9px}
+.opt em{font-style:normal;color:var(--muted);flex:none}.opt.ok{border-color:var(--ok);background:var(--okb)}.opt.bad{border-color:var(--bad);background:var(--badb)}.opt:disabled{cursor:default}
+.exp{display:none;margin-top:14px;background:var(--soft);border-left:3px solid var(--acc);border-radius:6px;padding:10px 12px;font-size:14.5px;color:var(--ink2)}.exp.on{display:block}
+.exp .v{font-weight:600;margin-bottom:4px}.exp .v.ok{color:var(--ok)}.exp .v.bad{color:var(--bad)}.exp .src{display:block;margin-top:6px;font-size:12px;color:var(--muted)}
+.exp a{color:var(--acc);font-size:13px}
+.next{display:none;width:100%;margin-top:14px;border:0;border-radius:22px;padding:11px;background:var(--acc);color:#fff;font:600 15px inherit;cursor:pointer}.next.on{display:block}
+.res{text-align:center;padding:20px 0}.res b{display:block;font:600 42px Georgia,serif;color:var(--acc)}.res p{color:var(--ink2);margin:6px 0 18px}
+.wrongs{text-align:left}.wrongs div{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;font-size:14px}.wrongs div i{font-style:normal;display:block;color:var(--ok);margin-top:3px}
+.btns{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}.btn{border:1px solid var(--acc);background:var(--acc);color:#fff;border-radius:20px;padding:8px 18px;font:600 14px inherit;cursor:pointer}.btn.ghost{background:none;color:var(--acc)}
+</style></head><body><div class="app">
+<header><b id="ttl">断事图 · 练习</b><a href="index.html" id="back">‹ 断事图</a></header>
+<section class="view on" id="v-home">
+<div class="stats"><div><b id="s-done">0</b><span>已做</span></div><div><b id="s-total">0</b><span>题库</span></div><div><b id="s-due">0</b><span>待复习</span></div><div><b id="s-wrong">0</b><span>错题</span></div></div>
+<h2>开始练</h2>
+<div class="modes">
+<button class="mode main" data-mode="smart"><b>今日一组</b><span>先复习到期的，再补新题 · 10 题</span></button>
+<button class="mode" data-mode="rand"><b>随机十题</b><span>全库随机抽</span></button>
+<button class="mode" data-mode="wrong"><b>错题回炉</b><span>答对一次就移出</span></button>
+<button class="mode" data-mode="due"><b>只做复习</b><span>按遗忘间隔排到今天的</span></button>
+</div>
+<h2>按篇练</h2><div class="chs" id="chs"></div>
+<p class="note">每篇按「没做过 → 错过的 → 久没复习的」出题，一次 10 题。题目只考断事用得上的规则；答完看讲解里的出处，点「看原文」回到那一篇。</p>
+</section>
+<section class="view" id="v-quiz"><div class="qtop"><span id="q-tag"></span><span id="q-n"></span></div><div class="prog"><i id="q-prog"></i></div>
+<p class="qt" id="q-t"></p><div class="opts" id="q-opts"></div><div class="exp" id="q-exp"></div><button class="next" id="q-next">下一题</button></section>
+<section class="view" id="v-res"><div class="res"><b id="r-score"></b><p id="r-msg"></p></div><div class="wrongs" id="r-wrongs"></div>
+<div class="btns"><button class="btn" id="r-again">再来一组</button><button class="btn ghost" id="r-home">回目录</button></div></section>
+</div>
+<script src="kq_ds.js?v=c1d1477a"></script>
+<script>
+const KEY='xy_ds_kq_v1',N=10,GAP=[0,1,2,4,7,15,30,60];
+function load(){try{const v=localStorage.getItem(KEY);return v?JSON.parse(v):{}}catch(e){return {}}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(st))}catch(e){}}
+let st=load();st.q=st.q||{};st.w=st.w||[];
+const today=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*6e4)/864e5);
+const $=id=>document.getElementById(id);const esc=t=>String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const ID=DS_DATA.map(q=>q[0]), BY=Object.fromEntries(DS_DATA.map(q=>[q[0],q]));
+const CAT=Object.fromEntries(DS_CATS.map(c=>[c[0],c]));
+const LIVE=ID.slice();st.w=st.w.filter(i=>BY[i]);
+const isDue=i=>st.q[i]&&st.q[i].d<=today();
+function show(v){document.querySelectorAll('.view').forEach(x=>x.classList.toggle('on',x.id==='v-'+v));window.scrollTo(0,0)}
+function acc(ids){let n=0,c=0;ids.forEach(i=>{const r=st.q[i];if(r&&r.n){n+=r.n;c+=r.c||0}});return {n,c,p:n?c/n:null}}
+function home(){
+  const done=LIVE.filter(i=>st.q[i]).length,due=LIVE.filter(isDue).length;
+  $('s-done').textContent=done;$('s-total').textContent=LIVE.length;$('s-due').textContent=due;$('s-wrong').textContent=st.w.length;
+  document.querySelector('[data-mode=wrong]').disabled=!st.w.length;document.querySelector('[data-mode=due]').disabled=!due;
+  $('chs').innerHTML=DS_CATS.map(([k,n])=>{const ids=LIVE.filter(i=>BY[i][1]===k),d=ids.filter(i=>st.q[i]).length,a=acc(ids);
+    const at=a.p===null?'':`<span class="a${a.p<.8?' lo':''}">正确率 ${Math.round(a.p*100)}%</span>`;
+    return `<button class="ch" data-ch="${k}"><span class="t">${esc(n)}<span class="bar"><i style="width:${ids.length?d/ids.length*100:0}%"></i></span></span><span class="n">${at}${d}/${ids.length}</span></button>`}).join('');
+  show('home')}
+function ranked(pool){const w=new Set(st.w),rank=i=>!st.q[i]?0:w.has(i)?1:isDue(i)?2:3;
+  return shuffle(pool).sort((a,b)=>rank(a)-rank(b)||((st.q[a]||{}).b||0)-((st.q[b]||{}).b||0)||((st.q[a]||{}).t||0)-((st.q[b]||{}).t||0)).slice(0,N)}
+function pick(mode,arg){const pool=LIVE;
+  if(mode==='wrong')return shuffle(st.w).slice(0,N);if(mode==='due')return shuffle(pool.filter(isDue)).slice(0,N);if(mode==='rand')return shuffle(pool).slice(0,N);
+  if(mode==='smart'){const due=shuffle(pool.filter(isDue)).slice(0,N),fresh=shuffle(pool.filter(i=>!st.q[i]));let out=due.concat(fresh).slice(0,N);
+    if(out.length<N)out=out.concat(shuffle(pool.filter(i=>!out.includes(i))).slice(0,N-out.length));return out}
+  if(mode==='ch')return ranked(pool.filter(i=>BY[i][1]===arg));return []}
+let run=null;
+function start(mode,arg){const list=pick(mode,arg);if(!list.length)return home();run={mode,arg,list,k:0,ok:0,bad:[]};ask()}
+function ask(){const i=run.list[run.k],q=BY[i];
+  $('q-tag').textContent=CAT[q[1]][1];$('q-n').textContent=(run.k+1)+' / '+run.list.length;$('q-prog').style.width=(run.k/run.list.length*100)+'%';
+  $('q-t').textContent=q[2];const opts=shuffle([q[3],...q[4]]);
+  $('q-opts').innerHTML=opts.map((o,j)=>`<button class="opt" data-o="${j}"><em>${'ABCD'[j]}</em><span></span></button>`).join('');
+  $('q-opts').querySelectorAll('.opt span').forEach((s,j)=>s.textContent=opts[j]);
+  $('q-opts').onclick=e=>{const b=e.target.closest('.opt');if(!b||b.disabled)return;answer(i,opts,+b.dataset.o)};
+  $('q-exp').className='exp';$('q-next').className='next';show('quiz')}
+function answer(i,opts,j){const q=BY[i],right=opts[j]===q[3],bs=$('q-opts').querySelectorAll('.opt');
+  bs.forEach((b,x)=>{b.disabled=true;if(opts[x]===q[3])b.classList.add('ok')});if(!right)bs[j].classList.add('bad');
+  const r=st.q[i]||{b:0};r.n=(r.n||0)+1;
+  if(right){r.b=Math.min((r.b||0)+1,GAP.length-1);r.c=(r.c||0)+1;run.ok++;st.w=st.w.filter(x=>x!==i)}else{r.b=0;if(!st.w.includes(i))st.w.push(i);run.bad.push(i)}
+  r.d=today()+GAP[r.b];r.t=Date.now();st.q[i]=r;save();
+  const e=$('q-exp');e.innerHTML=`<div class="v ${right?'ok':'bad'}"></div><div class="x"></div><span class="src"></span><a href="${CAT[q[1]][2]}.html" class="rd">看原文 · ${esc(CAT[q[1]][1])} ›</a>`;
+  e.querySelector('.v').textContent=right?'答对了':'正确答案：'+q[3];e.querySelector('.x').textContent=q[5];e.querySelector('.src').textContent='出处：'+q[6];
+  e.className='exp on';const nb=$('q-next');nb.className='next on';nb.textContent=run.k===run.list.length-1?'看结果':'下一题'}
+$('q-next').onclick=()=>{run.k++;run.k<run.list.length?ask():result()};
+function result(){const n=run.list.length,pct=Math.round(run.ok/n*100);$('r-score').textContent=run.ok+' / '+n;
+  $('r-msg').textContent=pct>=90?'很稳':pct>=70?'基本掌握，错的回头看一眼':'这几条还没吃透，回原文再读一遍';
+  $('r-wrongs').innerHTML=run.bad.map(i=>{const q=BY[i];return `<div>${esc(q[2])}<i>${esc(q[3])}</i></div>`}).join('');show('res')}
+$('r-again').onclick=()=>start(run.mode,run.arg);$('r-home').onclick=home;
+document.querySelectorAll('.mode').forEach(b=>b.onclick=()=>start(b.dataset.mode));
+$('chs').onclick=e=>{const b=e.target.closest('.ch');if(b)start('ch',b.dataset.ch)};
+const qs=new URLSearchParams(location.search).get('ch');
+if(qs&&CAT[qs])start('ch',qs);else home();
+</script></body></html>

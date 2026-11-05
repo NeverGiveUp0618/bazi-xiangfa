@@ -76,6 +76,8 @@ def build(md_path):
     #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
     #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
     import hashlib, json
+    if os.path.exists(os.path.join(HERE, '题库', os.path.splitext(os.path.basename(md_path))[0] + '.json')):
+        page = page.replace('</main><script>', '<p style="margin:22px 0 0"><a href="lian.html?ch=%s" style="display:inline-block;padding:10px 22px;border-radius:22px;background:var(--acc);color:#fff;text-decoration:none;font-size:15px">练这一篇 ›</a></p></main><script>' % name, 1)
     h = hashlib.md5(page.encode()).hexdigest()[:8]
     for old in glob.glob(os.path.join(OUT, name + '.*.html')):
         os.remove(old)
@@ -105,6 +107,28 @@ for p in sorted(glob.glob(os.path.join(HERE, '*.md')),
     md = open(p, encoding='utf-8').read()
     t = re.search(r'^# (.+)$', md, re.M).group(1).replace('断事图 · ', '')
     pages.append((os.path.splitext(os.path.basename(p))[0], t))
+
+# 题库：题库/*.json → duanshi/kq_ds.js + lian.html（题号 = 篇代号-序号，只许追加、撤题用 off 字段，别插队）
+import json as _json
+_cats, _data = [], []
+for _p in ORDER:
+    _f = os.path.join(HERE, '题库', _p + '.json')
+    if not os.path.exists(_f):
+        continue
+    _d = _json.load(open(_f, encoding='utf-8'))
+    _cats.append([_d['cat'], _d['title'], _d['cat']])
+    _off = set(_d.get('off', []))
+    for _n, _q in enumerate(_d['qs'], 1):
+        if _n in _off:
+            continue
+        assert len(_q) == 5 and len(_q[2]) == 3 and len(set([_q[1]] + _q[2])) == 4, (_p, _n, _q[0])
+        _data.append(['%s-%02d' % (_d['cat'], _n), _d['cat'], _q[0], _q[1], _q[2], _q[3], _q[4]])
+_js = 'const DS_CATS=%s;\nconst DS_DATA=%s;\n' % (_json.dumps(_cats, ensure_ascii=False), _json.dumps(_data, ensure_ascii=False))
+open(os.path.join(OUT, 'kq_ds.js'), 'w', encoding='utf-8').write(_js)
+import hashlib as _h
+_v = _h.md5(_js.encode()).hexdigest()[:8]
+open(os.path.join(OUT, 'lian.html'), 'w', encoding='utf-8').write(open(os.path.join(HERE, 'lian.tpl.html'), encoding='utf-8').read().replace('__V__', _v))
+print('✓ 题库 %d 篇 %d 题 → duanshi/lian.html' % (len(_cats), len(_data)))
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
 names = {'求人': 'qr', '天气': 'tq', '官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc', '合作': 'hz', '考公': 'kg', '示范': 'sf', '流年': 'ln', '进退': 'jt', '相貌': 'xm', '玄学': 'xs', '合婚': 'hh', '时辰': 'sc', '化解': 'hj'}
@@ -193,6 +217,7 @@ idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name
        '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><button type="button" class="theme-btn" id="themeBtn">☾ 黑</button></div>'
        '<main class="ix"><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
        '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p>'
+       '<a href="lian.html" style="display:inline-block;margin:10px 0 0;padding:6px 16px;border-radius:18px;border:1px solid var(--acc);color:var(--acc);text-decoration:none;font-size:14px">做题练习 ›</a>'
        '<div class="stat"><span><b>%d</b>篇</span><span><b>%d</b>类事</span></div>'
        '<a class="resume" id="resume" href="#"><span>继续上次：<b></b></span><span>›</span></a></div>'
        '<div class="sch"><input id="q" type="search" placeholder="搜一件事，如：婚姻 跳槽 失物" autocomplete="off"></div>'
