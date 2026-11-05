@@ -139,9 +139,9 @@ open(os.path.join(OUT, 'lian.html'), 'w', encoding='utf-8').write(open(os.path.j
 print('✓ 题库 %d 篇 %d 题 → duanshi/lian.html' % (len(_cats), len(_data)))
 for _c in [c[0] for c in _cats]:
     _qs = [q for q in _data if q[1] == _c]
-    _lg = sum(1 for q in _qs if len(q[3]) > max(len(x) for x in q[4]))
-    if len(_qs) >= 8 and _lg / len(_qs) > 0.5:
-        print('⚠️ %s：%d/%d 题正确答案是最长项（容易被猜中，请把干扰项写长一点）' % (_c, _lg, len(_qs)))
+    _lg = sum(1 for q in _qs if len(q[3]) >= max(len(x) for x in q[4]) + 5)
+    if len(_qs) >= 8 and _lg / len(_qs) > 0.2:
+        print('⚠️ %s：%d/%d 题正确答案比所有干扰项都长5字以上（容易被猜中，请把干扰项写长一点）' % (_c, _lg, len(_qs)))
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
 names = {'求人': 'qr', '天气': 'tq', '官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc', '合作': 'hz', '考公': 'kg', '示范': 'sf', '流年': 'ln', '进退': 'jt', '相貌': 'xm', '玄学': 'xs', '合婚': 'hh', '时辰': 'sc', '化解': 'hj'}
