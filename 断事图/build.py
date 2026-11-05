@@ -84,6 +84,7 @@ def build(md_path):
     #    正文写成带内容哈希的文件名 name.<hash>.html；固定入口 name.html 只是个跳转页，
     #    它用 fetch(no-store) 读 latest.json 找到当前哈希再跳——跳转页本身就算被缓存也不影响拿到新版。
     import hashlib, json
+    page = page.replace('</body></html>', '<script>(function(){var k="%s",d=0;function m(){if(d)return;var h=document.documentElement;if((window.scrollY+window.innerHeight)/h.scrollHeight>0.9){d=1;try{var r=JSON.parse(localStorage.getItem("ds-read")||"{}");r[k]=Date.now();localStorage.setItem("ds-read",JSON.stringify(r))}catch(e){}}}window.addEventListener("scroll",m,{passive:true});m()})();</script></body></html>' % os.path.splitext(os.path.basename(md_path))[0], 1)
     if os.path.exists(os.path.join(HERE, '题库', os.path.splitext(os.path.basename(md_path))[0] + '.json')):
         page = page.replace('</main><script>', '<p style="margin:22px 0 0"><a href="lian.html?ch=%s" style="display:inline-block;padding:10px 22px;border-radius:22px;background:var(--acc);color:#fff;text-decoration:none;font-size:15px">练这一篇 ›</a></p></main><script>' % name, 1)
     h = hashlib.md5(page.encode()).hexdigest()[:8]
@@ -156,13 +157,17 @@ GROUPS = [
 tmap = dict(pages)
 used = set()
 
+_nq = {}
+for _f in glob.glob(os.path.join(HERE, '题库', '*.json')):
+    _dd = __import__('json').load(open(_f, encoding='utf-8'))
+    _nq[os.path.splitext(os.path.basename(_f))[0]] = (_dd['cat'], len(_dd['qs']) - len(_dd.get('off', [])))
 def tile(k, color, step=None):
     t = tmap.get(k, k)
     a, b = (t.split('：', 1) + [''])[:2]
     used.add(k)
     badge = ('<i class="ng" style="--c:%s">%d</i>' % (color, step)) if step else ('<i class="ng" style="--c:%s">%s</i>' % (color, html.escape(k[0])))
-    return ('<a class="tl" href="%s.html" data-k="%s" data-q="%s" style="--c:%s">%s<div><b>%s</b><span>%s</span></div></a>'
-            % (names.get(k, 'page'), html.escape(k), html.escape(k + a + b), color, badge, html.escape(a), html.escape(b)))
+    return ('<a class="tl" href="%s.html" data-k="%s" data-q="%s" data-p="%s" data-n="%d" style="--c:%s">%s<div><b>%s</b><span>%s</span><em class="pg"></em></div></a>'
+            % (names.get(k, 'page'), html.escape(k), html.escape(k + a + b), _nq.get(k, ('', 0))[0] or names.get(k, ''), _nq.get(k, ('', 0))[1], color, badge, html.escape(a), html.escape(b)))
 
 secs = ''
 for gid, gname, gdesc, color, keys in GROUPS:
@@ -206,6 +211,9 @@ border-left:4px solid var(--c);box-shadow:0 1px 3px rgba(80,50,20,.05);transitio
 .flow .tl{border-left:1px solid var(--line);border-top:4px solid var(--c);background:linear-gradient(180deg,color-mix(in srgb,var(--c) 7%,var(--card)),var(--card))}
 .flow .tl .ng{background:var(--c);color:#fff;border-radius:50%;width:30px;height:30px;font-size:15px}
 .none{display:none;text-align:center;color:var(--muted);padding:30px 0}
+.pg{display:block;font-style:normal;font-size:11.5px;color:var(--muted);margin-top:4px}.pg b{display:inline;font:inherit;color:var(--ok,#3f7a56)}
+.prog{margin:14px 0 4px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}.prog i{display:block;height:100%;background:var(--acc);width:0}
+.how{margin:10px 0 0;padding:10px 14px;border-radius:12px;background:var(--soft);font-size:13.5px;color:var(--ink2);line-height:1.75}
 @media (min-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr))}.flow .grid{grid-template-columns:repeat(4,minmax(0,1fr))}.tl:hover{box-shadow:0 4px 14px rgba(80,50,20,.1);transform:translateY(-1px)}}
 @media (min-width:1000px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
 """
@@ -216,6 +224,14 @@ IDX_JS = """
   tiles.forEach(function(t){t.addEventListener('click',function(){try{localStorage.setItem(KEY,t.dataset.k)}catch(e){}})});
   try{var k=localStorage.getItem(KEY),t=tiles.filter(function(x){return x.dataset.k===k})[0],r=document.getElementById('resume');
     if(t&&r){r.href=t.getAttribute('href');r.querySelector('b').textContent=t.querySelector('b').textContent;r.classList.add('on')}}catch(e){}
+  try{var rd=JSON.parse(localStorage.getItem('ds-read')||'{}'),qs=JSON.parse(localStorage.getItem('xy_ds_kq_v1')||'{}').q||{};
+    var nr=0,tn=0,td=0,tot=0;
+    tiles.forEach(function(t){var p=t.dataset.p,n=+t.dataset.n,e=t.querySelector('.pg'),r=!!rd[t.dataset.k],d=0;
+      if(n){Object.keys(qs).forEach(function(i){if(i.indexOf(p+'-')===0)d++})}
+      tot+=n;td+=d;if(r)nr++;
+      var s=[];if(r)s.push('<b>已读</b>');if(n)s.push('练 '+d+'/'+n);e.innerHTML=s.join(' · ')});
+    document.getElementById('ovr').innerHTML='已读 <b>'+nr+'</b>/'+tiles.length+' 篇 · 已练 <b>'+td+'</b>/'+tot+' 题';
+    document.getElementById('ovb').style.width=Math.round((nr/tiles.length*0.5+(tot?td/tot*0.5:0))*100)+'%'}catch(e){}
   var q=document.getElementById('q');
   q.addEventListener('input',function(){
     var w=q.value.trim().split(/\\s+/).filter(Boolean),any=false;
@@ -230,6 +246,7 @@ idx = ('<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name
        '<div class="top"><a href="../mobile/">‹ 象义随身</a><b>断事图</b><button type="button" class="theme-btn" id="themeBtn">☾ 黑</button></div>'
        '<main class="ix"><div class="hero"><small>断事图</small><h1>从一件事读盘</h1>'
        '<p>算不了认知以外的命。每一篇先讲这件事在现实里怎么回事，再讲八字、六壬怎么看，最后是案例和断之前要问清的事。</p>'
+       '<div class="how"><b>怎么读</b>：先走上面「入门四步」(来意→时辰→问诊单→示范)；再按你要断的事翻对应的一篇——每篇先读开头「先看这一页」，读完点末尾「练这一篇」，答对了再往下。<br><span id="ovr"></span></div><div class="prog"><i id="ovb"></i></div>'
        '<a href="lian.html" style="display:inline-block;margin:10px 0 0;padding:6px 16px;border-radius:18px;border:1px solid var(--acc);color:var(--acc);text-decoration:none;font-size:14px">做题练习 ›</a>'
        '<div class="stat"><span><b>%d</b>篇</span><span><b>%d</b>类事</span></div>'
        '<a class="resume" id="resume" href="#"><span>继续上次：<b></b></span><span>›</span></a></div>'
