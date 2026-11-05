@@ -728,6 +728,22 @@ function searchNodes(query, limit = 40, tradition = "all") {
     .slice(0, limit);
 }
 
+/* 搜不到时的近似兜底：按「字」重合度找最接近的词条（只在整词零命中时用） */
+function fuzzyNodes(query, tradition = "all", limit = 6) {
+  const chars = [...new Set([...query.replace(/\s+/g, "")])];
+  if (chars.length < 2) return [];
+  const pool = nodes.filter(node => inTradition(node, tradition));
+  const scored = [];
+  pool.forEach(node => {
+    const head = [node.title, ...(node.aliases || []), ...(node.core || [])].join("、");
+    const body = Object.values(node.branches || {}).flat().join("、");
+    let sc = 0;
+    chars.forEach(c => { if (head.includes(c)) sc += 3; else if (body.includes(c)) sc += 1; });
+    if (sc >= Math.max(3, chars.length)) scored.push({ node, sc });
+  });
+  return scored.sort((a, b) => b.sc - a.sc).slice(0, limit).map(x => x.node);
+}
+
 const ANTI_KEYS = ["不能这样断", "反例", "不成立条件"];
 
 function antiEvidenceOf(node, terms = []) {
@@ -2184,7 +2200,13 @@ if (typeof document !== "undefined") {
     let results = searchNodes(query, 40, activeTradition);
     if (!results.length) {
       const range = traditionById.get(activeTradition)?.title || "当前范围";
-      el.searchBody.innerHTML = searchFilterHtml() + `<div class="empty-card">${escapeHtml(range)}没有找到「${escapeHtml(query)}」。可切到“两术共查”，或换个说法试试，比如“文书”“领导”“口舌”。</div>`;
+      const near = fuzzyNodes(query, activeTradition);
+      el.searchBody.innerHTML = searchFilterHtml() + `<div class="empty-card">${escapeHtml(range)}没有找到「${escapeHtml(query)}」。可切到“两术共查”，或换个说法试试，比如“文书”“领导”“口舌”。</div>` + (near.length ? `<div class="empty-card">你可能想找：${near.map(n => `<a href="#" class="near-link" data-near="${escapeHtml(n.title)}">${escapeHtml(n.title)}</a>`).join("　")}</div>` : "");
+      el.searchBody.querySelectorAll(".near-link").forEach(a => a.addEventListener("click", ev => {
+        ev.preventDefault();
+        const input = document.querySelector("#globalSearch");
+        if (input) { input.value = a.dataset.near; input.dispatchEvent(new Event("input", { bubbles: true })); }
+      }));
       return;
     }
     results = rankResultsByContext(results, searchContext, searchLens);
