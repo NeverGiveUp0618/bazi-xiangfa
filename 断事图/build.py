@@ -56,6 +56,14 @@ ul{padding-left:1.2em}
 
 def build(md_path):
     md = open(md_path, encoding='utf-8').read()
+    _bf = os.path.join(HERE, '题库', os.path.splitext(os.path.basename(md_path))[0] + '.json')
+    if os.path.exists(_bf):
+        import json as _j
+        _br = _j.load(open(_bf, encoding='utf-8')).get('brief')
+        if _br and '\n---\n' in md:
+            _blk = '\n## 先看这一页：抓住这一篇的 %d 条\n\n%s\n\n---\n' % (len(_br), '\n'.join('%d. %s' % (i + 1, t) for i, t in enumerate(_br)))
+            _i = md.index('\n---\n') + len('\n---\n')
+            md = md[:_i] + _blk + md[_i:]
     title = re.search(r'^# (.+)$', md, re.M).group(1).strip()
     sub = title.split('：', 1)
     body = mdlite.md2html(md, heading_offset=0) if 'heading_offset' in mdlite.md2html.__code__.co_varnames else mdlite.md2html(md)
@@ -129,6 +137,11 @@ import hashlib as _h
 _v = _h.md5(_js.encode()).hexdigest()[:8]
 open(os.path.join(OUT, 'lian.html'), 'w', encoding='utf-8').write(open(os.path.join(HERE, 'lian.tpl.html'), encoding='utf-8').read().replace('__V__', _v))
 print('✓ 题库 %d 篇 %d 题 → duanshi/lian.html' % (len(_cats), len(_data)))
+for _c in [c[0] for c in _cats]:
+    _qs = [q for q in _data if q[1] == _c]
+    _lg = sum(1 for q in _qs if len(q[3]) > max(len(x) for x in q[4]))
+    if len(_qs) >= 8 and _lg / len(_qs) > 0.5:
+        print('⚠️ %s：%d/%d 题正确答案是最长项（容易被猜中，请把干扰项写长一点）' % (_c, _lg, len(_qs)))
 
 # 目录页：index.html 也走 latest.json 跳正文，自己是静态小页，不怕缓存（列表很少改）
 names = {'求人': 'qr', '天气': 'tq', '官职': 'gz', '疾病': 'jb', '公司经营': 'gs', '婚姻': 'hy', '官司': 'ss', '房产': 'fc', '学业': 'xy', '出行': 'cx', '子女': 'zn', '职业': 'zy', '父母': 'fm', '兄弟朋友': 'xd', '性格': 'xg', '失物': 'sw', '财运': 'cy', '感情': 'gq', '意外': 'yw', '寿元': 'sy', '小人是非': 'xr', '来意': 'ly', '问诊单': 'wz', '人生年龄': 'nl', '层次': 'cc', '合作': 'hz', '考公': 'kg', '示范': 'sf', '流年': 'ln', '进退': 'jt', '相貌': 'xm', '玄学': 'xs', '合婚': 'hh', '时辰': 'sc', '化解': 'hj'}
