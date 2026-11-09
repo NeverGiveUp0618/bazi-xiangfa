@@ -86,7 +86,9 @@ strong,b{color:var(--h)}
 .toc .part small{font-size:10.5pt;color:var(--muted);font-family:"Songti SC",serif;margin-left:3mm}
 .toc ol{margin:0;padding:0;list-style:none;columns:2;column-gap:10mm}
 .toc li{font-size:11.5pt;line-height:1.75;break-inside:avoid}
-.toc li a{color:inherit;text-decoration:none}
+.toc li a{color:inherit;text-decoration:none;display:flex;align-items:baseline}
+.toc li em{font-style:normal;margin-left:auto;color:var(--muted);padding-left:2mm}
+.toc li a span.d{flex:1;border-bottom:.6pt dotted var(--line);margin:0 1.5mm}
 .toc li i{font-style:normal;color:var(--accent);display:inline-block;width:2.2em}
 .how{page-break-after:always}
 .how h2{font-family:"Kaiti SC",serif;font-size:22pt;color:var(--h);margin:4mm 0 4mm}
@@ -129,7 +131,8 @@ details summary::-webkit-details-marker{display:none}
 '''
 
 
-def build(out=None):
+def build(out=None, nums=None):
+    nums = nums or {}
     toc = ['<section class="toc"><h2>目　录</h2>']
     body, n = [], 0
     for gi, (g, intro, names) in enumerate(GROUPS):
@@ -139,7 +142,7 @@ def build(out=None):
             n += 1
             title, b, qd = page_md(name)
             head, _, sub = title.partition('：')
-            toc.append('<li><a href="#c%d"><i>%d</i>%s</a></li>' % (n, n, H.escape(head)))
+            toc.append('<li><a href="#c%d"><i>%d</i>%s<span class="d"></span><em>%s</em></a></li>' % (n, n, H.escape(head), nums.get(n, '000')))
             body.append('<article class="chap" id="c%d"><header class="chead"><div class="ck">%s · 第 %d 篇</div><h1>%s</h1></header><div class="doc">%s</div>%s</article>' % (
                 n, g, n, H.escape(title), b, quiz_html(qd)))
         toc.append('</ol>')
@@ -160,8 +163,21 @@ def build(out=None):
     subprocess.run([CHROME, '--headless=new', '--disable-gpu', '--no-pdf-header-footer', '--no-sandbox', '--virtual-time-budget=60000',
                     '--print-to-pdf=' + out, 'file://' + tmp], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=900)
     print('篇', n, '->', out, round(os.path.getsize(out) / 1e6, 1), 'MB')
+    return out, n
 
 
 if __name__ == '__main__':
     a = sys.argv[1:]
-    build(a[a.index('--out') + 1] if '--out' in a else None)
+    o = a[a.index('--out') + 1] if '--out' in a else None
+    out, n = build(o)                       # 第一遍：目录页码先占位（位数相同，版面不变）
+    import fitz
+    d = fitz.open(out); nums = {}
+    for k in range(1, n + 1):
+        for i in range(4, len(d)):          # 目录页之后找「· 第 k 篇」篇头
+            if re.search(r'· 第 %s 篇' % r'\s*'.join(str(k)), d[i].get_text()[:80]):
+                nums[k] = i + 1; break
+    d.close()
+    assert len(nums) == n, (len(nums), n)
+    build(o, nums)                          # 第二遍：填真页码
+    d = fitz.open(out); bad = [k for k in nums if not re.search(r'· 第 %s 篇' % r'\s*'.join(str(k)), d[nums[k] - 1].get_text()[:80])]
+    print('目录页码核对：', '全部对上' if not bad else bad)
