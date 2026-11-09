@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """断事图 → PDF 学习册（2026-11-09）。md 是源；每篇末尾带「练习」选择题（题库/*.json），答案附在该篇之后。
 用法：python3 断事图/pdf_duanshi.py [--out path]
-配色：松烟绿 + 赭金（区别于盲派的朱砂檀香、命理精讲的青瓷黛墨）。
+配色：薰衣草紫（区别于盲派的朱砂檀香、命理精讲的青瓷黛墨）。
 """
 import datetime, html as H, io, json, os, re, subprocess, sys
 
@@ -62,24 +62,24 @@ def quiz_html(qd):
 
 
 CSS = u'''
-@page { size: A4; margin: 18mm 17mm 21mm 17mm; background: #f6f7ef;
-  @bottom-center { content: counter(page); font-family: "Songti SC", serif; font-size: 10pt; color: #5d7a6c; }
-  @bottom-left { content: "象义随身 · 断事图"; font-family: "Songti SC", serif; font-size: 9pt; color: #9bb0a4; }
+@page { size: A4; margin: 18mm 17mm 21mm 17mm; background: #f7f4fb;
+  @bottom-center { content: counter(page); font-family: "Songti SC", serif; font-size: 10pt; color: #7a6a9c; }
+  @bottom-left { content: "象义随身 · 断事图"; font-family: "Songti SC", serif; font-size: 9pt; color: #b3a8cc; }
 }
 @page :first { margin: 0; @bottom-center { content: none; } @bottom-left { content: none; } }
-:root{ --paper:#f6f7ef; --ink:#26302b; --muted:#667267; --h:#2c5c4d; --accent:#b08a3e; --line:#cfd9c9; --soft:#e8eedf; }
+:root{ --paper:#f7f4fb; --ink:#2b2735; --muted:#6c6580; --h:#5b4a8a; --accent:#9a7fc4; --line:#d9d0e8; --soft:#ece6f6; }
 *{box-sizing:border-box}
 html{background:#fff}
 body{margin:0;font-family:"Songti SC","STSong",serif;font-size:12pt;line-height:1.85;color:var(--ink);background:var(--paper);-webkit-print-color-adjust:exact;print-color-adjust:exact}
 p{margin:.45em 0;text-align:justify;orphans:2;widows:2}
 strong,b{color:var(--h)}
-.cover{height:297mm;page-break-after:always;display:flex;flex-direction:column;justify-content:center;padding:0 24mm;background:linear-gradient(160deg,#f6f7ef 0%,#dfe9d9 100%);position:relative}
+.cover{height:297mm;page-break-after:always;display:flex;flex-direction:column;justify-content:center;padding:0 24mm;background:linear-gradient(160deg,#f7f4fb 0%,#e4dcf2 100%);position:relative}
 .cover:before{content:"";position:absolute;left:14mm;top:14mm;right:14mm;bottom:14mm;border:1.2pt solid var(--accent);border-radius:3mm}
 .cover .kk{letter-spacing:.6em;color:var(--accent);font-size:13pt;margin-bottom:10mm}
 .cover h1{font-family:"Kaiti SC","STKaiti",serif;font-size:56pt;line-height:1.25;margin:0 0 6mm;color:var(--h);letter-spacing:.12em}
 .cover .sub{font-size:16pt;color:var(--muted);margin-bottom:18mm}
 .cover .meta{font-size:12pt;color:var(--muted);line-height:2}
-.cover .seal{position:absolute;right:26mm;bottom:30mm;width:26mm;height:26mm;border:2pt solid #a8573f;color:#a8573f;display:grid;place-items:center;font-family:"Kaiti SC",serif;font-size:19pt;line-height:1.2;text-align:center;border-radius:2mm;transform:rotate(-6deg)}
+.cover .seal{position:absolute;right:26mm;bottom:30mm;width:26mm;height:26mm;border:2pt solid #b0577a;color:#b0577a;display:grid;place-items:center;font-family:"Kaiti SC",serif;font-size:19pt;line-height:1.2;text-align:center;border-radius:2mm;transform:rotate(-6deg)}
 .toc{page-break-after:always}
 .toc h2{font-family:"Kaiti SC",serif;font-size:26pt;color:var(--h);text-align:center;margin:8mm 0;letter-spacing:.3em}
 .toc .part{font-family:"Kaiti SC",serif;font-size:17pt;color:var(--h);margin:6mm 0 2mm;padding-bottom:1mm;border-bottom:1pt solid var(--accent)}
@@ -99,7 +99,7 @@ strong,b{color:var(--h)}
 .chead .ck{color:var(--accent);letter-spacing:.35em;font-size:11.5pt;margin-bottom:2mm}
 .chead h1{font-family:"Kaiti SC","STKaiti",serif;font-size:25pt;line-height:1.3;margin:0;color:var(--h)}
 .doc h2{font-family:"Kaiti SC",serif;font-size:18pt;color:var(--h);margin:8mm 0 3mm;line-height:1.4;page-break-after:avoid;padding:1.2mm 0 1.2mm 3.5mm;border-left:2.6pt solid var(--accent);background:linear-gradient(90deg,var(--soft),transparent)}
-.doc h3{font-family:"Kaiti SC",serif;font-size:15pt;color:#3d7060;margin:6mm 0 2mm;page-break-after:avoid}
+.doc h3{font-family:"Kaiti SC",serif;font-size:15pt;color:#7058a8;margin:6mm 0 2mm;page-break-after:avoid}
 .doc h4{font-size:13.5pt;color:var(--h);margin:4mm 0 1mm;page-break-after:avoid}
 .doc ul,.doc ol{margin:.4em 0 .6em;padding-left:1.5em}
 .doc li{margin:.18em 0}
@@ -109,10 +109,10 @@ hr{border:0;border-top:.8pt solid var(--line);margin:5mm 0}
 .tw{margin:3mm 0;overflow:visible}
 table{border-collapse:collapse;width:100%;font-size:10.6pt;line-height:1.6}
 th,td{border:.6pt solid var(--line);padding:1.4mm 2.2mm;vertical-align:top;overflow-wrap:anywhere}
-th{background:#d9e5d3;color:var(--h);font-weight:700}
+th{background:#e2d9f1;color:var(--h);font-weight:700}
 tr{page-break-inside:avoid}
 q{quotes:none;color:var(--h)}
-details{margin:2.5mm 0;padding:2mm 3.5mm;background:#eef2e4;border-left:2.2pt solid var(--accent);border-radius:0 2mm 2mm 0;font-size:11.6pt}
+details{margin:2.5mm 0;padding:2mm 3.5mm;background:#f0ebf8;border-left:2.2pt solid var(--accent);border-radius:0 2mm 2mm 0;font-size:11.6pt}
 details summary{font-weight:700;color:var(--h);list-style:none}
 details summary::-webkit-details-marker{display:none}
 .quiz{margin-top:9mm;padding-top:4mm;border-top:1.2pt dashed var(--accent)}
@@ -125,7 +125,7 @@ details summary::-webkit-details-marker{display:none}
 .key{margin-top:4mm;padding:3mm 4mm;background:var(--soft);border-radius:2mm;font-size:11.8pt}
 .exps{margin:2mm 0 0;padding-left:0;list-style:none;font-size:10.8pt;line-height:1.7;color:var(--muted)}
 .exps li{margin:1mm 0}
-.src{color:#8a9a8c;font-size:10pt}
+.src{color:#9a90b3;font-size:10pt}
 '''
 
 
