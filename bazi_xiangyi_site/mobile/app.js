@@ -2041,6 +2041,20 @@ if (typeof document !== "undefined") {
     if (view === "tree") treeStart(); else treeStop();
   }
 
+  /* 笔记位置钩子（易术堂共用 notes.js）：记下「哪个标签页＋哪个象义节点」，笔记本里点「回到出处」据此翻回 */
+  window.YGN_HOOK = {
+    loc: function () { return { tab: activeTab, node: detailStack.length ? detailStack[detailStack.length - 1] : "" }; },
+    go: function (l) {
+      if (!l) return;
+      if (l.tab) switchTab(l.tab);
+      if (l.node && nodeById.get(l.node)) openDetail(l.node);
+    },
+    label: function () {
+      var n = detailStack.length ? nodeById.get(detailStack[detailStack.length - 1]) : null;
+      return n ? String(n.name || n.title || n.label || n.id || "") : "";
+    }
+  };
+
   function switchTab(tab, pushHistory = true) {
     activeTab = tab;
     detailStack = [];
